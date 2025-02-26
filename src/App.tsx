@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import SpeedInsights from "@vercel/speed-insights";
 import { inject } from "@vercel/analytics";
+import Layout from "@/components/Layout";
 
 // Initialize analytics
 inject();
@@ -20,6 +21,7 @@ import DetailStage from "./pages/DetailStage";
 import ProfilEntreprise from "./pages/ProfilEntreprise";
 import ProfilStagiaire from "./pages/ProfilStagiaire";
 import NotFound from "./pages/NotFound";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,21 +35,23 @@ const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/connexion" element={<Connexion />} />
-            <Route path="/inscription" element={<Inscription />} />
-            <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
-            <Route path="/stages" element={<OffresStages />} />
-            <Route path="/stages/:id" element={<DetailStage />} />
-            <Route path="/entreprises/:id" element={<ProfilEntreprise />} />
-            <Route path="/stagiaires/:id" element={<ProfilStagiaire />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/connexion" element={<Connexion />} />
+              <Route path="/inscription" element={<Inscription />} />
+              <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+              <Route path="/stages" element={<OffresStages />} />
+              <Route path="/stages/:id" element={<DetailStage />} />
+              <Route path="/entreprises/:id" element={<ProfilEntreprise />} />
+              <Route path="/stagiaires/:id" element={<ProfilStagiaire />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Layout>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
