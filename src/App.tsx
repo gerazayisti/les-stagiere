@@ -8,6 +8,10 @@ import Index from "./pages/Index";
 import Connexion from "./pages/Connexion";
 import Inscription from "./pages/Inscription";
 import MotDePasseOublie from "./pages/MotDePasseOublie";
+import OffresStages from "./pages/OffresStages";
+import DetailStage from "./pages/DetailStage";
+import ProfilEntreprise from "./pages/ProfilEntreprise";
+import ProfilStagiaire from "./pages/ProfilStagiaire";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +27,10 @@ const App = () => (
           <Route path="/connexion" element={<Connexion />} />
           <Route path="/inscription" element={<Inscription />} />
           <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+          <Route path="/stages" element={<OffresStages />} />
+          <Route path="/stages/:id" element={<DetailStage />} />
+          <Route path="/entreprises/:id" element={<ProfilEntreprise />} />
+          <Route path="/stagiaires/:id" element={<ProfilStagiaire />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
