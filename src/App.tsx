@@ -26,6 +26,7 @@ import APropos from "./pages/APropos";
 import Abonnement from "./pages/Abonnement";
 import Blog from "./pages/Blog";
 import ArticleDetail from "./pages/ArticleDetail";
+import Messagerie from "./pages/Messagerie";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +59,7 @@ function App() {
                 <Route path="/abonnement" element={<Abonnement />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/:slug" element={<ArticleDetail />} />
+                <Route path="/messagerie" element={<Messagerie />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>
