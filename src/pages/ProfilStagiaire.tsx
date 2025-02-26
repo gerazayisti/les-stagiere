@@ -4,6 +4,7 @@ import { InteractiveCV } from "@/components/profile/InteractiveCV";
 import { Portfolio } from "@/components/profile/Portfolio";
 import { Recommendations } from "@/components/profile/Recommendations";
 import { CVManager } from "@/components/profile/CVManager";
+import { EditProfileForm } from "@/components/profile/EditProfileForm";
 import { Badge } from "@/components/profile/Badge";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,6 +18,10 @@ interface StagiaireData {
   title: string;
   location: string;
   bio: string;
+  email: string;
+  phone: string;
+  education: string;
+  disponibility: string;
   isPremium: boolean;
   cvs: Array<{
     id: string;
@@ -38,6 +43,10 @@ export default function ProfilStagiaire() {
     title: "Développeur Full Stack Junior",
     location: "Yaoundé, Cameroun",
     bio: "Passionné par le développement web et mobile, je suis à la recherche de nouvelles opportunités pour développer mes compétences.",
+    email: "jean.dupont@email.com",
+    phone: "+237 6XX XX XX XX",
+    education: "Master en Informatique",
+    disponibility: "immediate",
     isPremium: false,
     cvs: [],
   });
@@ -48,6 +57,14 @@ export default function ProfilStagiaire() {
     { id: "portfolio" as const, label: "Portfolio", icon: Briefcase },
     { id: "recommendations" as const, label: "Recommandations", icon: ThumbsUp },
   ];
+
+  const handleProfileUpdate = (data: Omit<StagiaireData, "id" | "avatar" | "isPremium" | "cvs">) => {
+    setStagiaire((prev) => ({
+      ...prev,
+      ...data,
+    }));
+    setIsEditing(false);
+  };
 
   const handleCVUpload = (file: File) => {
     const newCV = {
@@ -129,14 +146,43 @@ export default function ProfilStagiaire() {
         {activeTab === "profile" && (
           isEditing ? (
             <Card className="p-6">
-              {/* Formulaire d'édition du profil de base */}
-              <form className="space-y-4">
-                {/* Ajouter les champs d'édition ici */}
-              </form>
+              <EditProfileForm
+                initialData={stagiaire}
+                onSubmit={handleProfileUpdate}
+                onCancel={() => setIsEditing(false)}
+              />
             </Card>
           ) : (
             <Card className="p-6">
-              {/* Affichage du profil de base */}
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="font-semibold mb-2">Contact</h3>
+                    <div className="space-y-2 text-muted-foreground">
+                      <p>Email: {stagiaire.email}</p>
+                      <p>Téléphone: {stagiaire.phone}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-2">Formation</h3>
+                    <div className="space-y-2 text-muted-foreground">
+                      <p>{stagiaire.education}</p>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">Disponibilité</h3>
+                  <p className="text-muted-foreground">
+                    {stagiaire.disponibility === "immediate"
+                      ? "Immédiate"
+                      : `Dans ${stagiaire.disponibility.replace("months", " mois")}`}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">À propos</h3>
+                  <p className="text-muted-foreground">{stagiaire.bio}</p>
+                </div>
+              </div>
             </Card>
           )
         )}

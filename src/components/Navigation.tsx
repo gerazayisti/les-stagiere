@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "./ThemeToggle";
 
-export default function Navigation() {
+export default function Navigation({ isPremium }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -25,9 +25,11 @@ export default function Navigation() {
             <Link to="/blog" className="text-muted-foreground hover:text-foreground transition-colors">
               Blog
             </Link>
-            <Link to="/messagerie" className="text-muted-foreground hover:text-foreground transition-colors">
-              Messagerie
-            </Link>
+            {isPremium && (
+              <Link to="/messagerie" className="text-muted-foreground hover:text-foreground transition-colors">
+                Messagerie
+              </Link>
+            )}
             <Link to="/abonnement" className="text-muted-foreground hover:text-foreground transition-colors">
               Abonnement
             </Link>
@@ -70,13 +72,15 @@ export default function Navigation() {
               >
                 Blog
               </Link>
-              <Link
-                to="/messagerie"
-                className="block px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"
-                onClick={() => setIsOpen(false)}
-              >
-                Messagerie
-              </Link>
+              {isPremium && (
+                <Link
+                  to="/messagerie"
+                  className="block px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Messagerie
+                </Link>
+              )}
               <Link
                 to="/abonnement"
                 className="block px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"
