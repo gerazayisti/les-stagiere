@@ -23,6 +23,7 @@ import ProfilStagiaire from "./pages/ProfilStagiaire";
 import NotFound from "./pages/NotFound";
 import Contact from "./pages/Contact";
 import APropos from "./pages/APropos";
+import Abonnement from "./pages/Abonnement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,6 +53,7 @@ function App() {
                 <Route path="/stagiaires/:id" element={<ProfilStagiaire />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/a-propos" element={<APropos />} />
+                <Route path="/abonnement" element={<Abonnement />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>
