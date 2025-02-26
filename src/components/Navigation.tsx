@@ -25,6 +25,9 @@ export default function Navigation() {
             <Link to="/blog" className="text-muted-foreground hover:text-foreground transition-colors">
               Blog
             </Link>
+            <Link to="/messagerie" className="text-muted-foreground hover:text-foreground transition-colors">
+              Messagerie
+            </Link>
             <Link to="/abonnement" className="text-muted-foreground hover:text-foreground transition-colors">
               Abonnement
             </Link>
@@ -66,6 +69,13 @@ export default function Navigation() {
                 onClick={() => setIsOpen(false)}
               >
                 Blog
+              </Link>
+              <Link
+                to="/messagerie"
+                className="block px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"
+                onClick={() => setIsOpen(false)}
+              >
+                Messagerie
               </Link>
               <Link
                 to="/abonnement"

@@ -20,6 +20,7 @@ import OffresStages from "./pages/OffresStages";
 import DetailStage from "./pages/DetailStage";
 import ProfilEntreprise from "./pages/ProfilEntreprise";
 import ProfilStagiaire from "./pages/ProfilStagiaire";
+import ProfilEnrichi from "./pages/ProfilEnrichi";
 import NotFound from "./pages/NotFound";
 import Contact from "./pages/Contact";
 import APropos from "./pages/APropos";
@@ -60,6 +61,7 @@ function App() {
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/:slug" element={<ArticleDetail />} />
                 <Route path="/messagerie" element={<Messagerie />} />
+                <Route path="/profil-enrichi" element={<ProfilEnrichi />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>

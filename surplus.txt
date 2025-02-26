@@ -1,2 +1,5 @@
 Implémenter la logique de sauvegarde dans EditProfileForm
 Connecter l'analyse de CV à une vraie API d'IA
+
+la recommendation est pour les stagiere ayant deja payer un abonement
+fonctionnalités premium, il suffit de changer isPremium: false à isPremium: true dans les données du stagiaire (à connecter avec votre système d'authentification et de gestion des abonnements).
