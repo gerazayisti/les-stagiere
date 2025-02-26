@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
-import { Navigation } from "../components/Navigation";
+import { ArrowRight, Users2, Building2, TrendingUp, Briefcase, Search, UserPlus } from "lucide-react";
+import Navigation from "../components/Navigation";
 import { ServiceCard } from "../components/ServiceCard";
 import { CategoryCard } from "../components/CategoryCard";
 import { TargetAudience } from "../components/TargetAudience";
 import { Pricing } from "../components/Pricing";
-import Footer from "@/components/Footer";
+import Footer from "../components/Footer";
 
 const Index = () => {
   const fadeIn = {
@@ -22,25 +22,26 @@ const Index = () => {
   const stats = [
     { icon: Users2, label: "Stagiaires inscrits", value: "10,000+" },
     { icon: Building2, label: "Entreprises partenaires", value: "500+" },
-    { icon: TrendingUp, label: "Taux de recrutement", value: "85%" },
+    { icon: TrendingUp, label: "Taux de placement", value: "85%" },
+    { icon: Briefcase, label: "Stages disponibles", value: "1,000+" }
   ];
 
   const services = [
     {
-      title: "Offres de Stage",
-      description: "Publiez une offre d'emploi. Faites-le savoir en publiant votre offre d'emploi sur notre plateforme. Trouvez le profil dont vous avez besoin parmi nos nombreux visiteurs.",
-      icon: Briefcase,
-    },
-    {
-      title: "Recrutement",
-      description: "Vous cherchez le candidat parfait ? Publiez votre offre d'emploi sur notre plateforme et accédez à un bassin de talents qualifiés.",
       icon: Search,
+      title: "Recherche intelligente",
+      description: "Trouvez le stage parfait grâce à notre algorithme de matching avancé."
     },
     {
-      title: "Hire the Best One",
-      description: "Vous cherchez le meilleur talent pour votre entreprise ? Publiez votre offre d'emploi sur notre site et accédez aux candidats les plus qualifiés.",
       icon: UserPlus,
+      title: "Profil professionnel",
+      description: "Créez un profil attractif pour vous démarquer auprès des recruteurs."
     },
+    {
+      icon: Building2,
+      title: "Entreprises vérifiées",
+      description: "Accédez à un réseau d'entreprises et d'institutions de confiance."
+    }
   ];
 
   const categories = [
@@ -261,9 +262,9 @@ const Index = () => {
             {services.map((service, index) => (
               <ServiceCard
                 key={service.title}
+                icon={service.icon}
                 title={service.title}
                 description={service.description}
-                icon={service.icon}
                 delay={0.2 * index}
               />
             ))}
