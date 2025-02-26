@@ -22,6 +22,7 @@ import ProfilEntreprise from "./pages/ProfilEntreprise";
 import ProfilStagiaire from "./pages/ProfilStagiaire";
 import NotFound from "./pages/NotFound";
 import Contact from "./pages/Contact";
+import APropos from "./pages/APropos";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,31 +32,34 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/connexion" element={<Connexion />} />
-              <Route path="/inscription" element={<Inscription />} />
-              <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
-              <Route path="/stages" element={<OffresStages />} />
-              <Route path="/stages/:id" element={<DetailStage />} />
-              <Route path="/entreprises/:id" element={<ProfilEntreprise />} />
-              <Route path="/stagiaires/:id" element={<ProfilStagiaire />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Layout>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </ThemeProvider>
-);
+function App() {
+  return (
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/connexion" element={<Connexion />} />
+                <Route path="/inscription" element={<Inscription />} />
+                <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+                <Route path="/stages" element={<OffresStages />} />
+                <Route path="/stages/:id" element={<DetailStage />} />
+                <Route path="/entreprises/:id" element={<ProfilEntreprise />} />
+                <Route path="/stagiaires/:id" element={<ProfilStagiaire />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/a-propos" element={<APropos />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Layout>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
+  );
+}
 
 export default App;
