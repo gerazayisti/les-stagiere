@@ -24,6 +24,7 @@ import {
   Clock,
   MessageCircle,
   MapPin,
+  Star
 } from "lucide-react";
 import { ProfilCandidat } from "./ProfilCandidat";
 import { ChatDiscussion } from "./ChatDiscussion";
@@ -40,6 +41,8 @@ interface Candidat {
   experience: string;
   formation: string;
   photo: string;
+  disponibilite: string;
+  hasRecommendation?: boolean;
 }
 
 interface Candidature {
@@ -55,11 +58,13 @@ interface Candidature {
 interface GestionCandidaturesProps {
   candidatures: Candidature[];
   onUpdateStatus: (candidatureId: number, newStatus: Candidature["status"]) => void;
+  onAddRecommendation: (candidatId: number) => void;
 }
 
 export function GestionCandidatures({
   candidatures,
   onUpdateStatus,
+  onAddRecommendation,
 }: GestionCandidaturesProps) {
   const [filter, setFilter] = useState<Candidature["status"] | "toutes">("toutes");
   const [selectedCandidat, setSelectedCandidat] = useState<Candidat | null>(null);
@@ -205,7 +210,7 @@ export function GestionCandidatures({
                     <SelectItem value="refusee">Refuser</SelectItem>
                   </SelectContent>
                 </Select>
-                {candidature.status === "en_discussion" && (
+                {candidature.status === "en_discussion" ||candidature.status==="acceptee" && (
                   <>
                     <Button size="sm" variant="outline" className="w-full">
                       <Download className="h-4 w-4 mr-1" />
@@ -221,6 +226,21 @@ export function GestionCandidatures({
                       Discuter
                     </Button>
                   </>
+                )}
+                {candidature.status === "acceptee" && !candidature.candidat.hasRecommendation && (
+                  <Button
+                    variant="outline"
+                    onClick={() => onAddRecommendation(candidature.candidat.id)}
+                    className="w-full"
+                  >
+                    <Star className="w-4 h-4 mr-2" />
+                    Recommander
+                  </Button>
+                )}
+                {candidature.candidat.hasRecommendation && (
+                  <div className="text-sm text-muted-foreground text-center">
+                    Recommandation déjà donnée
+                  </div>
                 )}
               </div>
             </CardFooter>
