@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import Contact from "./pages/Contact";
 import APropos from "./pages/APropos";
 import Abonnement from "./pages/Abonnement";
+import Blog from "./pages/Blog";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,6 +55,7 @@ function App() {
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/a-propos" element={<APropos />} />
                 <Route path="/abonnement" element={<Abonnement />} />
+                <Route path="/blog" element={<Blog />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>
