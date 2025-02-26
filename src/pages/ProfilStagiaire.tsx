@@ -5,6 +5,7 @@ import { EditProfileForm } from "@/components/EditProfileForm";
 import { CVAnalyzer } from "@/components/CVAnalyzer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MesCandidatures } from "@/components/MesCandidatures";
 
 const ProfilStagiaire = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -43,16 +44,66 @@ const ProfilStagiaire = () => {
     ],
   };
 
+  const [candidatures] = useState([
+    {
+      id: 1,
+      stage: {
+        id: 1,
+        titre: "Développeur Full-Stack",
+        entreprise: {
+          id: "1",
+          name: "TechCorp",
+          avatar: "https://via.placeholder.com/150",
+          localisation: "Paris, France",
+          secteur: "Technologies",
+        },
+        description: "Stage de développement web avec React et Node.js",
+        duree: "6 mois",
+        dateDebut: new Date(2024, 2, 1),
+        competencesRequises: ["React", "Node.js", "TypeScript"],
+        remuneration: "1000€/mois",
+      },
+      status: "en_discussion",
+      datePostulation: new Date(2024, 1, 15),
+      lettreMotivation: "/lettres/lettre1.pdf",
+      cv: "/cvs/cv1.pdf",
+    },
+    {
+      id: 2,
+      stage: {
+        id: 2,
+        titre: "Développeur Frontend React",
+        entreprise: {
+          id: "2",
+          name: "WebAgency",
+          avatar: "https://via.placeholder.com/150",
+          localisation: "Lyon, France",
+          secteur: "Web Design",
+        },
+        description: "Stage de développement d'interfaces utilisateur modernes",
+        duree: "4 mois",
+        dateDebut: new Date(2024, 3, 1),
+        competencesRequises: ["React", "TypeScript", "Tailwind"],
+        remuneration: "800€/mois",
+      },
+      status: "en_attente",
+      datePostulation: new Date(2024, 1, 20),
+      lettreMotivation: "/lettres/lettre2.pdf",
+      cv: "/cvs/cv2.pdf",
+    },
+  ]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       
       <div className="max-w-7xl mx-auto pt-32 px-4 sm:px-6 lg:px-8">
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile">Profil</TabsTrigger>
             <TabsTrigger value="edit">Modifier le profil</TabsTrigger>
-            <TabsTrigger value="cv">Analyse de CV</TabsTrigger>
+            <TabsTrigger value="cv">Analyse CV</TabsTrigger>
+            <TabsTrigger value="candidatures">Mes candidatures</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -159,6 +210,19 @@ const ProfilStagiaire = () => {
           <TabsContent value="cv">
             <div className="bg-white p-8 rounded-lg shadow-sm">
               <CVAnalyzer />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="candidatures">
+            <div className="bg-white p-8 rounded-lg shadow-sm">
+              <MesCandidatures
+                candidatures={candidatures}
+                stagiaire={{
+                  id: "1",
+                  name: stagiaire.nom,
+                  avatar: stagiaire.photo,
+                }}
+              />
             </div>
           </TabsContent>
         </Tabs>
