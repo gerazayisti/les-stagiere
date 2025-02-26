@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -8,7 +9,6 @@ export default {
     "./app/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
   ],
-  prefix: "",
   theme: {
     container: {
       center: true,
@@ -19,21 +19,47 @@ export default {
     },
     extend: {
       colors: {
-        primary: {
-          DEFAULT: "#0A192F",
-          dark: "#051024",
-          light: "#162A4A"
-        },
-        secondary: {
-          DEFAULT: "#1E3A5F",
-          light: "#2A4A7F"
-        },
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        gray: {
-          DEFAULT: "#8E9196",
-          light: "#F1F0FB",
-        }
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        navy: {
+          light: '#1a365d',    // Bleu marine plus clair
+          DEFAULT: '#0f172a',  // Bleu marine principal
+          dark: '#020617',     // Bleu marine plus foncé
+        },
+        primary: {
+          light: '#1a365d',    // Même que navy.light
+          DEFAULT: '#0f172a',  // Même que navy.DEFAULT
+          dark: '#020617',     // Même que navy.dark
+        },
+        secondary: {
+          light: '#475569',    // Gris bleuté clair
+          DEFAULT: '#334155',  // Gris bleuté
+          dark: '#1e293b',     // Gris bleuté foncé
+        },
+        accent: {
+          light: '#60a5fa',    // Bleu accent clair
+          DEFAULT: '#3b82f6',  // Bleu accent
+          dark: '#2563eb',     // Bleu accent foncé
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
       },
       fontFamily: {
         display: ["Playfair Display", "serif"],
@@ -55,5 +81,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;
