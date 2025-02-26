@@ -59,52 +59,6 @@ const Index = () => {
     { title: "Energy & Renewable", vacancies: 0 },
   ];
 
-  const pricing = [
-    {
-      title: "Pack Standard - Gratuit",
-      price: "Gratuit",
-      features: ["Accès aux offres d'emploi"],
-      type: "stagiaire"
-    },
-    {
-      title: "Pack Premium - 10 000 FCFA",
-      price: "10 000 FCFA",
-      features: [
-        "Mise en avant du profil",
-        "Accès aux offres exclusives",
-        "Notifications en temps réel",
-        "Optimisation du CV",
-        "Statistiques de visibilité",
-        "Accès aux ressources et conseils"
-      ],
-      isPopular: true,
-      type: "stagiaire"
-    },
-    {
-      title: "Abonnement Annuel Entreprise",
-      price: "50 000 FCFA",
-      features: [
-        "Accès illimité aux profils",
-        "Visibilité accrue",
-        "Alertes personnalisées",
-        "Support prioritaire"
-      ],
-      type: "entreprise"
-    },
-    {
-      title: "Paiement à la Demande",
-      price: "Sur devis",
-      features: [
-        "Recrutement de stagiaires occasionnels",
-        "Stages de vacances ou professionnels",
-        "Campagnes marketing",
-        "Campagnes publicitaires",
-        "Sondages d'entreprise"
-      ],
-      type: "entreprise"
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navigation />
@@ -192,59 +146,7 @@ const Index = () => {
       </section>
 
       {/* Public Cible Section */}
-      <section className="py-16 bg-muted px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <motion.h2
-            initial="hidden"
-            animate="visible"
-            variants={slideUp}
-            transition={{ duration: 0.6 }}
-            className="text-3xl font-semibold text-foreground mb-8 text-center"
-          >
-            Notre Public Cible
-          </motion.h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="p-6 rounded-lg bg-background border border-border"
-            >
-              <h3 className="text-xl font-semibold mb-4">Entreprises</h3>
-              <p className="text-muted-foreground">
-                Des startups aux grandes entreprises, nous accompagnons tous types d'organisations dans leur recherche de talents.
-              </p>
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="p-6 rounded-lg bg-background border border-border"
-            >
-              <h3 className="text-xl font-semibold mb-4">Institutions Étatiques</h3>
-              <p className="text-muted-foreground">
-                Mairies, ministères et autres institutions gouvernementales peuvent trouver les stagiaires qualifiés dont ils ont besoin.
-              </p>
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="p-6 rounded-lg bg-background border border-border"
-            >
-              <h3 className="text-xl font-semibold mb-4">Organismes Internationaux</h3>
-              <p className="text-muted-foreground">
-                ONGs et organisations internationales peuvent recruter des stagiaires locaux pour leurs projets.
-              </p>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      <TargetAudience />
+          <TargetAudience />
       
       {/* Services Proposés Section */}
       <section className="py-16 bg-muted px-4 sm:px-6 lg:px-8">
@@ -271,37 +173,7 @@ const Index = () => {
           </div>
         </div>
       </section>
-
-      {/* Stages par Catégorie Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <motion.h2
-            initial="hidden"
-            animate="visible"
-            variants={slideUp}
-            transition={{ duration: 0.6 }}
-            className="text-3xl font-semibold text-foreground mb-8 text-center"
-          >
-            Stages par Catégorie
-          </motion.h2>
-          <motion.p
-            initial="hidden"
-            animate="visible"
-            variants={slideUp}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg text-muted-foreground mb-8 text-center"
-          >
-            A better career is out there. We'll help you find it. We're your first step to becoming everything you want to be.
-          </motion.p>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {categories.map((category, index) => (
-              <CategoryCard key={category.title} title={category.title} vacancies={category.vacancies} delay={0.1 * index} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Les Services Que Nous Proposons Section */}
+ {/* Les Services Que Nous Proposons Section */}
       <section className="py-16 bg-muted px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.h2
@@ -311,7 +183,7 @@ const Index = () => {
             transition={{ duration: 0.6 }}
             className="text-3xl font-semibold text-foreground mb-8 text-center"
           >
-            Les Services Que Nous Proposons
+            Autres Services Que Nous Proposons
           </motion.h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <motion.div
@@ -386,6 +258,34 @@ const Index = () => {
             >
               Événementiel
             </motion.div>
+          </div>
+        </div>
+      </section>
+      {/* Stages par Catégorie Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.h2
+            initial="hidden"
+            animate="visible"
+            variants={slideUp}
+            transition={{ duration: 0.6 }}
+            className="text-3xl font-semibold text-foreground mb-8 text-center"
+          >
+            Stages par Catégorie
+          </motion.h2>
+          <motion.p
+            initial="hidden"
+            animate="visible"
+            variants={slideUp}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-lg text-muted-foreground mb-8 text-center"
+          >
+            A better career is out there. We'll help you find it. We're your first step to becoming everything you want to be.
+          </motion.p>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {categories.map((category, index) => (
+              <CategoryCard key={category.title} title={category.title} vacancies={category.vacancies} delay={0.1 * index} />
+            ))}
           </div>
         </div>
       </section>

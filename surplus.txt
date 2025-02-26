@@ -1,0 +1,2 @@
+Implémenter la logique de sauvegarde dans EditProfileForm
+Connecter l'analyse de CV à une vraie API d'IA
