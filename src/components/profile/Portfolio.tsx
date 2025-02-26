@@ -1,184 +1,182 @@
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { AddProjectModal, Project } from "./AddProjectModal";
 import {
-  Github,
-  Globe,
-  Code,
-  Laptop,
-  Monitor,
-  Smartphone,
-  Tags,
-} from "lucide-react";
-
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  image: string;
-  category: "web" | "mobile" | "desktop";
-  technologies: string[];
-  links: {
-    demo?: string;
-    github?: string;
-    live?: string;
-  };
-}
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PlusCircle, ExternalLink, Github, Calendar } from "lucide-react";
 
 export function Portfolio() {
-  const [filter, setFilter] = useState<"all" | "web" | "mobile" | "desktop">("all");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedDomain, setSelectedDomain] = useState<string>("all");
+  const [projects, setProjects] = useState<Project[]>([]);
 
-  const projects: Project[] = [
-    {
-      id: "1",
-      title: "E-commerce Platform",
-      description:
-        "Une plateforme e-commerce complète avec panier, paiement et gestion des commandes",
-      image: "https://images.unsplash.com/photo-1557821552-17105176677c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80",
-      category: "web",
-      technologies: ["React", "Node.js", "MongoDB", "Stripe"],
-      links: {
-        demo: "#",
-        github: "#",
-        live: "#",
-      },
-    },
-    {
-      id: "2",
-      title: "Fitness Tracker App",
-      description:
-        "Application mobile pour suivre ses activités sportives et sa nutrition",
-      image: "https://images.unsplash.com/photo-1526947425960-945c6e72858f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-      category: "mobile",
-      technologies: ["React Native", "Firebase", "Redux"],
-      links: {
-        github: "#",
-        live: "#",
-      },
-    },
-    {
-      id: "3",
-      title: "Task Management Desktop",
-      description: "Application desktop de gestion de tâches et de projets",
-      image: "https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1176&q=80",
-      category: "desktop",
-      technologies: ["Electron", "React", "SQLite"],
-      links: {
-        demo: "#",
-        github: "#",
-      },
-    },
-  ];
-
-  const categoryIcons = {
-    web: Monitor,
-    mobile: Smartphone,
-    desktop: Laptop,
+  const handleAddProject = (project: Omit<Project, "id">) => {
+    const newProject = {
+      ...project,
+      id: Date.now().toString(),
+    };
+    setProjects([...projects, newProject]);
   };
 
-  const filteredProjects =
-    filter === "all"
-      ? projects
-      : projects.filter((project) => project.category === filter);
+  const filteredProjects = selectedDomain === "all"
+    ? projects
+    : projects.filter(project => project.domain === selectedDomain);
+
+  const domains = ["all", ...new Set(projects.map(project => project.domain))];
+
+  const getStatusColor = (status: Project["status"]) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-500";
+      case "in_progress":
+        return "bg-blue-500";
+      case "planned":
+        return "bg-orange-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const getStatusText = (status: Project["status"]) => {
+    switch (status) {
+      case "completed":
+        return "Terminé";
+      case "in_progress":
+        return "En cours";
+      case "planned":
+        return "Planifié";
+      default:
+        return status;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex-1 w-full sm:w-auto">
+          <Select
+            value={selectedDomain}
+            onValueChange={setSelectedDomain}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Filtrer par domaine" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les domaines</SelectItem>
+              {domains.filter(d => d !== "all").map((domain) => (
+                <SelectItem key={domain} value={domain}>
+                  {domain}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button
-          variant={filter === "all" ? "default" : "outline"}
-          onClick={() => setFilter("all")}
-          className="flex items-center gap-2"
+          onClick={() => setIsAddModalOpen(true)}
+          className="w-full sm:w-auto"
         >
-          <Code className="w-4 h-4" />
-          Tous
-        </Button>
-        <Button
-          variant={filter === "web" ? "default" : "outline"}
-          onClick={() => setFilter("web")}
-          className="flex items-center gap-2"
-        >
-          <Monitor className="w-4 h-4" />
-          Web
-        </Button>
-        <Button
-          variant={filter === "mobile" ? "default" : "outline"}
-          onClick={() => setFilter("mobile")}
-          className="flex items-center gap-2"
-        >
-          <Smartphone className="w-4 h-4" />
-          Mobile
-        </Button>
-        <Button
-          variant={filter === "desktop" ? "default" : "outline"}
-          onClick={() => setFilter("desktop")}
-          className="flex items-center gap-2"
-        >
-          <Laptop className="w-4 h-4" />
-          Desktop
+          <PlusCircle className="w-4 h-4 mr-2" />
+          Ajouter un projet
         </Button>
       </div>
 
-      {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProjects.map((project) => {
-          const CategoryIcon = categoryIcons[project.category];
+      {projects.length === 0 ? (
+        <Card className="p-6 text-center">
+          <p className="text-muted-foreground">
+            Vous n'avez pas encore ajouté de projets à votre portfolio.
+            Commencez par ajouter votre premier projet !
+          </p>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filteredProjects.map((project) => (
+            <Card key={project.id} className="overflow-hidden">
+              {project.imageUrl && (
+                <div className="h-48 overflow-hidden">
+                  <img
+                    src={project.imageUrl}
+                    alt={project.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <h3 className="text-xl font-semibold">{project.title}</h3>
+                  <Badge variant="outline">{project.domain}</Badge>
+                </div>
+                
+                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4" />
+                  <span>{project.startDate}</span>
+                  {project.endDate && (
+                    <>
+                      <span>-</span>
+                      <span>{project.endDate}</span>
+                    </>
+                  )}
+                </div>
 
-          return (
-            <Card key={project.id} className="overflow-hidden group">
-              <div className="relative aspect-video overflow-hidden">
-                <img
-                  src={project.image}
-                  alt={project.title}
-                  className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                  {project.links.demo && (
-                    <a
-                      href={project.links.demo}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-white hover:text-primary transition-colors"
-                    >
-                      <Globe className="w-6 h-6" />
-                    </a>
-                  )}
-                  {project.links.github && (
-                    <a
-                      href={project.links.github}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-white hover:text-primary transition-colors"
-                    >
-                      <Github className="w-6 h-6" />
-                    </a>
-                  )}
+                <div className="mt-2">
+                  <Badge className={getStatusColor(project.status)}>
+                    {getStatusText(project.status)}
+                  </Badge>
                 </div>
-              </div>
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <CategoryIcon className="w-4 h-4 text-primary" />
-                  <h3 className="font-semibold">{project.title}</h3>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">
+
+                <p className="mt-4 text-muted-foreground">
                   {project.description}
                 </p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Tags className="w-4 h-4 text-muted-foreground" />
+
+                <div className="flex flex-wrap gap-2 mt-4">
                   {project.technologies.map((tech) => (
-                    <span
-                      key={tech}
-                      className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary"
-                    >
+                    <Badge key={tech} variant="secondary">
                       {tech}
-                    </span>
+                    </Badge>
                   ))}
+                </div>
+
+                <div className="flex gap-4 mt-6">
+                  {project.projectUrl && (
+                    <a
+                      href={project.projectUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center text-sm text-primary hover:underline"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      Voir le projet
+                    </a>
+                  )}
+                  {project.githubUrl && (
+                    <a
+                      href={project.githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center text-sm text-primary hover:underline"
+                    >
+                      <Github className="w-4 h-4 mr-1" />
+                      Code source
+                    </a>
+                  )}
                 </div>
               </div>
             </Card>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
+
+      <AddProjectModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAddProject}
+      />
     </div>
   );
 }

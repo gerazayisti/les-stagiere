@@ -47,7 +47,7 @@ export default function ProfilStagiaire() {
     phone: "+237 6XX XX XX XX",
     education: "Master en Informatique",
     disponibility: "immediate",
-    isPremium: false,
+    isPremium: true,
     cvs: [],
   });
 
