@@ -25,6 +25,7 @@ import Contact from "./pages/Contact";
 import APropos from "./pages/APropos";
 import Abonnement from "./pages/Abonnement";
 import Blog from "./pages/Blog";
+import ArticleDetail from "./pages/ArticleDetail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +57,7 @@ function App() {
                 <Route path="/a-propos" element={<APropos />} />
                 <Route path="/abonnement" element={<Abonnement />} />
                 <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<ArticleDetail />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>

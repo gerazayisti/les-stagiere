@@ -22,8 +22,8 @@ export default function Navigation() {
             <Link to="/stages" className="text-muted-foreground hover:text-foreground transition-colors">
               Offres de stages
             </Link>
-            <Link to="/blocs" className="text-muted-foreground hover:text-foreground transition-colors">
-              Blocs
+            <Link to="/blog" className="text-muted-foreground hover:text-foreground transition-colors">
+              Blog
             </Link>
             <Link to="/abonnement" className="text-muted-foreground hover:text-foreground transition-colors">
               Abonnement
@@ -61,11 +61,11 @@ export default function Navigation() {
                 Offres de stages
               </Link>
               <Link
-                to="/blocs"
+                to="/blog"
                 className="block px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"
                 onClick={() => setIsOpen(false)}
               >
-                Blocs
+                Blog
               </Link>
               <Link
                 to="/abonnement"
