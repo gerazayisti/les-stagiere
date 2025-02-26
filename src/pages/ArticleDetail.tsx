@@ -1,6 +1,9 @@
 import { useParams } from "react-router-dom";
-import { CalendarDays, Clock, Share2, User } from "lucide-react";
+import { CalendarDays, Clock, Heart, Share2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Comments } from "@/components/Comments";
+import { RecommendedArticles } from "@/components/RecommendedArticles";
+import { useState } from "react";
 
 // Simulated articles database
 const articlesData = {
@@ -91,6 +94,8 @@ const articlesData = {
 export default function ArticleDetail() {
   const { slug } = useParams();
   const article = articlesData[slug as keyof typeof articlesData];
+  const [isLiked, setIsLiked] = useState(false);
+  const [likes, setLikes] = useState(42);
 
   if (!article) {
     return (
@@ -102,6 +107,11 @@ export default function ArticleDetail() {
       </div>
     );
   }
+
+  const handleLike = () => {
+    setIsLiked(!isLiked);
+    setLikes(isLiked ? likes - 1 : likes + 1);
+  };
 
   return (
     <div className="container mx-auto px-4 py-16">
@@ -121,18 +131,35 @@ export default function ArticleDetail() {
         <p className="text-xl text-muted-foreground mb-8">{article.description}</p>
         
         {/* Article Meta */}
-        <div className="flex items-center gap-6 text-sm text-muted-foreground mb-8">
-          <div className="flex items-center gap-2">
-            <User size={18} />
-            <span>{article.author}</span>
+        <div className="flex items-center justify-between text-sm text-muted-foreground mb-8">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <User size={18} />
+              <span>{article.author}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CalendarDays size={18} />
+              <span>{article.date}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock size={18} />
+              <span>{article.readTime}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <CalendarDays size={18} />
-            <span>{article.date}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock size={18} />
-            <span>{article.readTime}</span>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={isLiked ? "text-red-500" : ""}
+              onClick={handleLike}
+            >
+              <Heart className={`w-5 h-5 mr-1 ${isLiked ? "fill-current" : ""}`} />
+              {likes}
+            </Button>
+            <Button variant="ghost" size="sm">
+              <Share2 className="w-5 h-5 mr-1" />
+              Partager
+            </Button>
           </div>
         </div>
       </div>
@@ -153,16 +180,19 @@ export default function ArticleDetail() {
           dangerouslySetInnerHTML={{ __html: article.content }}
         />
 
-        {/* Share Section */}
-        <div className="mt-12 pt-8 border-t">
-          <h3 className="text-lg font-semibold mb-4">Partager cet article</h3>
-          <div className="flex gap-4">
-            <Button variant="outline" size="sm">
-              <Share2 className="w-4 h-4 mr-2" />
-              Partager
-            </Button>
-          </div>
-        </div>
+        {/* Comments Section */}
+        <Comments articleId={slug as string} />
+
+        {/* Recommended Articles */}
+        <RecommendedArticles
+          currentSlug={slug as string}
+          articles={Object.entries(articlesData).map(([slug, data]) => ({
+            slug,
+            title: data.title,
+            image: data.image,
+            description: data.description,
+          }))}
+        />
       </div>
     </div>
   );
