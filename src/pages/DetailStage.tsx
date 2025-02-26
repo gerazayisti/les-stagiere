@@ -1,10 +1,14 @@
-
 import { useParams, Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { MapPin, Building2, Calendar, ArrowLeft, Mail, Phone, Globe } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import CandidatureModal from "@/components/CandidatureModal";
 
 const DetailStage = () => {
   const { id } = useParams();
+  const { toast } = useToast();
+  const [showCandidatureModal, setShowCandidatureModal] = useState(false);
 
   // Exemple de données (à remplacer par des données réelles)
   const stage = {
@@ -34,6 +38,18 @@ const DetailStage = () => {
       email: "stages@techcorp.fr",
       telephone: "01 23 45 67 89",
     },
+  };
+
+  const handlePostuler = () => {
+    setShowCandidatureModal(true);
+  };
+
+  const handleCandidatureClose = () => {
+    setShowCandidatureModal(false);
+    toast({
+      title: "Candidature envoyée !",
+      description: "Nous vous recontacterons dès que possible.",
+    });
   };
 
   return (
@@ -135,12 +151,22 @@ const DetailStage = () => {
             </div>
 
             {/* Action Button */}
-            <button className="w-full bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary-dark transition-colors animate-fade-in">
+            <button
+              onClick={handlePostuler}
+              className="w-full bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary-dark transition-colors animate-fade-in"
+            >
               Postuler à cette offre
             </button>
           </div>
         </div>
       </div>
+
+      <CandidatureModal
+        isOpen={showCandidatureModal}
+        onClose={handleCandidatureClose}
+        stageId={Number(id)}
+        stageTitre={stage.titre}
+      />
     </div>
   );
 };
