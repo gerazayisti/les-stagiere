@@ -19,30 +19,22 @@ export default {
     },
     extend: {
       colors: {
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        navy: {
-          light: '#1a365d',    // Bleu marine plus clair
-          DEFAULT: '#0f172a',  // Bleu marine principal
-          dark: '#020617',     // Bleu marine plus foncé
-        },
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          light: '#1a365d',    // Même que navy.light
-          DEFAULT: '#0f172a',  // Même que navy.DEFAULT
-          dark: '#020617',     // Même que navy.dark
+          DEFAULT: "#3B82F6", // Bleu plus clair
+          foreground: "#FFFFFF",
         },
         secondary: {
-          light: '#475569',    // Gris bleuté clair
-          DEFAULT: '#334155',  // Gris bleuté
-          dark: '#1e293b',     // Gris bleuté foncé
+          DEFAULT: "#38BDF8", // Bleu ciel
+          foreground: "#1E3A8A",
         },
         accent: {
-          light: '#60a5fa',    // Bleu accent clair
-          DEFAULT: '#3b82f6',  // Bleu accent
-          dark: '#2563eb',     // Bleu accent foncé
+          DEFAULT: "#60A5FA", // Bleu plus doux
+          foreground: "#FFFFFF",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
