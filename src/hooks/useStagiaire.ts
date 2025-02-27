@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
@@ -10,7 +11,7 @@ export interface StagiaireData {
   location: string;
   bio: string;
   email: string;
-  phone?: string;
+  phone?: string; // Rendre phone optionnel
   education: string;
   disponibility?: string;
   is_premium?: boolean;

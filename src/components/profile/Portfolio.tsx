@@ -7,7 +7,7 @@ import { Plus, ExternalLink, Github, Image as ImageIcon } from "lucide-react";
 import { AddProjectModal } from "./AddProjectModal";
 
 interface Project {
-  id: string;
+  id?: string;
   title: string;
   description: string;
   technologies: string[];
@@ -25,7 +25,7 @@ export function Portfolio({ projects = [], isOwner }: PortfolioProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
-  const handleAddProject = (project: Project) => {
+  const handleAddProject = (project: Omit<Project, "id">) => {
     // Cette fonction sera implémentée pour ajouter un projet à la base de données
     console.log("Ajouter projet:", project);
     setShowAddModal(false);
@@ -69,8 +69,8 @@ export function Portfolio({ projects = [], isOwner }: PortfolioProps) {
         </Card>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <Card key={project.id} className="overflow-hidden">
+          {projects.map((project, index) => (
+            <Card key={project.id || `project-${index}`} className="overflow-hidden">
               {project.image_url && (
                 <div className="aspect-video w-full overflow-hidden">
                   <img
@@ -88,8 +88,8 @@ export function Portfolio({ projects = [], isOwner }: PortfolioProps) {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {project.technologies.map((tech) => (
-                    <Badge key={tech} variant="secondary">
+                  {project.technologies.map((tech, idx) => (
+                    <Badge key={`${tech}-${idx}`} variant="secondary">
                       {tech}
                     </Badge>
                   ))}

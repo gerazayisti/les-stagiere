@@ -1,25 +1,16 @@
-import { useState, useMemo } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
-import { Badge } from "./Badge";
-import { Star, Quote, Calendar, Building2, Filter } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { AddRecommendationModal } from "./AddRecommendationModal";
+import { Lock, Star, Award, Building2, Calendar, Info } from "lucide-react";
 
 interface Recommendation {
   id: string;
   entreprise_id: string;
+  entreprise_name?: string;
+  entreprise_logo?: string;
   position: string;
   department: string;
   period: string;
@@ -32,138 +23,135 @@ interface Recommendation {
   is_public: boolean;
   created_at: string;
   updated_at: string;
-  entreprise?: {
-    name: string;
-    logo_url: string;
-  };
 }
 
 interface RecommendationsProps {
   recommendations: Recommendation[];
   isOwner: boolean;
   stagiaireId: string;
+  isPremium?: boolean;
 }
 
-export function Recommendations({ recommendations, isOwner }: RecommendationsProps) {
-  const [sortBy, setSortBy] = useState<"date" | "rating">("date");
-  const [filterEntreprise, setFilterEntreprise] = useState<string>("all");
+export function Recommendations({ recommendations = [], isOwner, stagiaireId, isPremium = false }: RecommendationsProps) {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingRecommendation, setEditingRecommendation] = useState<Recommendation | null>(null);
 
-  // Extraire la liste unique des entreprises
-  const entreprises = useMemo(() => {
-    const uniqueEntreprises = new Set(
-      recommendations.map((rec) => rec.entreprise?.name || "Inconnue")
-    );
-    return Array.from(uniqueEntreprises);
-  }, [recommendations]);
+  const handleAddRecommendation = (recommendation: Omit<Recommendation, "id">) => {
+    // Cette fonction sera implémentée pour ajouter une recommandation à la base de données
+    console.log("Ajouter recommandation:", recommendation);
+    setShowAddModal(false);
+  };
 
-  // Trier et filtrer les recommandations
-  const sortedAndFilteredRecommendations = useMemo(() => {
-    let filtered = recommendations;
+  const handleEditRecommendation = (recommendation: Recommendation) => {
+    setEditingRecommendation(recommendation);
+    setShowAddModal(true);
+  };
 
-    // Filtrer par entreprise
-    if (filterEntreprise !== "all") {
-      filtered = filtered.filter(
-        (rec) => rec.entreprise?.name === filterEntreprise
-      );
-    }
-
-    // Trier
-    return [...filtered].sort((a, b) => {
-      if (sortBy === "date") {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-      return b.rating - a.rating;
-    });
-  }, [recommendations, sortBy, filterEntreprise]);
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "long",
-    });
+  // Fonction pour rendre les étoiles selon la note (rating)
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`w-4 h-4 ${i < rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`}
+      />
+    ));
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Recommandations</h2>
-        <div className="flex gap-4">
-          <Select value={sortBy} onValueChange={(value: "date" | "rating") => setSortBy(value)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Trier par..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date">Date</SelectItem>
-              <SelectItem value="rating">Note</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={filterEntreprise} onValueChange={setFilterEntreprise}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filtrer par entreprise" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes les entreprises</SelectItem>
-              {entreprises.map((entreprise) => (
-                <SelectItem key={entreprise} value={entreprise}>
-                  {entreprise}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <h2 className="text-xl font-semibold">Recommandations</h2>
+        {isOwner && isPremium && (
+          <Button onClick={() => setShowAddModal(true)}>
+            Demander une recommandation
+          </Button>
+        )}
       </div>
 
-      <div className="grid gap-6">
-        {sortedAndFilteredRecommendations.map((recommendation) => (
-          <Card key={recommendation.id} className="p-6">
-            <div className="flex items-start gap-4">
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={recommendation.entreprise?.logo_url} />
-                <AvatarFallback>
-                  {recommendation.entreprise?.name?.[0] || "E"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold">
-                      {recommendation.entreprise?.name || "Entreprise"}
-                    </h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{recommendation.position}</span>
-                      <span>•</span>
-                      <span>{recommendation.department}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {formatDate(recommendation.start_date)} - {formatDate(recommendation.end_date)}
-                      </span>
+      {!isPremium && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start space-x-4">
+              <Lock className="w-8 h-8 text-primary mt-1" />
+              <div>
+                <h3 className="font-semibold text-lg mb-2">Fonctionnalité premium</h3>
+                <p className="text-muted-foreground mb-4">
+                  Les recommandations vérifiées sont disponibles uniquement pour les utilisateurs premium.
+                  Elles permettent de prouver votre expérience et vos compétences auprès des recruteurs.
+                </p>
+                <Button>Passer à la version premium</Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {recommendations.length === 0 && isPremium ? (
+        <Card className="p-6 text-center">
+          <div className="py-12">
+            <Award className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
+            <h3 className="mt-4 text-lg font-medium">Aucune recommandation</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {isOwner
+                ? "Demandez des recommandations à vos anciens maîtres de stage ou employeurs pour renforcer votre profil."
+                : "Ce profil n'a pas encore reçu de recommandations."}
+            </p>
+            {isOwner && (
+              <Button
+                className="mt-4"
+                onClick={() => setShowAddModal(true)}
+              >
+                Demander ma première recommandation
+              </Button>
+            )}
+          </div>
+        </Card>
+      ) : (
+        <>
+          {recommendations.map((recommendation) => (
+            <Card key={recommendation.id} className="overflow-hidden">
+              <CardHeader>
+                <div className="flex justify-between">
+                  <div className="flex items-center gap-4">
+                    {recommendation.entreprise_logo ? (
+                      <img
+                        src={recommendation.entreprise_logo}
+                        alt={recommendation.entreprise_name || "Entreprise"}
+                        className="w-10 h-10 rounded-full object-cover border"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Building2 className="w-5 h-5 text-primary" />
+                      </div>
+                    )}
+                    <div>
+                      <CardTitle className="text-lg">
+                        {recommendation.entreprise_name || "Entreprise"}
+                      </CardTitle>
+                      <CardDescription>
+                        {recommendation.position} • {recommendation.department}
+                      </CardDescription>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-4 h-4 ${
-                          i < recommendation.rating
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    ))}
+                    {renderStars(recommendation.rating)}
                   </div>
                 </div>
-
-                <div className="mt-4">
-                  <Quote className="w-8 h-8 text-muted-foreground/20 mb-2" />
-                  <p className="text-muted-foreground">{recommendation.content}</p>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 flex items-center text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4 mr-1" />
+                  <span>
+                    {recommendation.period || `${recommendation.start_date} - ${recommendation.end_date}`}
+                  </span>
                 </div>
+                <p className="mb-4 text-muted-foreground whitespace-pre-wrap">
+                  {recommendation.content}
+                </p>
 
-                {recommendation.skills && recommendation.skills.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-semibold mb-2">Compétences démontrées</h4>
+                {recommendation.skills?.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium mb-2">Compétences</p>
                     <div className="flex flex-wrap gap-2">
                       {recommendation.skills.map((skill, index) => (
                         <Badge key={index} variant="secondary">
@@ -174,9 +162,9 @@ export function Recommendations({ recommendations, isOwner }: RecommendationsPro
                   </div>
                 )}
 
-                {recommendation.achievements && recommendation.achievements.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-semibold mb-2">Réalisations</h4>
+                {recommendation.achievements?.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Réalisations</p>
                     <ul className="list-disc list-inside text-sm text-muted-foreground">
                       {recommendation.achievements.map((achievement, index) => (
                         <li key={index}>{achievement}</li>
@@ -184,11 +172,41 @@ export function Recommendations({ recommendations, isOwner }: RecommendationsPro
                     </ul>
                   </div>
                 )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+              {isOwner && (
+                <CardFooter className="bg-muted/50 px-6 py-3">
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Info className="w-4 h-4" />
+                      <span>
+                        {recommendation.is_public
+                          ? "Cette recommandation est publique"
+                          : "Cette recommandation est privée"}
+                      </span>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => handleEditRecommendation(recommendation)}>
+                      Modifier
+                    </Button>
+                  </div>
+                </CardFooter>
+              )}
+            </Card>
+          ))}
+        </>
+      )}
+
+      {showAddModal && (
+        <AddRecommendationModal
+          isOpen={showAddModal}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingRecommendation(null);
+          }}
+          onSubmit={handleAddRecommendation}
+          initialData={editingRecommendation}
+          stagiaire={{ id: stagiaireId }}
+        />
+      )}
     </div>
   );
 }

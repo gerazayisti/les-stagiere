@@ -1,231 +1,212 @@
-import { useState, useRef, useCallback } from 'react'
-import ReactCrop, { Crop } from 'react-image-crop'
-import 'react-image-crop/dist/ReactCrop.css'
-import { auth } from '@/lib/auth'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { toast } from 'sonner'
+
+import { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { User2, Camera, PenSquare, Trash2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { auth } from "@/lib/auth";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AvatarUploadProps {
-  currentUrl?: string
-  userName: string
-  onUploadComplete?: (url: string) => void
+  imageUrl?: string;
+  username?: string;
+  size?: "sm" | "md" | "lg";
+  onChange?: (url: string) => void;
+  onDelete?: () => void;
+  className?: string;
 }
 
-export function AvatarUpload({ currentUrl, userName, onUploadComplete }: AvatarUploadProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [crop, setCrop] = useState<Crop>({
-    unit: '%',
-    width: 100,
-    height: 100,
-    x: 0,
-    y: 0
-  })
-  const [loading, setLoading] = useState(false)
-  const imageRef = useRef<HTMLImageElement | null>(null)
+export function AvatarUpload({
+  imageUrl,
+  username,
+  size = "md",
+  onChange,
+  onDelete,
+  className,
+}: AvatarUploadProps) {
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
-  // Obtenir les initiales pour l'avatar par défaut
+  const dimensions = {
+    sm: "h-12 w-12",
+    md: "h-20 w-20", 
+    lg: "h-32 w-32",
+  };
+
+  const iconSize = {
+    sm: "h-4 w-4",
+    md: "h-6 w-6",
+    lg: "h-8 w-8",
+  };
+
+  const handleClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovering(false);
+  };
+
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
       .toUpperCase()
-  }
+      .substring(0, 2);
+  };
 
-  // Gérer la sélection du fichier
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      // Vérifier le type et la taille
-      try {
-        if (!file.type.startsWith('image/')) {
-          throw new Error('Veuillez sélectionner une image')
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validation
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      toast({
+        title: "Fichier trop volumineux",
+        description: "L'image doit faire moins de 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Format invalide",
+        description: "Veuillez sélectionner une image",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Si un avatar existant doit être supprimé
+      if (imageUrl && imageUrl.includes("public") && !imageUrl.includes("ui-avatars.com")) {
+        try {
+          await auth.deleteAvatar(imageUrl);
+        } catch (error) {
+          console.error("Erreur lors de la suppression de l'avatar :", error);
         }
-        if (file.size > 5 * 1024 * 1024) {
-          throw new Error('L\'image ne doit pas dépasser 5MB')
+      }
+
+      // Upload du nouvel avatar
+      if (user?.id) {
+        const newImageUrl = await auth.uploadAvatar(file, user.id);
+        if (onChange) {
+          onChange(newImageUrl);
         }
 
-        setSelectedFile(file)
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          setPreviewUrl(reader.result as string)
-        }
-        reader.readAsDataURL(file)
-        setIsOpen(true)
-      } catch (error: any) {
-        toast.error(error.message)
+        toast({
+          title: "Avatar mis à jour",
+          description: "Votre avatar a été mis à jour avec succès",
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors du téléchargement :", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger l'image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
     }
-  }
+  };
 
-  // Recadrer l'image
-  const cropImage = useCallback(async () => {
-    if (!imageRef.current || !selectedFile) return null
-
-    const canvas = document.createElement('canvas')
-    const scaleX = imageRef.current.naturalWidth / imageRef.current.width
-    const scaleY = imageRef.current.naturalHeight / imageRef.current.height
-    const pixelRatio = window.devicePixelRatio
-    
-    canvas.width = crop.width * scaleX
-    canvas.height = crop.height * scaleY
-    
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return null
-
-    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
-    ctx.imageSmoothingQuality = 'high'
-
-    ctx.drawImage(
-      imageRef.current,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
-      0,
-      0,
-      crop.width * scaleX,
-      crop.height * scaleY
-    )
-
-    // Convertir le canvas en blob
-    return new Promise<File>((resolve) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            const file = new File([blob], selectedFile.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            })
-            resolve(file)
-          }
-        },
-        'image/jpeg',
-        1
-      )
-    })
-  }, [crop, selectedFile])
-
-  // Sauvegarder l'avatar
-  const handleSave = async () => {
-    try {
-      setLoading(true)
-      const croppedImage = await cropImage()
-      if (!croppedImage) throw new Error('Erreur lors du recadrage')
-
-      const url = await auth.uploadAvatar(croppedImage)
-      onUploadComplete?.(url)
-      setIsOpen(false)
-      toast.success('Avatar mis à jour avec succès')
-    } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la mise à jour de l\'avatar')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Supprimer l'avatar
   const handleDelete = async () => {
+    if (!imageUrl || !onDelete) return;
+
+    setIsLoading(true);
     try {
-      setLoading(true)
-      const url = await auth.deleteAvatar()
-      onUploadComplete?.(url)
-      toast.success('Avatar supprimé avec succès')
-    } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la suppression de l\'avatar')
+      if (imageUrl.includes("public") && !imageUrl.includes("ui-avatars.com")) {
+        await auth.deleteAvatar(imageUrl);
+      }
+      onDelete();
+      toast({
+        title: "Avatar supprimé",
+        description: "Votre avatar a été supprimé avec succès",
+      });
+    } catch (error) {
+      console.error("Erreur lors de la suppression :", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'image",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="relative group">
-        <Avatar className="h-24 w-24">
-          <AvatarImage src={currentUrl} alt={userName} />
-          <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+    <div className={className}>
+      <div
+        className={`relative inline-block ${isLoading ? "opacity-50" : ""}`}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <Avatar className={`${dimensions[size]} cursor-pointer`} onClick={handleClick}>
+          <AvatarImage src={imageUrl} alt={username || "Avatar"} />
+          <AvatarFallback>
+            {username ? getInitials(username) : <User2 className={iconSize[size]} />}
+          </AvatarFallback>
         </Avatar>
-        
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-          <label className="cursor-pointer p-2">
-            <input
-              type="file"
-              className="hidden"
-              accept="image/*"
-              onChange={handleFileSelect}
-            />
-            <span className="text-white text-sm">Modifier</span>
-          </label>
-        </div>
+
+        {isHovering && !isLoading && (
+          <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+            <div className="flex flex-col items-center">
+              <Camera className="text-white" />
+              {size === "lg" && <span className="text-white text-xs mt-1">Modifier</span>}
+            </div>
+          </div>
+        )}
+
+        {size === "lg" && imageUrl && onDelete && (
+          <Button
+            size="icon"
+            variant="destructive"
+            className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+            onClick={handleDelete}
+            disabled={isLoading}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+
+        {size === "lg" && (
+          <Button
+            size="icon"
+            variant="secondary"
+            className="absolute -bottom-2 -left-2 h-8 w-8 rounded-full"
+            onClick={handleClick}
+            disabled={isLoading}
+          >
+            <PenSquare className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      {currentUrl && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleDelete}
-          disabled={loading}
-        >
-          Supprimer l'avatar
-        </Button>
-      )}
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Modifier l'avatar</DialogTitle>
-            <DialogDescription>
-              Recadrez votre image pour l'adapter au format avatar
-            </DialogDescription>
-          </DialogHeader>
-          
-          {previewUrl && (
-            <div className="mt-4">
-              <ReactCrop
-                crop={crop}
-                onChange={c => setCrop(c)}
-                aspect={1}
-                circularCrop
-              >
-                <img
-                  ref={imageRef}
-                  src={previewUrl}
-                  alt="Aperçu"
-                  className="max-h-[400px] w-auto"
-                />
-              </ReactCrop>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setIsOpen(false)}
-              disabled={loading}
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={loading}
-            >
-              {loading ? 'Enregistrement...' : 'Enregistrer'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/*"
+      />
     </div>
-  )
+  );
 }

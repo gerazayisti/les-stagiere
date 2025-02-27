@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { auth } from "@/lib/auth"
@@ -22,13 +23,13 @@ export default function Connexion() {
     setLoading(true)
 
     try {
-      const { user, profile } = await auth.signIn(formData)
+      const { user } = await auth.signIn(formData)
       
       // Rediriger selon le rôle
       if (user.user_metadata.role === 'entreprise') {
-        navigate('/profil-entreprise')
+        navigate('/entreprises/' + user.id)
       } else {
-        navigate('/profil-stagiaire')
+        navigate('/stagiaires/' + user.id)
       }
       
       toast.success("Connexion réussie !")

@@ -1,3 +1,4 @@
+
 import Navigation from "@/components/Navigation";
 import { Search, MapPin, Building2, Calendar, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -5,7 +6,7 @@ import { useState } from 'react';
 import { useRealtimeStages } from '@/hooks/useRealtime';
 
 interface Stage {
-  id: number;
+  id: string;
   titre: string;
   entreprise: string;
   lieu: string;
@@ -20,11 +21,12 @@ const OffresStages = () => {
   // Souscription aux mises à jour en temps réel
   useRealtimeStages((event) => {
     if (event.eventType === 'INSERT') {
-      setStages((prev) => [event.new as Stage, ...prev])
+      const newStage = event.new as unknown as Stage;
+      setStages((prev) => [newStage, ...prev])
     } else if (event.eventType === 'UPDATE') {
       setStages((prev) =>
         prev.map((stage) =>
-          stage.id === event.new.id ? (event.new as Stage) : stage
+          stage.id === event.new.id ? (event.new as unknown as Stage) : stage
         )
       )
     } else if (event.eventType === 'DELETE') {

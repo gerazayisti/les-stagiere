@@ -1,6 +1,7 @@
+
 import { supabase } from './supabase'
 
-export type UserRole = 'stagiaire' | 'entreprise'
+export type UserRole = 'stagiaire' | 'entreprise' | 'admin'
 
 interface SignUpData {
   email: string
@@ -128,28 +129,59 @@ export const initAuthListener = () => {
         table: 'users',
       },
       async (payload) => {
-        // Récupérer les données complètes de l'utilisateur
-        const { data: userData, error } = await supabase.auth.admin.getUserById(
-          payload.new.id
-        )
-        
-        if (error) {
-          console.error('Erreur lors de la récupération des données utilisateur:', error)
-          return
-        }
+        if (payload.new && typeof payload.new === 'object' && 'id' in payload.new) {
+          const { data: userData, error } = await supabase.auth.admin.getUserById(
+            payload.new.id as string
+          )
+          
+          if (error) {
+            console.error('Erreur lors de la récupération des données utilisateur:', error)
+            return
+          }
 
-        await syncUserData(userData.user)
+          await syncUserData(userData.user)
+        }
       }
     )
     .subscribe()
 }
+
+// Fonction pour télécharger et supprimer un avatar
+export const uploadAvatar = async (file: File, userId: string): Promise<string> => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${userId}-${Math.random()}.${fileExt}`;
+  const filePath = `avatars/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('public')
+    .upload(filePath, file);
+
+  if (uploadError) throw uploadError;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('public')
+    .getPublicUrl(filePath);
+
+  return publicUrl;
+};
+
+export const deleteAvatar = async (url: string): Promise<void> => {
+  const path = url.split('/').pop();
+  if (!path) return;
+  
+  const { error } = await supabase.storage
+    .from('public')
+    .remove([`avatars/${path}`]);
+
+  if (error) throw error;
+};
 
 export const auth = {
   async signUp(data: SignUpData) {
     const { email, password, role, name } = data
 
     return withRetry(async () => {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const result = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -161,20 +193,20 @@ export const auth = {
         },
       })
 
-      if (authError) throw authError
-      return authData
+      if (result.error) throw result.error
+      return result
     })
   },
 
   async signIn({ email, password }: SignInData) {
     return withRetry(async () => {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const result = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
-      return data
+      if (result.error) throw result.error
+      return result.data
     })
   },
 
@@ -211,6 +243,10 @@ export const auth = {
     return authData
   },
 
+  // Nouvelles fonctions ajoutées pour les opérations sur les avatars
+  uploadAvatar,
+  deleteAvatar,
+
   // Nouvelle fonction pour initialiser les données de test
   initializeTestData: async () => {
     try {
@@ -218,37 +254,34 @@ export const auth = {
       const adminEmail = 'admin@les-stagiaires.fr'
       const adminPassword = 'admin123'
       
-      const { data: adminData, error: adminError } = await auth.signUp(
-        adminEmail,
-        adminPassword,
-        'admin'
-      )
+      const adminSignUp = await auth.signUp({
+        email: adminEmail,
+        password: adminPassword,
+        role: 'admin',
+        name: 'Admin'
+      })
       
-      if (adminError) throw adminError
-
       // Créer une entreprise de test
       const entrepriseEmail = 'entreprise@test.fr'
       const entreprisePassword = 'test123'
       
-      const { data: entrepriseData, error: entrepriseError } = await auth.signUp(
-        entrepriseEmail,
-        entreprisePassword,
-        'entreprise'
-      )
+      const entrepriseSignUp = await auth.signUp({
+        email: entrepriseEmail,
+        password: entreprisePassword,
+        role: 'entreprise',
+        name: 'Entreprise Test'
+      })
       
-      if (entrepriseError) throw entrepriseError
-
       // Créer un stagiaire de test
       const stagiaireEmail = 'stagiaire@test.fr'
       const stagiairePassword = 'test123'
       
-      const { data: stagiaireData, error: stagiaireError } = await auth.signUp(
-        stagiaireEmail,
-        stagiairePassword,
-        'stagiaire'
-      )
-      
-      if (stagiaireError) throw stagiaireError
+      const stagiaireSignUp = await auth.signUp({
+        email: stagiaireEmail,
+        password: stagiairePassword,
+        role: 'stagiaire',
+        name: 'Stagiaire Test'
+      })
 
       return { success: true, message: 'Données de test initialisées avec succès' }
     } catch (error) {

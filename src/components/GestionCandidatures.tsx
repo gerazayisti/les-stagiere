@@ -266,7 +266,7 @@ export function GestionCandidatures({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-2xl">
             <ChatDiscussion
-              candidatureId={chatCandidature.id}
+              candidatureId={chatCandidature.id.toString()} // Conversion en string
               entreprise={{
                 id: "entreprise-1", // À remplacer par l'ID réel de l'entreprise
                 name: "TechCorp", // À remplacer par le nom réel de l'entreprise
@@ -274,8 +274,8 @@ export function GestionCandidatures({
               }}
               candidat={{
                 id: chatCandidature.candidat.id.toString(),
-                name: chatCandidature.candidat.nom,
-                avatar: chatCandidature.candidat.photo
+                name: candidature.candidat.nom,
+                avatar: candidature.candidat.photo
               }}
               onClose={() => setChatCandidature(null)}
             />
