@@ -1,148 +1,148 @@
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { auth, UserRole } from "@/lib/auth"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { toast } from "sonner"
+import { Eye, EyeOff } from "lucide-react"
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import Navigation from "@/components/Navigation";
-import { Users, Building2, ArrowLeft } from "lucide-react";
+export default function Inscription() {
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    name: "",
+    role: "stagiaire" as UserRole,
+  })
 
-const Inscription = () => {
-  const [accountType, setAccountType] = useState<"stagiaire" | "entreprise">("stagiaire");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      await auth.signUp(formData)
+      
+      toast.success("Inscription réussie ! Veuillez vérifier votre email pour continuer.")
+      navigate('/connexion')
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de l'inscription")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      
-      <div className="max-w-6xl mx-auto pt-32 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md mx-auto">
-          <Link to="/connexion" className="inline-flex items-center text-gray hover:text-primary mb-8">
-            <ArrowLeft size={20} className="mr-2" />
-            Retour à la connexion
-          </Link>
-
-          <h1 className="text-3xl font-display font-bold text-center mb-8 animate-fade-in">
-            Créer un compte
-          </h1>
-
-          {/* Account Type Selection */}
-          <div className="bg-white rounded-lg p-1 flex mb-8 shadow-sm animate-slide-up">
-            <button
-              onClick={() => setAccountType("stagiaire")}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-md transition-colors ${
-                accountType === "stagiaire"
-                  ? "bg-primary text-white"
-                  : "text-gray hover:bg-gray-light"
-              }`}
-            >
-              <Users size={20} />
-              Stagiaire
-            </button>
-            <button
-              onClick={() => setAccountType("entreprise")}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-md transition-colors ${
-                accountType === "entreprise"
-                  ? "bg-primary text-white"
-                  : "text-gray hover:bg-gray-light"
-              }`}
-            >
-              <Building2 size={20} />
-              Entreprise
-            </button>
-          </div>
-
-          {/* Registration Form */}
-          <div className="bg-white rounded-lg p-8 shadow-sm animate-fade-in">
-            <form className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray">
-                    Prénom
-                  </label>
-                  <input
-                    type="text"
-                    id="firstName"
-                    className="mt-1 block w-full px-3 py-2 bg-gray-light border border-gray-200 rounded-md text-sm shadow-sm placeholder-gray-400
-                      focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                    placeholder="Jean"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray">
-                    Nom
-                  </label>
-                  <input
-                    type="text"
-                    id="lastName"
-                    className="mt-1 block w-full px-3 py-2 bg-gray-light border border-gray-200 rounded-md text-sm shadow-sm placeholder-gray-400
-                      focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                    placeholder="Dupont"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray">
-                  Adresse email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  className="mt-1 block w-full px-3 py-2 bg-gray-light border border-gray-200 rounded-md text-sm shadow-sm placeholder-gray-400
-                    focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                  placeholder="exemple@email.com"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray">
-                  Mot de passe
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  className="mt-1 block w-full px-3 py-2 bg-gray-light border border-gray-200 rounded-md text-sm shadow-sm placeholder-gray-400
-                    focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                  placeholder="••••••••"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray">
-                  Confirmer le mot de passe
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  className="mt-1 block w-full px-3 py-2 bg-gray-light border border-gray-200 rounded-md text-sm shadow-sm placeholder-gray-400
-                    focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                  placeholder="••••••••"
-                />
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  id="terms"
-                  type="checkbox"
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-200 rounded"
-                />
-                <label htmlFor="terms" className="ml-2 block text-sm text-gray">
-                  J'accepte les{" "}
-                  <Link to="/conditions" className="text-primary hover:text-primary-dark">
-                    conditions d'utilisation
-                  </Link>
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Inscription</CardTitle>
+          <CardDescription>
+            Créez votre compte pour accéder à la plateforme
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Type de compte</Label>
+              <Select
+                value={formData.role}
+                onValueChange={(value: UserRole) => 
+                  setFormData({ ...formData, role: value })
+                }
               >
-                Créer mon compte
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez votre profil" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stagiaire">Stagiaire</SelectItem>
+                  <SelectItem value="entreprise">Entreprise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-export default Inscription;
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                {formData.role === 'entreprise' ? "Nom de l'entreprise" : "Nom complet"}
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="votre@email.com"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Mot de passe</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-500" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end">
+              <a href="/connexion" className="text-sm text-primary hover:underline">
+                Déjà un compte ? Se connecter
+              </a>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Inscription..." : "S'inscrire"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

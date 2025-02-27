@@ -1,38 +1,36 @@
-
 import Navigation from "@/components/Navigation";
 import { Search, MapPin, Building2, Calendar, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from 'react';
+import { useRealtimeStages } from '@/hooks/useRealtime';
+
+interface Stage {
+  id: number;
+  titre: string;
+  entreprise: string;
+  lieu: string;
+  duree: string;
+  description: string;
+  tags: string[];
+}
 
 const OffresStages = () => {
-  const stages = [
-    {
-      id: 1,
-      titre: "Développeur Full-Stack",
-      entreprise: "TechCorp",
-      lieu: "Paris",
-      duree: "6 mois",
-      description: "Rejoignez notre équipe dynamique pour développer des applications web innovantes...",
-      tags: ["React", "Node.js", "TypeScript"],
-    },
-    {
-      id: 2,
-      titre: "UI/UX Designer",
-      entreprise: "DesignStudio",
-      lieu: "Lyon",
-      duree: "4 mois",
-      description: "Participez à la conception d'interfaces utilisateur pour nos clients internationaux...",
-      tags: ["Figma", "Adobe XD", "Prototype"],
-    },
-    {
-      id: 3,
-      titre: "Data Analyst",
-      entreprise: "DataInsight",
-      lieu: "Bordeaux",
-      duree: "5 mois",
-      description: "Analysez les données de nos clients pour en extraire des insights pertinents...",
-      tags: ["Python", "SQL", "Tableau"],
-    },
-  ];
+  const [stages, setStages] = useState<Stage[]>([]);
+
+  // Souscription aux mises à jour en temps réel
+  useRealtimeStages((event) => {
+    if (event.eventType === 'INSERT') {
+      setStages((prev) => [event.new as Stage, ...prev])
+    } else if (event.eventType === 'UPDATE') {
+      setStages((prev) =>
+        prev.map((stage) =>
+          stage.id === event.new.id ? (event.new as Stage) : stage
+        )
+      )
+    } else if (event.eventType === 'DELETE') {
+      setStages((prev) => prev.filter((stage) => stage.id !== event.old.id))
+    }
+  })
 
   return (
     <div className="min-h-screen bg-gray-50">
