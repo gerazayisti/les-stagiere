@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ interface Candidat {
   photo: string;
   disponibilite: string;
   hasRecommendation?: boolean;
+  location?: string; // Ajout pour compatibilité
 }
 
 interface Candidature {
@@ -168,7 +170,7 @@ export function GestionCandidatures({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <MapPin className="h-4 w-4" />
-                  {candidature.candidat.localisation}
+                  {candidature.candidat.location || "Non spécifié"}
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {candidature.candidat.competences.map((comp) => (
@@ -250,7 +252,11 @@ export function GestionCandidatures({
 
       {selectedCandidat && (
         <ProfilCandidat
-          candidat={selectedCandidat}
+          candidat={{
+            id: selectedCandidat.id.toString(),
+            name: selectedCandidat.nom,
+            avatar: selectedCandidat.photo
+          }}
           isOpen={!!selectedCandidat}
           onClose={() => setSelectedCandidat(null)}
         />
@@ -266,7 +272,11 @@ export function GestionCandidatures({
                 name: "TechCorp", // À remplacer par le nom réel de l'entreprise
                 avatar: "https://via.placeholder.com/150", // À remplacer par l'avatar réel
               }}
-              candidat={chatCandidature.candidat}
+              candidat={{
+                id: chatCandidature.candidat.id.toString(),
+                name: chatCandidature.candidat.nom,
+                avatar: chatCandidature.candidat.photo
+              }}
               onClose={() => setChatCandidature(null)}
             />
           </div>

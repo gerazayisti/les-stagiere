@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,23 +20,40 @@ interface CV {
 }
 
 interface CVManagerProps {
-  isPremium: boolean;
-  cvs: CV[];
-  onUpload: (file: File) => void;
-  onDelete: (cvId: string) => void;
+  isPremium?: boolean;
+  cvUrl?: string;
+  cvs?: CV[];
+  onUpload: (file: File) => Promise<void>;
+  onDelete?: (cvId: string) => void;
 }
 
-export function CVManager({ isPremium, cvs, onUpload, onDelete }: CVManagerProps) {
+export function CVManager({ isPremium = false, cvUrl, cvs = [], onUpload, onDelete }: CVManagerProps) {
   const [showAnalyzer, setShowAnalyzer] = useState(false);
+  
+  // Créer un CV à partir de cvUrl si fourni et cvs est vide
+  const actualCvs = cvs.length > 0 ? cvs : (
+    cvUrl ? [{
+      id: "current-cv",
+      name: "CV actuel",
+      url: cvUrl,
+      uploadDate: "Non spécifié"
+    }] : []
+  );
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (!isPremium && cvs.length >= 1) {
+      if (!isPremium && actualCvs.length >= 1) {
         alert("Version gratuite limitée à 1 CV. Passez à la version premium pour plus.");
         return;
       }
       onUpload(file);
+    }
+  };
+
+  const handleDelete = (cvId: string) => {
+    if (onDelete) {
+      onDelete(cvId);
     }
   };
 
@@ -68,7 +86,7 @@ export function CVManager({ isPremium, cvs, onUpload, onDelete }: CVManagerProps
         </div>
       </div>
 
-      {!isPremium && cvs.length === 0 && (
+      {!isPremium && actualCvs.length === 0 && (
         <Card className="p-6">
           <div className="flex items-center gap-4 text-muted-foreground">
             <AlertCircle className="w-8 h-8" />
@@ -82,7 +100,7 @@ export function CVManager({ isPremium, cvs, onUpload, onDelete }: CVManagerProps
 
       {/* Liste des CV */}
       <div className="grid gap-4">
-        {cvs.map((cv) => (
+        {actualCvs.map((cv) => (
           <Card key={cv.id} className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -95,13 +113,25 @@ export function CVManager({ isPremium, cvs, onUpload, onDelete }: CVManagerProps
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete(cv.id)}
+                <a 
+                  href={cv.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
                 >
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
+                  <Button variant="ghost" size="sm">
+                    Voir
+                  </Button>
+                </a>
+                {onDelete && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(cv.id)}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                )}
               </div>
             </div>
           </Card>

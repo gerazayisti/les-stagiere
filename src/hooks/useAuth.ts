@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +8,7 @@ export interface User {
   id: string;
   email: string;
   role: 'stagiaire' | 'entreprise' | 'admin';
-  email_verified: boolean;
+  email_confirmed_at?: string; // Utilisons email_confirmed_at au lieu de email_verified
 }
 
 export function useAuth() {
@@ -29,7 +30,7 @@ export function useAuth() {
           id: session.user.id,
           email: session.user.email!,
           role: role,
-          email_verified: session.user.email_verified
+          email_confirmed_at: session.user.email_confirmed_at
         });
         setUserRole(role);
       } else {
@@ -58,7 +59,7 @@ export function useAuth() {
           id: session.user.id,
           email: session.user.email!,
           role: role,
-          email_verified: session.user.email_verified
+          email_confirmed_at: session.user.email_confirmed_at
         });
         setUserRole(role);
       }
@@ -98,6 +99,6 @@ export function useAuth() {
     loading,
     signOut,
     isAuthenticated: !!user,
-    isEmailVerified: user?.email_verified || false
+    isEmailVerified: !!user?.email_confirmed_at
   };
 }

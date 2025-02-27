@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -12,13 +13,17 @@ export interface ProfileStatus {
   isComplete: boolean;
   missingFields: string[];
   profile: any | null;
+  userId?: string | null;
+  userRole?: string | null;
 }
 
 export function useProfileCompletion({ userId, userRole }: UseProfileCompletionProps = {}) {
   const [status, setStatus] = useState<ProfileStatus>({
     isComplete: false,
     missingFields: [],
-    profile: null
+    profile: null,
+    userId,
+    userRole
   });
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
@@ -52,7 +57,9 @@ export function useProfileCompletion({ userId, userRole }: UseProfileCompletionP
       setStatus({
         isComplete: false,
         missingFields: [],
-        profile: null
+        profile: null,
+        userId,
+        userRole
       });
     }
   }, [userId, userRole]);
@@ -62,7 +69,9 @@ export function useProfileCompletion({ userId, userRole }: UseProfileCompletionP
       setStatus({
         isComplete: false,
         missingFields: [],
-        profile: null
+        profile: null,
+        userId,
+        userRole
       });
       setLoading(false);
       return;
@@ -86,7 +95,9 @@ export function useProfileCompletion({ userId, userRole }: UseProfileCompletionP
         setStatus({
           isComplete: false,
           missingFields: requiredFields,
-          profile: null
+          profile: null,
+          userId,
+          userRole
         });
         if (error.code !== 'PGRST116') { // Ignore l'erreur "not found"
           toast({
@@ -102,7 +113,9 @@ export function useProfileCompletion({ userId, userRole }: UseProfileCompletionP
         setStatus({
           isComplete: false,
           missingFields: requiredFields,
-          profile: null
+          profile: null,
+          userId,
+          userRole
         });
         if (window.location.pathname !== '/complete-profile') {
           navigate('/complete-profile');
@@ -123,7 +136,9 @@ export function useProfileCompletion({ userId, userRole }: UseProfileCompletionP
       setStatus({
         isComplete,
         missingFields,
-        profile
+        profile,
+        userId,
+        userRole
       });
 
       // Rediriger vers la page de complétion si le profil est incomplet
@@ -136,7 +151,9 @@ export function useProfileCompletion({ userId, userRole }: UseProfileCompletionP
       setStatus({
         isComplete: false,
         missingFields: [],
-        profile: null
+        profile: null,
+        userId,
+        userRole
       });
     } finally {
       setLoading(false);

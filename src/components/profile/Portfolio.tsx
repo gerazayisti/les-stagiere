@@ -1,182 +1,153 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AddProjectModal, Project } from "./AddProjectModal";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { PlusCircle, ExternalLink, Github, Calendar } from "lucide-react";
+import { Plus, ExternalLink, Github, Image as ImageIcon } from "lucide-react";
+import { AddProjectModal } from "./AddProjectModal";
 
-export function Portfolio() {
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedDomain, setSelectedDomain] = useState<string>("all");
-  const [projects, setProjects] = useState<Project[]>([]);
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  technologies: string[];
+  image_url?: string;
+  project_url?: string;
+  github_url?: string;
+}
 
-  const handleAddProject = (project: Omit<Project, "id">) => {
-    const newProject = {
-      ...project,
-      id: Date.now().toString(),
-    };
-    setProjects([...projects, newProject]);
+interface PortfolioProps {
+  projects: Project[];
+  isOwner: boolean;
+}
+
+export function Portfolio({ projects = [], isOwner }: PortfolioProps) {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+
+  const handleAddProject = (project: Project) => {
+    // Cette fonction sera implémentée pour ajouter un projet à la base de données
+    console.log("Ajouter projet:", project);
+    setShowAddModal(false);
   };
 
-  const filteredProjects = selectedDomain === "all"
-    ? projects
-    : projects.filter(project => project.domain === selectedDomain);
-
-  const domains = ["all", ...new Set(projects.map(project => project.domain))];
-
-  const getStatusColor = (status: Project["status"]) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-500";
-      case "in_progress":
-        return "bg-blue-500";
-      case "planned":
-        return "bg-orange-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
-
-  const getStatusText = (status: Project["status"]) => {
-    switch (status) {
-      case "completed":
-        return "Terminé";
-      case "in_progress":
-        return "En cours";
-      case "planned":
-        return "Planifié";
-      default:
-        return status;
-    }
+  const handleEditProject = (project: Project) => {
+    setEditingProject(project);
+    setShowAddModal(true);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex-1 w-full sm:w-auto">
-          <Select
-            value={selectedDomain}
-            onValueChange={setSelectedDomain}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrer par domaine" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les domaines</SelectItem>
-              {domains.filter(d => d !== "all").map((domain) => (
-                <SelectItem key={domain} value={domain}>
-                  {domain}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button
-          onClick={() => setIsAddModalOpen(true)}
-          className="w-full sm:w-auto"
-        >
-          <PlusCircle className="w-4 h-4 mr-2" />
-          Ajouter un projet
-        </Button>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Portfolio</h2>
+        {isOwner && (
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Ajouter un projet
+          </Button>
+        )}
       </div>
 
       {projects.length === 0 ? (
         <Card className="p-6 text-center">
-          <p className="text-muted-foreground">
-            Vous n'avez pas encore ajouté de projets à votre portfolio.
-            Commencez par ajouter votre premier projet !
-          </p>
+          <div className="py-12">
+            <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
+            <h3 className="mt-4 text-lg font-medium">Aucun projet</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {isOwner
+                ? "Commencez à montrer votre travail en ajoutant un projet à votre portfolio"
+                : "Ce profil n'a pas encore ajouté de projets à son portfolio"}
+            </p>
+            {isOwner && (
+              <Button
+                className="mt-4"
+                onClick={() => setShowAddModal(true)}
+              >
+                Ajouter votre premier projet
+              </Button>
+            )}
+          </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredProjects.map((project) => (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {projects.map((project) => (
             <Card key={project.id} className="overflow-hidden">
-              {project.imageUrl && (
-                <div className="h-48 overflow-hidden">
+              {project.image_url && (
+                <div className="aspect-video w-full overflow-hidden">
                   <img
-                    src={project.imageUrl}
+                    src={project.image_url}
                     alt={project.title}
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover transition-transform hover:scale-105"
                   />
                 </div>
               )}
-              <div className="p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-xl font-semibold">{project.title}</h3>
-                  <Badge variant="outline">{project.domain}</Badge>
-                </div>
-                
-                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>{project.startDate}</span>
-                  {project.endDate && (
-                    <>
-                      <span>-</span>
-                      <span>{project.endDate}</span>
-                    </>
-                  )}
-                </div>
-
-                <div className="mt-2">
-                  <Badge className={getStatusColor(project.status)}>
-                    {getStatusText(project.status)}
-                  </Badge>
-                </div>
-
-                <p className="mt-4 text-muted-foreground">
+              <CardHeader>
+                <CardTitle>{project.title}</CardTitle>
+                <CardDescription className="line-clamp-2">
                   {project.description}
-                </p>
-
-                <div className="flex flex-wrap gap-2 mt-4">
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
                   {project.technologies.map((tech) => (
                     <Badge key={tech} variant="secondary">
                       {tech}
                     </Badge>
                   ))}
                 </div>
-
-                <div className="flex gap-4 mt-6">
-                  {project.projectUrl && (
-                    <a
-                      href={project.projectUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center text-sm text-primary hover:underline"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      Voir le projet
-                    </a>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <div className="flex space-x-2">
+                  {project.github_url && (
+                    <Button size="sm" variant="outline" asChild>
+                      <a
+                        href={project.github_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Github className="mr-2 h-4 w-4" />
+                        GitHub
+                      </a>
+                    </Button>
                   )}
-                  {project.githubUrl && (
-                    <a
-                      href={project.githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center text-sm text-primary hover:underline"
-                    >
-                      <Github className="w-4 h-4 mr-1" />
-                      Code source
-                    </a>
+                  {project.project_url && (
+                    <Button size="sm" variant="outline" asChild>
+                      <a
+                        href={project.project_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Voir le projet
+                      </a>
+                    </Button>
                   )}
                 </div>
-              </div>
+                {isOwner && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleEditProject(project)}
+                  >
+                    Modifier
+                  </Button>
+                )}
+              </CardFooter>
             </Card>
           ))}
         </div>
       )}
 
-      <AddProjectModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={handleAddProject}
-      />
+      {showAddModal && (
+        <AddProjectModal
+          isOpen={showAddModal}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingProject(null);
+          }}
+          onSubmit={handleAddProject}
+          initialData={editingProject}
+        />
+      )}
     </div>
   );
 }

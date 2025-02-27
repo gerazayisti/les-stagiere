@@ -1,4 +1,5 @@
-import { ReactNode } from 'react';
+
+import { ReactNode, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,7 +11,16 @@ interface RequireProfileCompletionProps {
 
 export function RequireProfileCompletion({ children }: RequireProfileCompletionProps) {
   const { user, userRole, loading: authLoading } = useAuth();
-  const { isComplete, loading: profileLoading, userId, userRole: profileUserRole } = useProfileCompletion();
+  const { isComplete, loading: profileLoading, checkProfileCompletion } = useProfileCompletion({ 
+    userId: user?.id, 
+    userRole: user?.role 
+  });
+
+  useEffect(() => {
+    if (user) {
+      checkProfileCompletion();
+    }
+  }, [user, checkProfileCompletion]);
 
   // Si l'authentification est en cours de chargement
   if (authLoading || profileLoading) {
