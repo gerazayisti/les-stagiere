@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import {
@@ -20,6 +20,7 @@ export default function Navigation() {
   const navigate = useNavigate();
   const { user, userRole, loading, signOut, isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Obtenir les initiales du nom ou de l'email
   const getInitials = (text: string) => {
@@ -54,12 +55,21 @@ export default function Navigation() {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
-      toast.success("Vous avez été déconnecté avec succès");
-      navigate("/");
+      setIsSigningOut(true);
+      console.log("Déconnexion initiée depuis Navigation");
+      
+      // Utiliser directement l'API de Supabase pour la déconnexion
+      const success = await signOut();
+      
+      if (success) {
+        toast.success("Vous avez été déconnecté avec succès");
+        navigate("/");
+      }
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
       toast.error("Une erreur est survenue lors de la déconnexion");
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
@@ -173,9 +183,17 @@ export default function Navigation() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleSignOut}
-                    className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 flex items-center"
+                    disabled={isSigningOut}
                   >
-                    Se déconnecter
+                    {isSigningOut ? (
+                      <span className="animate-pulse">Déconnexion en cours...</span>
+                    ) : (
+                      <>
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Se déconnecter
+                      </>
+                    )}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -298,13 +316,21 @@ export default function Navigation() {
                       </Button>
                       <Button
                         variant="ghost"
-                        className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 flex items-center"
                         onClick={() => {
                           handleSignOut();
                           setIsOpen(false);
                         }}
+                        disabled={isSigningOut}
                       >
-                        Se déconnecter
+                        {isSigningOut ? (
+                          <span className="animate-pulse">Déconnexion en cours...</span>
+                        ) : (
+                          <>
+                            <LogOut className="w-4 h-4 mr-2" />
+                            Se déconnecter
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>

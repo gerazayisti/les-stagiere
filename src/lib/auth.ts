@@ -17,9 +17,9 @@ interface SignInData {
 
 // Configuration pour la gestion des retries
 const RETRY_CONFIG = {
-  maxRetries: 4,
-  initialDelay: 10000,
-  maxDelay: 30000,
+  maxRetries: 2, // Réduit pour éviter des attentes trop longues
+  initialDelay: 1000, // Réduit pour une meilleure expérience utilisateur
+  maxDelay: 5000, // Réduit pour une meilleure expérience utilisateur
   backoffFactor: 2
 }
 
@@ -31,6 +31,8 @@ async function withRetry<T>(
   try {
     return await operation()
   } catch (error: any) {
+    console.error(`Erreur (tentative ${retryCount + 1}):`, error);
+    
     if (
       retryCount >= RETRY_CONFIG.maxRetries ||
       error.status !== 429
@@ -43,6 +45,7 @@ async function withRetry<T>(
       RETRY_CONFIG.maxDelay
     )
 
+    console.log(`Rate limit atteint. Nouvelle tentative dans ${delay/1000}s...`);
     await new Promise(resolve => setTimeout(resolve, delay))
     console.log(`Tentative ${retryCount + 1}/${RETRY_CONFIG.maxRetries}...`)
     return withRetry(operation, retryCount + 1)
@@ -53,6 +56,8 @@ async function withRetry<T>(
 const syncUserData = async (authUser: any) => {
   try {
     if (!authUser) return;
+
+    console.log("Synchronisation des données utilisateur:", authUser.id);
 
     // Insérer/mettre à jour dans la table users
     const { error: userError } = await supabase
@@ -83,7 +88,7 @@ const syncUserData = async (authUser: any) => {
           preferred_locations: [],
           preferred_domains: [],
           last_active: new Date().toISOString(),
-        })
+        }, { onConflict: 'id' })
 
       if (stagiaireError) throw stagiaireError
     }
@@ -100,10 +105,12 @@ const syncUserData = async (authUser: any) => {
           industry: authUser.user_metadata?.industry || '',
           location: authUser.user_metadata?.location || '',
           benefits: [],
-        })
+        }, { onConflict: 'id' })
 
       if (entrepriseError) throw entrepriseError
     }
+    
+    console.log("Synchronisation terminée avec succès");
   } catch (error) {
     console.error('Erreur lors de la synchronisation des données:', error)
   }
@@ -113,37 +120,11 @@ const syncUserData = async (authUser: any) => {
 export const initAuthListener = () => {
   // Écouter les changements de session
   supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log("Auth state change:", event);
     if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
       await syncUserData(session?.user)
     }
   })
-
-  // Écouter les changements dans auth.users via realtime
-  supabase
-    .channel('schema-db-changes')
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'auth',
-        table: 'users',
-      },
-      async (payload) => {
-        if (payload.new && typeof payload.new === 'object' && 'id' in payload.new) {
-          const { data: userData, error } = await supabase.auth.admin.getUserById(
-            payload.new.id as string
-          )
-          
-          if (error) {
-            console.error('Erreur lors de la récupération des données utilisateur:', error)
-            return
-          }
-
-          await syncUserData(userData.user)
-        }
-      }
-    )
-    .subscribe()
 }
 
 // Fonction pour télécharger et supprimer un avatar
@@ -181,6 +162,7 @@ export const auth = {
     const { email, password, role, name } = data
 
     return withRetry(async () => {
+      console.log("Tentative d'inscription...");
       const result = await supabase.auth.signUp({
         email,
         password,
@@ -194,25 +176,38 @@ export const auth = {
       })
 
       if (result.error) throw result.error
+      
+      // Synchroniser immédiatement les données utilisateur
+      if (result.data.user) {
+        await syncUserData(result.data.user);
+      }
+      
       return result
     })
   },
 
   async signIn({ email, password }: SignInData) {
     return withRetry(async () => {
+      console.log("Tentative de connexion...");
       const result = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (result.error) throw result.error
+      
+      // Synchroniser immédiatement les données utilisateur
+      await syncUserData(result.data.user);
+      
       return result.data
     })
   },
 
   async signOut() {
+    console.log("Tentative de déconnexion depuis auth.ts...");
     const { error } = await supabase.auth.signOut()
     if (error) throw error
+    console.log("Déconnexion réussie depuis auth.ts");
   },
 
   async getCurrentUser() {

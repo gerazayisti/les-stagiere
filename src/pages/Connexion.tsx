@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 
 export default function Connexion() {
   const navigate = useNavigate()
@@ -23,19 +23,25 @@ export default function Connexion() {
     setLoading(true)
 
     try {
+      console.log("Tentative de connexion...");
       const { user } = await auth.signIn(formData)
+      console.log("Utilisateur connecté:", user);
       
-      // Rediriger selon le rôle
-      if (user.user_metadata.role === 'entreprise') {
-        navigate('/entreprises/' + user.id)
-      } else {
-        navigate('/stagiaires/' + user.id)
-      }
-      
-      toast.success("Connexion réussie !")
+      // Ajouter un court délai avant la redirection pour permettre à l'état d'auth de se propager
+      setTimeout(() => {
+        // Rediriger selon le rôle
+        if (user.user_metadata?.role === 'entreprise') {
+          navigate('/entreprises/' + user.id)
+        } else {
+          navigate('/stagiaires/' + user.id)
+        }
+        
+        toast.success("Connexion réussie !")
+        setLoading(false)
+      }, 500);
     } catch (error: any) {
+      console.error("Erreur de connexion:", error);
       toast.error(error.message || "Erreur lors de la connexion")
-    } finally {
       setLoading(false)
     }
   }
@@ -62,6 +68,7 @@ export default function Connexion() {
                   setFormData({ ...formData, email: e.target.value })
                 }
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -75,11 +82,13 @@ export default function Connexion() {
                     setFormData({ ...formData, password: e.target.value })
                   }
                   required
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2"
+                  disabled={loading}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-gray-500" />
@@ -101,7 +110,14 @@ export default function Connexion() {
               </a>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Connexion..." : "Se connecter"}
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Connexion en cours...
+                </>
+              ) : (
+                "Se connecter"
+              )}
             </Button>
           </form>
         </CardContent>

@@ -86,11 +86,21 @@ export function useAuth() {
 
   const signOut = async () => {
     try {
+      console.log("Tentative de déconnexion...");
+      setLoading(true);
+      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
+      // S'assurer que l'état est bien mis à jour
       setUser(null);
       setUserRole(null);
+      console.log("Déconnexion réussie");
+      
+      // Naviguer vers la page d'accueil
+      navigate('/');
+      
+      return true;
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
       toast("Impossible de vous déconnecter", {
@@ -98,6 +108,8 @@ export function useAuth() {
         position: "top-center"
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
