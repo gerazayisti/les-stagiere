@@ -29,25 +29,9 @@ export function useProfileCompletion({ userId, userRole }: UseProfileCompletionP
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const requiredFieldsStagiaire = [
-    'name',
-    'title',
-    'location',
-    'bio',
-    'education',
-    'skills',
-    'languages',
-    'preferred_locations'
-  ];
-
-  const requiredFieldsEntreprise = [
-    'name',
-    'description',
-    'industry',
-    'location',
-    'size',
-    'company_culture'
-  ];
+  // Nous simplifions les champs requis à seulement name et bio/description
+  const requiredFieldsStagiaire = ['name', 'bio'];
+  const requiredFieldsEntreprise = ['name', 'description'];
 
   useEffect(() => {
     if (userId && userRole) {

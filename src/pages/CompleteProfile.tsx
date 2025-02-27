@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -22,17 +23,8 @@ export default function CompleteProfile() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    title: '',
-    location: '',
     bio: '',
-    education: '',
-    skills: [],
-    languages: [],
-    preferred_locations: [],
-    description: '',
-    industry: '',
-    size: '',
-    company_culture: ''
+    description: ''
   });
 
   useEffect(() => {
@@ -52,12 +44,13 @@ export default function CompleteProfile() {
       setLoading(true);
 
       const table = authRole === 'stagiaire' ? 'stagiaires' : 'entreprises';
+      const dataToSubmit = authRole === 'stagiaire' 
+        ? { id: user.id, name: formData.name, bio: formData.bio } 
+        : { id: user.id, name: formData.name, description: formData.description };
+
       const { error } = await supabase
         .from(table)
-        .upsert({
-          id: user.id,
-          ...formData
-        });
+        .upsert(dataToSubmit);
 
       if (error) throw error;
 
@@ -87,14 +80,6 @@ export default function CompleteProfile() {
     }));
   };
 
-  const handleArrayInputChange = (name: string, value: string) => {
-    const array = value.split(',').map(item => item.trim());
-    setFormData(prev => ({
-      ...prev,
-      [name]: array
-    }));
-  };
-
   if (checkingProfile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -108,7 +93,7 @@ export default function CompleteProfile() {
       <Card className="max-w-2xl mx-auto p-6">
         <h1 className="text-2xl font-bold mb-6">Compléter votre profil</h1>
         <p className="text-gray-600 mb-6">
-          Veuillez remplir les champs suivants pour compléter votre profil :
+          Veuillez remplir les informations suivantes pour compléter votre profil :
           {missingFields.length > 0 && (
             <span className="text-red-500 block mt-2">
               Champs manquants : {missingFields.join(', ')}
@@ -117,144 +102,47 @@ export default function CompleteProfile() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Champs communs */}
+          {/* Nom */}
           <div>
-            <Label htmlFor="name">Nom</Label>
+            <Label htmlFor="name">Nom{authRole === 'entreprise' ? " de l'entreprise" : " complet"}</Label>
             <Input
               id="name"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
+              placeholder={authRole === 'entreprise' ? "Nom de votre entreprise" : "Votre nom complet"}
               required
             />
           </div>
 
+          {/* Bio ou Description */}
           {authRole === 'stagiaire' ? (
-            <>
-              <div>
-                <Label htmlFor="title">Titre</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  name="bio"
-                  value={formData.bio}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="education">Formation</Label>
-                <Input
-                  id="education"
-                  name="education"
-                  value={formData.education}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="skills">Compétences (séparées par des virgules)</Label>
-                <Input
-                  id="skills"
-                  name="skills"
-                  value={formData.skills.join(', ')}
-                  onChange={(e) => handleArrayInputChange('skills', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="languages">Langues (séparées par des virgules)</Label>
-                <Input
-                  id="languages"
-                  name="languages"
-                  value={formData.languages.join(', ')}
-                  onChange={(e) => handleArrayInputChange('languages', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="preferred_locations">Lieux préférés (séparés par des virgules)</Label>
-                <Input
-                  id="preferred_locations"
-                  name="preferred_locations"
-                  value={formData.preferred_locations.join(', ')}
-                  onChange={(e) => handleArrayInputChange('preferred_locations', e.target.value)}
-                  required
-                />
-              </div>
-            </>
+            <div>
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                name="bio"
+                value={formData.bio}
+                onChange={handleInputChange}
+                placeholder="Décrivez votre parcours et vos objectifs professionnels..."
+                className="h-32"
+                required
+              />
+            </div>
           ) : (
-            <>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="industry">Secteur d'activité</Label>
-                <Input
-                  id="industry"
-                  name="industry"
-                  value={formData.industry}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="size">Taille de l'entreprise</Label>
-                <Input
-                  id="size"
-                  name="size"
-                  value={formData.size}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="company_culture">Culture d'entreprise</Label>
-                <Textarea
-                  id="company_culture"
-                  name="company_culture"
-                  value={formData.company_culture}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-            </>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Décrivez votre entreprise, ses activités et sa mission..."
+                className="h-32"
+                required
+              />
+            </div>
           )}
-
-          <div>
-            <Label htmlFor="location">Localisation</Label>
-            <Input
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
 
           <Button type="submit" disabled={loading}>
             {loading ? (

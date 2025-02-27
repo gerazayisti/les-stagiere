@@ -31,7 +31,7 @@ import { ProfilCandidat } from "./ProfilCandidat";
 import { ChatDiscussion } from "./ChatDiscussion";
 
 interface Candidat {
-  id: number;
+  id: string; // Changé à string pour assurer la cohérence
   nom: string;
   email: string;
   telephone: string;
@@ -44,13 +44,13 @@ interface Candidat {
   photo: string;
   disponibilite: string;
   hasRecommendation?: boolean;
-  location?: string; // Ajout pour compatibilité
+  location?: string;
 }
 
 interface Candidature {
-  id: number;
+  id: string; // Changé à string pour assurer la cohérence
   candidat: Candidat;
-  stageId: number;
+  stageId: string; // Changé à string pour assurer la cohérence
   stageTitre: string;
   status: "en_attente" | "acceptee" | "refusee" | "en_discussion";
   datePostulation: Date;
@@ -59,8 +59,8 @@ interface Candidature {
 
 interface GestionCandidaturesProps {
   candidatures: Candidature[];
-  onUpdateStatus: (candidatureId: number, newStatus: Candidature["status"]) => void;
-  onAddRecommendation: (candidatId: number) => void;
+  onUpdateStatus: (candidatureId: string, newStatus: Candidature["status"]) => void;
+  onAddRecommendation: (candidatId: string) => void;
 }
 
 export function GestionCandidatures({
@@ -212,7 +212,7 @@ export function GestionCandidatures({
                     <SelectItem value="refusee">Refuser</SelectItem>
                   </SelectContent>
                 </Select>
-                {candidature.status === "en_discussion" ||candidature.status==="acceptee" && (
+                {candidature.status === "en_discussion" || candidature.status === "acceptee" && (
                   <>
                     <Button size="sm" variant="outline" className="w-full">
                       <Download className="h-4 w-4 mr-1" />
@@ -253,7 +253,7 @@ export function GestionCandidatures({
       {selectedCandidat && (
         <ProfilCandidat
           candidat={{
-            id: selectedCandidat.id.toString(),
+            id: selectedCandidat.id,
             name: selectedCandidat.nom,
             avatar: selectedCandidat.photo
           }}
@@ -266,16 +266,16 @@ export function GestionCandidatures({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-2xl">
             <ChatDiscussion
-              candidatureId={chatCandidature.id.toString()} // Conversion en string
+              candidatureId={chatCandidature.id}
               entreprise={{
                 id: "entreprise-1", // À remplacer par l'ID réel de l'entreprise
                 name: "TechCorp", // À remplacer par le nom réel de l'entreprise
                 avatar: "https://via.placeholder.com/150", // À remplacer par l'avatar réel
               }}
               candidat={{
-                id: chatCandidature.candidat.id.toString(),
-                name: candidature.candidat.nom,
-                avatar: candidature.candidat.photo
+                id: chatCandidature.candidat.id,
+                name: chatCandidature.candidat.nom,
+                avatar: chatCandidature.candidat.photo
               }}
               onClose={() => setChatCandidature(null)}
             />

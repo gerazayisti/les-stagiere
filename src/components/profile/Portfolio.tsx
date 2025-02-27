@@ -145,7 +145,6 @@ export function Portfolio({ projects = [], isOwner }: PortfolioProps) {
             setEditingProject(null);
           }}
           onSubmit={handleAddProject}
-          initialData={editingProject}
         />
       )}
     </div>

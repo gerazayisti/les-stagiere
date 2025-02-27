@@ -9,7 +9,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { Portfolio } from "@/components/profile/Portfolio";
 import { Recommendations } from "@/components/profile/Recommendations";
 import { useToast } from "@/components/ui/use-toast";
-import { Lock, ChevronUp, Shield, Star, Award, Robot } from "lucide-react";
+import { Lock, ChevronUp, Shield, Star, Award, Bot } from "lucide-react";
 
 export default function ProfilEnrichi() {
   const { user } = useAuth();
@@ -36,7 +36,7 @@ export default function ProfilEnrichi() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center">
-              <Robot className="w-5 h-5 mr-2 text-primary" />
+              <Bot className="w-5 h-5 mr-2 text-primary" />
               Analyse IA de CV
             </CardTitle>
             <CardDescription>
@@ -177,7 +177,7 @@ export default function ProfilEnrichi() {
 
         <TabsContent value="portfolio" className="space-y-4">
           <Portfolio
-            projects={[]}  // Ajout des props manquantes
+            projects={[]}
             isOwner={true}
           />
         </TabsContent>
@@ -187,7 +187,7 @@ export default function ProfilEnrichi() {
             recommendations={[]}
             isOwner={true}
             stagiaireId={user?.id || ""}
-            isPremium={isPremium}  // Assurez-vous que cette prop est correctement typée dans le composant Recommendations
+            isPremium={isPremium}
           />
         </TabsContent>
       </Tabs>
