@@ -1,3 +1,4 @@
+
 -- Politiques de sécurité RLS pour Supabase
 
 -- Politique pour la table users
@@ -8,6 +9,10 @@ CREATE POLICY "Users can view their own profile" ON users
 CREATE POLICY "Users can update their own profile" ON users
     FOR UPDATE TO authenticated
     USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert their own profile" ON users
+    FOR INSERT TO authenticated
+    WITH CHECK (auth.uid() = id);
 
 -- Politique pour la table stages
 CREATE POLICY "Stages are viewable by everyone" ON stages

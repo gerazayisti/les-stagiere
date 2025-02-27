@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -61,6 +62,9 @@ function App() {
                   <Route path="/a-propos" element={<APropos />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<ArticleDetail />} />
+
+                  {/* Redirection de l'ancienne route vers la nouvelle */}
+                  <Route path="/profil-stagiaire" element={<Navigate to="/stagiaires/:id" replace />} />
 
                   {/* Routes protégées nécessitant un profil complet */}
                   <Route

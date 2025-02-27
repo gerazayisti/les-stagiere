@@ -1,18 +1,17 @@
+
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { InteractiveCV } from "@/components/profile/InteractiveCV";
-import { Portfolio } from "@/components/profile/Portfolio";
-import { Recommendations } from "@/components/profile/Recommendations";
-import { CVManager } from "@/components/profile/CVManager";
 import { EditProfileForm } from "@/components/profile/EditProfileForm";
-import { Badge } from "@/components/profile/Badge";
-import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FileText, Briefcase, ThumbsUp, Lock, User, Loader2 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useProfile } from '@/hooks/useProfile';
 import { useStagiaire } from '@/hooks/useStagiaire';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import { AboutTab } from "@/components/profile/AboutTab";
+import { CVTab } from "@/components/profile/CVTab";
+import { Portfolio } from "@/components/profile/Portfolio";
+import { Recommendations } from "@/components/profile/Recommendations";
+import { Loader2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 export default function ProfilStagiaire() {
   const { id } = useParams();
@@ -71,46 +70,11 @@ export default function ProfilStagiaire() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* En-tête du profil */}
-      <Card className="p-6 mb-8">
-        <div className="flex flex-col md:flex-row items-center gap-6">
-          <Avatar className="w-24 h-24">
-            <AvatarImage src={stagiaire.avatar_url} />
-            <AvatarFallback>{stagiaire.name[0]}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <h1 className="text-2xl font-bold">{stagiaire.name}</h1>
-              {stagiaire.is_premium && (
-                <Badge variant="premium" />
-              )}
-            </div>
-            <p className="text-muted-foreground">{stagiaire.title}</p>
-            <div className="flex flex-wrap items-center gap-4 mt-4 justify-center md:justify-start">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <User className="w-4 h-4" />
-                <span>{stagiaire.location}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Briefcase className="w-4 h-4" />
-                <span>{stagiaire.education}</span>
-              </div>
-              {stagiaire.disponibility && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Lock className="w-4 h-4" />
-                  <span>{stagiaire.disponibility}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          {isOwner && (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
-                Modifier le profil
-              </Button>
-            </div>
-          )}
-        </div>
-      </Card>
+      <ProfileHeader 
+        stagiaire={stagiaire} 
+        isOwner={isOwner} 
+        onEditClick={() => setIsEditing(true)} 
+      />
 
       {/* Onglets */}
       <Tabs defaultValue={activeTab} className="space-y-6" onValueChange={(value: any) => setActiveTab(value)}>
@@ -122,57 +86,27 @@ export default function ProfilStagiaire() {
         </TabsList>
 
         <TabsContent value="profile">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">À propos</h2>
-            <p className="text-muted-foreground whitespace-pre-wrap">{stagiaire.bio}</p>
-
-            {stagiaire.skills && stagiaire.skills.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-2">Compétences</h3>
-                <div className="flex flex-wrap gap-2">
-                  {stagiaire.skills.map((skill, index) => (
-                    <Badge key={index}>{skill}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {stagiaire.languages && stagiaire.languages.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-2">Langues</h3>
-                <div className="flex flex-wrap gap-2">
-                  {stagiaire.languages.map((language, index) => (
-                    <Badge key={index} variant="outline">{language}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {stagiaire.preferred_locations && stagiaire.preferred_locations.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-2">Localisations préférées</h3>
-                <div className="flex flex-wrap gap-2">
-                  {stagiaire.preferred_locations.map((location, index) => (
-                    <Badge key={index} variant="secondary">{location}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </Card>
+          <AboutTab 
+            bio={stagiaire.bio} 
+            skills={stagiaire.skills || []} 
+            languages={stagiaire.languages || []} 
+            preferredLocations={stagiaire.preferred_locations || []}
+          />
         </TabsContent>
 
         <TabsContent value="cv">
-          <Card className="p-6">
-            {isOwner ? (
-              <CVManager onUpload={handleCVUpload} cvUrl={stagiaire.cv_url} />
-            ) : (
-              <InteractiveCV cvUrl={stagiaire.cv_url} />
-            )}
-          </Card>
+          <CVTab 
+            isOwner={isOwner} 
+            cvUrl={stagiaire.cv_url} 
+            onUpload={handleCVUpload}
+          />
         </TabsContent>
 
         <TabsContent value="portfolio">
-          <Portfolio projects={stagiaire.projects || []} isOwner={isOwner} />
+          <Portfolio 
+            projects={stagiaire.projects || []} 
+            isOwner={isOwner} 
+          />
         </TabsContent>
 
         <TabsContent value="recommendations">
