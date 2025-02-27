@@ -11,7 +11,7 @@ export interface StagiaireData {
   location: string;
   bio: string;
   email: string;
-  phone?: string; // Rendre phone optionnel
+  phone?: string; // Rendu optionnel
   education: string;
   disponibility?: string;
   is_premium?: boolean;

@@ -1,8 +1,8 @@
+
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import { auth } from "@/lib/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,39 +12,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
-import { User } from "@supabase/supabase-js";
 import { ThemeToggle } from "./ThemeToggle";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 export default function Navigation() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, userRole, loading, signOut, isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const user = await auth.getCurrentUser();
-        setUser(user);
-      } catch (error) {
-        console.error("Erreur lors de la vérification de l'utilisateur:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkUser();
-  }, []);
-
-  const handleSignOut = async () => {
-    try {
-      await auth.signOut();
-      setUser(null);
-      navigate("/");
-    } catch (error) {
-      console.error("Erreur lors de la déconnexion:", error);
-    }
-  };
 
   // Obtenir les initiales du nom ou de l'email
   const getInitials = (text: string) => {
@@ -67,18 +42,30 @@ export default function Navigation() {
   const handleProfileClick = () => {
     if (!user) return;
     
-    const userRole = user.user_metadata?.role;
-    const userId = user.id;
-
     if (userRole === 'entreprise') {
-      navigate(`/entreprises/${userId}`);
+      navigate(`/entreprises/${user.id}`);
     } else if (userRole === 'stagiaire') {
-      navigate(`/stagiaires/${userId}`);
+      navigate(`/stagiaires/${user.id}`);
     } else {
       navigate('/profil');
     }
     setIsOpen(false);
   };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Vous avez été déconnecté avec succès");
+      navigate("/");
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+      toast.error("Une erreur est survenue lors de la déconnexion");
+    }
+  };
+
+  useEffect(() => {
+    console.log("Navigation state:", { user, userRole, isAuthenticated, loading });
+  }, [user, userRole, isAuthenticated, loading]);
 
   return (
     <nav className="fixed w-full bg-background/95 backdrop-blur-sm z-50 border-b border-border">
@@ -127,7 +114,7 @@ export default function Navigation() {
 
             {loading ? (
               <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
-            ) : user ? (
+            ) : isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -149,9 +136,9 @@ export default function Navigation() {
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium">
-                        {user.user_metadata?.name || user.email}
+                        {user?.user_metadata?.name || user?.email}
                       </p>
-                      {user.user_metadata?.name && (
+                      {user?.user_metadata?.name && (
                         <p className="text-xs text-muted-foreground">
                           {user.email}
                         </p>
@@ -166,7 +153,19 @@ export default function Navigation() {
                     Mon profil
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => navigate("/parametres")}
+                    onClick={() => {
+                      navigate("/messagerie");
+                      setIsOpen(false);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    Messagerie
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      navigate("/parametres");
+                      setIsOpen(false);
+                    }}
                     className="cursor-pointer"
                   >
                     Paramètres
@@ -248,7 +247,7 @@ export default function Navigation() {
               >
                 Contact
               </Link>
-              {user ? (
+              {isAuthenticated ? (
                 <>
                   <DropdownMenuSeparator />
                   <div className="px-4 py-2">
@@ -260,9 +259,9 @@ export default function Navigation() {
                       </Avatar>
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">
-                          {user.user_metadata?.name || user.email}
+                          {user?.user_metadata?.name || user?.email}
                         </span>
-                        {user.user_metadata?.name && (
+                        {user?.user_metadata?.name && (
                           <span className="text-xs text-muted-foreground">
                             {user.email}
                           </span>
@@ -276,6 +275,16 @@ export default function Navigation() {
                         onClick={handleProfileClick}
                       >
                         Mon profil
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => {
+                          navigate("/messagerie");
+                          setIsOpen(false);
+                        }}
+                      >
+                        Messagerie
                       </Button>
                       <Button
                         variant="ghost"

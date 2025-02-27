@@ -6,8 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { AddRecommendationModal } from "./AddRecommendationModal";
 import { Lock, Star, Award, Building2, Calendar, Info } from "lucide-react";
 
-interface RecommendationBase {
-  id?: string;
+// Structure des recommandations complète
+interface Recommendation {
+  id: string;
+  entreprise_id: string;
+  entreprise_name?: string;
+  entreprise_logo?: string;
   position: string;
   department: string;
   period: string;
@@ -18,16 +22,12 @@ interface RecommendationBase {
   skills: string[];
   achievements: string[];
   is_public: boolean;
-}
-
-interface Recommendation extends RecommendationBase {
-  id: string;
-  entreprise_id: string;
-  entreprise_name?: string;
-  entreprise_logo?: string;
   created_at: string;
   updated_at: string;
 }
+
+// Type pour la création d'une nouvelle recommandation
+type NewRecommendation = Omit<Recommendation, "id" | "entreprise_name" | "entreprise_logo" | "created_at" | "updated_at">;
 
 interface RecommendationsProps {
   recommendations: Recommendation[];
@@ -40,8 +40,7 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingRecommendation, setEditingRecommendation] = useState<Recommendation | null>(null);
 
-  // Adaptée pour utiliser notre interface personnalisée RecommendationBase
-  const handleAddRecommendation = (recommendation: RecommendationBase) => {
+  const handleAddRecommendation = (recommendation: NewRecommendation) => {
     // Cette fonction sera implémentée pour ajouter une recommandation à la base de données
     console.log("Ajouter recommandation:", recommendation);
     setShowAddModal(false);
@@ -208,6 +207,7 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
             setEditingRecommendation(null);
           }}
           onSubmit={handleAddRecommendation}
+          initialData={editingRecommendation}
           stagiaire={{ id: stagiaireId }}
         />
       )}

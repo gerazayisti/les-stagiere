@@ -11,14 +11,15 @@ import { Card } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export default function CompleteProfile() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user, userRole: authRole } = useAuth();
-  const { missingFields, profile, loading: checkingProfile } = useProfileCompletion({
-    userId: user?.id,
-    userRole: authRole
+  const { toast: uiToast } = useToast();
+  const { user, userRole } = useAuth();
+  const { missingFields, profile, loading: checkingProfile, checkProfileCompletion } = useProfileCompletion({
+    userId: user?.id, 
+    userRole: userRole
   });
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -36,15 +37,27 @@ export default function CompleteProfile() {
     }
   }, [profile]);
 
+  useEffect(() => {
+    console.log("CompleteProfile - Auth state:", { user, userRole });
+  }, [user, userRole]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id || !authRole) return;
+    
+    if (!user?.id || !userRole) {
+      toast("Erreur", {
+        description: "Vous devez être connecté pour compléter votre profil",
+        position: "top-center"
+      });
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log(`Updating ${userRole} profile for user ${user.id}`);
 
-      const table = authRole === 'stagiaire' ? 'stagiaires' : 'entreprises';
-      const dataToSubmit = authRole === 'stagiaire' 
+      const table = userRole === 'stagiaire' ? 'stagiaires' : 'entreprises';
+      const dataToSubmit = userRole === 'stagiaire' 
         ? { id: user.id, name: formData.name, bio: formData.bio } 
         : { id: user.id, name: formData.name, description: formData.description };
 
@@ -54,18 +67,24 @@ export default function CompleteProfile() {
 
       if (error) throw error;
 
-      toast({
-        title: "Succès",
+      toast("Succès", {
         description: "Votre profil a été mis à jour avec succès",
+        position: "top-center"
       });
 
-      navigate('/profil');
+      await checkProfileCompletion();
+
+      // Rediriger vers la page appropriée selon le rôle
+      if (userRole === 'stagiaire') {
+        navigate(`/stagiaires/${user.id}`);
+      } else {
+        navigate(`/entreprises/${user.id}`);
+      }
     } catch (error) {
       console.error('Erreur lors de la mise à jour du profil:', error);
-      toast({
-        title: "Erreur",
+      toast("Erreur", {
         description: "Impossible de mettre à jour votre profil",
-        variant: "destructive",
+        position: "top-center"
       });
     } finally {
       setLoading(false);
@@ -88,6 +107,20 @@ export default function CompleteProfile() {
     );
   }
 
+  if (!user || !userRole) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="max-w-2xl mx-auto p-6">
+          <h1 className="text-2xl font-bold mb-6">Vous devez être connecté</h1>
+          <p className="text-gray-600 mb-6">
+            Vous devez être connecté pour accéder à cette page.
+          </p>
+          <Button onClick={() => navigate('/connexion')}>Se connecter</Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Card className="max-w-2xl mx-auto p-6">
@@ -104,19 +137,19 @@ export default function CompleteProfile() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Nom */}
           <div>
-            <Label htmlFor="name">Nom{authRole === 'entreprise' ? " de l'entreprise" : " complet"}</Label>
+            <Label htmlFor="name">Nom{userRole === 'entreprise' ? " de l'entreprise" : " complet"}</Label>
             <Input
               id="name"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              placeholder={authRole === 'entreprise' ? "Nom de votre entreprise" : "Votre nom complet"}
+              placeholder={userRole === 'entreprise' ? "Nom de votre entreprise" : "Votre nom complet"}
               required
             />
           </div>
 
           {/* Bio ou Description */}
-          {authRole === 'stagiaire' ? (
+          {userRole === 'stagiaire' ? (
             <div>
               <Label htmlFor="bio">Bio</Label>
               <Textarea

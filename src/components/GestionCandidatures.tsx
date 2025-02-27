@@ -31,7 +31,7 @@ import { ProfilCandidat } from "./ProfilCandidat";
 import { ChatDiscussion } from "./ChatDiscussion";
 
 interface Candidat {
-  id: string; // Changé à string pour assurer la cohérence
+  id: string; // Utilisons string pour tous les IDs pour la cohérence
   nom: string;
   email: string;
   telephone: string;
@@ -48,9 +48,9 @@ interface Candidat {
 }
 
 interface Candidature {
-  id: string; // Changé à string pour assurer la cohérence
+  id: string; // String pour la cohérence
   candidat: Candidat;
-  stageId: string; // Changé à string pour assurer la cohérence
+  stageId: string; // String pour la cohérence
   stageTitre: string;
   status: "en_attente" | "acceptee" | "refusee" | "en_discussion";
   datePostulation: Date;
@@ -212,7 +212,7 @@ export function GestionCandidatures({
                     <SelectItem value="refusee">Refuser</SelectItem>
                   </SelectContent>
                 </Select>
-                {candidature.status === "en_discussion" || candidature.status === "acceptee" && (
+                {(candidature.status === "en_discussion" || candidature.status === "acceptee") && (
                   <>
                     <Button size="sm" variant="outline" className="w-full">
                       <Download className="h-4 w-4 mr-1" />
@@ -268,9 +268,9 @@ export function GestionCandidatures({
             <ChatDiscussion
               candidatureId={chatCandidature.id}
               entreprise={{
-                id: "entreprise-1", // À remplacer par l'ID réel de l'entreprise
-                name: "TechCorp", // À remplacer par le nom réel de l'entreprise
-                avatar: "https://via.placeholder.com/150", // À remplacer par l'avatar réel
+                id: "entreprise-1", 
+                name: "TechCorp", 
+                avatar: "https://via.placeholder.com/150",
               }}
               candidat={{
                 id: chatCandidature.candidat.id,

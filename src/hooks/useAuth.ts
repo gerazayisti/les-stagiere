@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 export interface User {
   id: string;
   email: string;
   role: 'stagiaire' | 'entreprise' | 'admin';
-  email_confirmed_at?: string; // Utilisons email_confirmed_at au lieu de email_verified
+  email_confirmed_at?: string;
+  user_metadata?: any;
 }
 
 export function useAuth() {
@@ -16,7 +18,6 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     // Vérifier la session actuelle
@@ -24,13 +25,15 @@ export function useAuth() {
 
     // Écouter les changements d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Auth state changed:", _event, session?.user);
       if (session?.user) {
         const role = session.user.user_metadata?.role;
         setUser({
           id: session.user.id,
           email: session.user.email!,
           role: role,
-          email_confirmed_at: session.user.email_confirmed_at
+          email_confirmed_at: session.user.email_confirmed_at,
+          user_metadata: session.user.user_metadata
         });
         setUserRole(role);
       } else {
@@ -47,11 +50,14 @@ export function useAuth() {
 
   const checkUser = async () => {
     try {
+      setLoading(true);
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
         throw error;
       }
+
+      console.log("Current session:", session);
 
       if (session?.user) {
         const role = session.user.user_metadata?.role;
@@ -59,16 +65,19 @@ export function useAuth() {
           id: session.user.id,
           email: session.user.email!,
           role: role,
-          email_confirmed_at: session.user.email_confirmed_at
+          email_confirmed_at: session.user.email_confirmed_at,
+          user_metadata: session.user.user_metadata
         });
         setUserRole(role);
+      } else {
+        setUser(null);
+        setUserRole(null);
       }
     } catch (error) {
       console.error('Erreur lors de la vérification de l\'utilisateur:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de vérifier votre session",
-        variant: "destructive",
+      toast("Impossible de vérifier votre session", {
+        description: "Une erreur est survenue lors de la vérification de votre session",
+        position: "top-center"
       });
     } finally {
       setLoading(false);
@@ -82,14 +91,13 @@ export function useAuth() {
       
       setUser(null);
       setUserRole(null);
-      navigate('/connexion');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de vous déconnecter",
-        variant: "destructive",
+      toast("Impossible de vous déconnecter", {
+        description: "Une erreur est survenue lors de la déconnexion",
+        position: "top-center"
       });
+      throw error;
     }
   };
 
@@ -99,6 +107,7 @@ export function useAuth() {
     loading,
     signOut,
     isAuthenticated: !!user,
-    isEmailVerified: !!user?.email_confirmed_at
+    isEmailVerified: !!user?.email_confirmed_at,
+    refreshUser: checkUser
   };
 }
