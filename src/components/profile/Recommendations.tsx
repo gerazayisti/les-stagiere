@@ -1,114 +1,189 @@
+import { useState, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "./Badge";
-import { Star, Quote } from "lucide-react";
+import { Star, Quote, Calendar, Building2, Filter } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Recommendation {
   id: string;
-  author: {
-    name: string;
-    position: string;
-    company: string;
-    avatar: string;
-  };
-  content: string;
+  entreprise_id: string;
+  position: string;
+  department: string;
+  period: string;
+  start_date: string;
+  end_date: string;
   rating: number;
-  date: string;
+  content: string;
+  skills: string[];
+  achievements: string[];
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+  entreprise?: {
+    name: string;
+    logo_url: string;
+  };
 }
 
 interface RecommendationsProps {
-  isPremium: boolean;
+  recommendations: Recommendation[];
+  isOwner: boolean;
+  stagiaireId: string;
 }
 
-export function Recommendations({ isPremium }: RecommendationsProps) {
-  const recommendations: Recommendation[] = [
-    {
-      id: "1",
-      author: {
-        name: "Marie Nguemo",
-        position: "Directrice RH",
-        company: "Tech Solutions Cameroun",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Marie",
-      },
-      content:
-        "Un excellent stagiaire avec une grande capacité d'apprentissage et d'adaptation. A démontré une forte expertise technique et une excellente communication avec l'équipe.",
-      rating: 5,
-      date: "Février 2025",
-    },
-    {
-      id: "2",
-      author: {
-        name: "Paul Biya",
-        position: "Lead Developer",
-        company: "Digital Africa Inc",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Paul",
-      },
-      content:
-        "Très professionnel et proactif. A apporté des solutions innovantes à plusieurs défis techniques majeurs pendant son stage.",
-      rating: 5,
-      date: "Janvier 2025",
-    },
-  ];
+export function Recommendations({ recommendations, isOwner }: RecommendationsProps) {
+  const [sortBy, setSortBy] = useState<"date" | "rating">("date");
+  const [filterEntreprise, setFilterEntreprise] = useState<string>("all");
 
-  if (!isPremium) {
-    return (
-      <Card className="p-6 text-center">
-        <Quote className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold mb-2">
-          Recommandations Premium
-        </h3>
-        <p className="text-muted-foreground mb-4">
-          Passez à un abonnement premium pour recevoir des recommandations
-          de vos anciens employeurs et superviseurs.
-        </p>
-        <Badge type="premium" className="mx-auto" />
-      </Card>
+  // Extraire la liste unique des entreprises
+  const entreprises = useMemo(() => {
+    const uniqueEntreprises = new Set(
+      recommendations.map((rec) => rec.entreprise?.name || "Inconnue")
     );
-  }
+    return Array.from(uniqueEntreprises);
+  }, [recommendations]);
+
+  // Trier et filtrer les recommandations
+  const sortedAndFilteredRecommendations = useMemo(() => {
+    let filtered = recommendations;
+
+    // Filtrer par entreprise
+    if (filterEntreprise !== "all") {
+      filtered = filtered.filter(
+        (rec) => rec.entreprise?.name === filterEntreprise
+      );
+    }
+
+    // Trier
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "date") {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      return b.rating - a.rating;
+    });
+  }, [recommendations, sortBy, filterEntreprise]);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("fr-FR", {
+      year: "numeric",
+      month: "long",
+    });
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold">Recommandations</h3>
-        <Badge type="premium" />
+        <h2 className="text-2xl font-bold">Recommandations</h2>
+        <div className="flex gap-4">
+          <Select value={sortBy} onValueChange={(value: "date" | "rating") => setSortBy(value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Trier par..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Date</SelectItem>
+              <SelectItem value="rating">Note</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filterEntreprise} onValueChange={setFilterEntreprise}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrer par entreprise" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les entreprises</SelectItem>
+              {entreprises.map((entreprise) => (
+                <SelectItem key={entreprise} value={entreprise}>
+                  {entreprise}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-6">
-        {recommendations.map((recommendation) => (
+        {sortedAndFilteredRecommendations.map((recommendation) => (
           <Card key={recommendation.id} className="p-6">
             <div className="flex items-start gap-4">
               <Avatar className="w-12 h-12">
-                <AvatarImage src={recommendation.author.avatar} />
+                <AvatarImage src={recommendation.entreprise?.logo_url} />
                 <AvatarFallback>
-                  {recommendation.author.name[0]}
+                  {recommendation.entreprise?.name?.[0] || "E"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between">
                   <div>
-                    <h4 className="font-semibold">
-                      {recommendation.author.name}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {recommendation.author.position} chez{" "}
-                      {recommendation.author.company}
-                    </p>
+                    <h3 className="font-semibold">
+                      {recommendation.entreprise?.name || "Entreprise"}
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{recommendation.position}</span>
+                      <span>•</span>
+                      <span>{recommendation.department}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                      <Calendar className="w-4 h-4" />
+                      <span>
+                        {formatDate(recommendation.start_date)} - {formatDate(recommendation.end_date)}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: recommendation.rating }).map((_, i) => (
+                    {Array.from({ length: 5 }).map((_, i) => (
                       <Star
                         key={i}
-                        className="w-4 h-4 fill-yellow-500 text-yellow-500"
+                        className={`w-4 h-4 ${
+                          i < recommendation.rating
+                            ? "text-yellow-400 fill-yellow-400"
+                            : "text-gray-300"
+                        }`}
                       />
                     ))}
                   </div>
                 </div>
-                <blockquote className="text-muted-foreground border-l-2 pl-4 my-4">
-                  {recommendation.content}
-                </blockquote>
-                <p className="text-sm text-muted-foreground">
-                  {recommendation.date}
-                </p>
+
+                <div className="mt-4">
+                  <Quote className="w-8 h-8 text-muted-foreground/20 mb-2" />
+                  <p className="text-muted-foreground">{recommendation.content}</p>
+                </div>
+
+                {recommendation.skills && recommendation.skills.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-semibold mb-2">Compétences démontrées</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {recommendation.skills.map((skill, index) => (
+                        <Badge key={index} variant="secondary">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {recommendation.achievements && recommendation.achievements.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-semibold mb-2">Réalisations</h4>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground">
+                      {recommendation.achievements.map((achievement, index) => (
+                        <li key={index}>{achievement}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </Card>

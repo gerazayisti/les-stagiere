@@ -1,15 +1,12 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
-import SpeedInsights from "@vercel/speed-insights";
-import { inject } from "@vercel/analytics";
-import Layout from "@/components/Layout";
-
-// Initialize analytics
-inject();
+import Layout from "./components/Layout";
+import { initAuthListener } from '@/lib/auth';
+import { useEffect } from "react";
 
 // Pages
 import Index from "./pages/Index";
@@ -18,57 +15,118 @@ import Inscription from "./pages/Inscription";
 import MotDePasseOublie from "./pages/MotDePasseOublie";
 import OffresStages from "./pages/OffresStages";
 import DetailStage from "./pages/DetailStage";
-import ProfilEntreprise from "./pages/ProfilEntreprise";
 import ProfilStagiaire from "./pages/ProfilStagiaire";
-import ProfilEnrichi from "./pages/ProfilEnrichi";
-import NotFound from "./pages/NotFound";
+import ProfilEntreprise from "./pages/ProfilEntreprise";
 import Contact from "./pages/Contact";
 import APropos from "./pages/APropos";
 import Abonnement from "./pages/Abonnement";
+import NotFound from "./pages/NotFound";
+import ProfilEnrichi from "./pages/ProfilEnrichi";
 import Blog from "./pages/Blog";
 import ArticleDetail from "./pages/ArticleDetail";
 import Messagerie from "./pages/Messagerie";
+import CompleteProfile from "./pages/CompleteProfile";
+import { RequireProfileCompletion } from "./components/RequireProfileCompletion";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60 * 1000, // 1 minute
+      staleTime: 1000 * 60 * 5, // 5 minutes
     },
   },
 });
 
 function App() {
+  useEffect(() => {
+    initAuthListener();
+  }, []);
+
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/connexion" element={<Connexion />} />
-                <Route path="/inscription" element={<Inscription />} />
-                <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
-                <Route path="/stages" element={<OffresStages />} />
-                <Route path="/stages/:id" element={<DetailStage />} />
-                <Route path="/entreprises/:id" element={<ProfilEntreprise />} />
-                <Route path="/stagiaires/:id" element={<ProfilStagiaire />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/a-propos" element={<APropos />} />
-                <Route path="/abonnement" element={<Abonnement />} />
-                <Route path="/blog" element={<Blog />} />
-                <Route path="/blog/:slug" element={<ArticleDetail />} />
-                <Route path="/messagerie" element={<Messagerie />} />
-                <Route path="/profil-enrichi" element={<ProfilEnrichi />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
-          </BrowserRouter>
+          <Router>
+            <div className="relative">
+              <Toaster />
+              <Sonner />
+              <Layout>
+                <Routes>
+                  {/* Routes publiques */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/connexion" element={<Connexion />} />
+                  <Route path="/inscription" element={<Inscription />} />
+                  <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+                  <Route path="/complete-profile" element={<CompleteProfile />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/a-propos" element={<APropos />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/blog/:slug" element={<ArticleDetail />} />
+
+                  {/* Routes protégées nécessitant un profil complet */}
+                  <Route
+                    path="/stages"
+                    element={
+                      <RequireProfileCompletion>
+                        <OffresStages />
+                      </RequireProfileCompletion>
+                    }
+                  />
+                  <Route
+                    path="/stages/:id"
+                    element={
+                      <RequireProfileCompletion>
+                        <DetailStage />
+                      </RequireProfileCompletion>
+                    }
+                  />
+                  <Route
+                    path="/stagiaires/:id"
+                    element={
+                      <RequireProfileCompletion>
+                        <ProfilStagiaire />
+                      </RequireProfileCompletion>
+                    }
+                  />
+                  <Route
+                    path="/entreprises/:id"
+                    element={
+                      <RequireProfileCompletion>
+                        <ProfilEntreprise />
+                      </RequireProfileCompletion>
+                    }
+                  />
+                  <Route
+                    path="/messagerie"
+                    element={
+                      <RequireProfileCompletion>
+                        <Messagerie />
+                      </RequireProfileCompletion>
+                    }
+                  />
+                  <Route
+                    path="/profil-enrichi"
+                    element={
+                      <RequireProfileCompletion>
+                        <ProfilEnrichi />
+                      </RequireProfileCompletion>
+                    }
+                  />
+                  <Route
+                    path="/abonnement"
+                    element={
+                      <RequireProfileCompletion>
+                        <Abonnement />
+                      </RequireProfileCompletion>
+                    }
+                  />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Layout>
+            </div>
+          </Router>
         </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

@@ -1,5 +1,8 @@
+import { useParams } from 'react-router-dom';
+import { useProfile } from '@/hooks/useProfile';
+import { Loader2, MapPin, Globe, Users, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CompanyRecommendations } from "@/components/profile/CompanyRecommendations";
 import { EditEntrepriseForm } from "@/components/EditEntrepriseForm";
@@ -8,7 +11,7 @@ import { GestionCandidatures } from "@/components/GestionCandidatures";
 import { RecommendationForm, RecommendationData } from "@/components/profile/RecommendationForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Users, Star, MapPin, Globe, Phone, Mail } from "lucide-react";
+import { Building2, Users as UsersIcon, Star, MapPin as MapPinIcon, Globe as GlobeIcon, Phone, Mail } from "lucide-react";
 
 interface CompanyData {
   id: string;
@@ -60,86 +63,33 @@ interface Candidature {
 }
 
 export default function ProfilEntreprise() {
+  const { id } = useParams();
+  const { profile, loading, error, isOwner } = useProfile({
+    id: id!,
+    type: 'entreprise'
+  });
+
   const [activeTab, setActiveTab] = useState("about");
   const [entreprise, setEntreprise] = useState<CompanyData>({
-    id: "1",
-    name: "TechCorp Solutions",
-    logo: "https://api.dicebear.com/7.x/initials/svg?seed=TC",
-    description: "Leader dans le développement de solutions technologiques innovantes",
-    industry: "Technologies de l'information",
-    location: "Yaoundé, Cameroun",
-    website: "www.techcorp.com",
-    phone: "+237 6XX XX XX XX",
-    email: "contact@techcorp.com",
-    employeeCount: "50-100",
-    foundedYear: 2015,
+    id: profile.id,
+    name: profile.name,
+    logo: profile.logo_url,
+    description: profile.description,
+    industry: profile.industry,
+    location: profile.location,
+    website: profile.website,
+    phone: profile.phone,
+    email: profile.email,
+    employeeCount: profile.size,
+    foundedYear: profile.founded_year,
   });
 
   const [stages, setStages] = useState<Stage[]>([
-    {
-      id: 1,
-      titre: "Développeur Full-Stack",
-      description: "Stage de développement web avec React et Node.js",
-      duree: "6 mois",
-      dateDebut: new Date(2024, 2, 1),
-      competencesRequises: ["React", "Node.js", "TypeScript"],
-      remuneration: "1000€/mois",
-    },
-    {
-      id: 2,
-      titre: "UX Designer",
-      description: "Conception d'interfaces utilisateur pour nos produits",
-      duree: "4 mois",
-      dateDebut: new Date(2024, 3, 1),
-      competencesRequises: ["Figma", "Adobe XD", "Prototypage"],
-      remuneration: "800€/mois",
-    },
+    // Add stages data here
   ]);
 
   const [candidatures, setCandidatures] = useState<Candidature[]>([
-    {
-      id: 1,
-      candidat: {
-        id: 1,
-        nom: "Sophie Martin",
-        email: "sophie.martin@email.com",
-        telephone: "06 12 34 56 78",
-        cv: "/cvs/sophie-martin.pdf",
-        lettre: "/lettres/sophie-martin.pdf",
-        competences: ["React", "TypeScript", "Node.js"],
-        experience: "Stage de 6 mois en développement web",
-        formation: "Master 2 Informatique",
-        photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie",
-        disponibilite: "Disponible dès mars 2024",
-        hasRecommendation: false,
-      },
-      stageId: 1,
-      stageTitre: "Développeur Full-Stack",
-      status: "en_discussion",
-      datePostulation: new Date(2024, 1, 15),
-      noteInterne: "Candidate prometteuse, à recontacter",
-    },
-    {
-      id: 2,
-      candidat: {
-        id: 2,
-        nom: "Lucas Dubois",
-        email: "lucas.dubois@email.com",
-        telephone: "06 98 76 54 32",
-        cv: "/cvs/lucas-dubois.pdf",
-        lettre: "/lettres/lucas-dubois.pdf",
-        competences: ["Figma", "Adobe XD", "UI/UX"],
-        experience: "Projets freelance en design",
-        formation: "Bachelor Design Numérique",
-        photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas",
-        disponibilite: "Disponible dès avril 2024",
-        hasRecommendation: true,
-      },
-      stageId: 2,
-      stageTitre: "UX Designer",
-      status: "acceptee",
-      datePostulation: new Date(2024, 1, 20),
-    },
+    // Add candidatures data here
   ]);
 
   const [showRecommendationForm, setShowRecommendationForm] = useState(false);
@@ -197,35 +147,151 @@ export default function ProfilEntreprise() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h1 className="text-2xl font-bold text-red-600">Erreur</h1>
+        <p className="text-gray-600">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* En-tête du profil */}
-      <Card className="p-6 mb-8">
-        <div className="flex flex-col md:flex-row items-center gap-6">
-          <Avatar className="w-24 h-24">
-            <AvatarImage src={entreprise.logo} />
-            <AvatarFallback>{entreprise.name[0]}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 text-center md:text-left">
-            <h1 className="text-2xl font-bold mb-2">{entreprise.name}</h1>
-            <p className="text-muted-foreground">{entreprise.description}</p>
-            <div className="flex flex-wrap items-center gap-4 mt-4 justify-center md:justify-start">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Building2 className="w-4 h-4" />
-                <span>{entreprise.industry}</span>
+      <div className="bg-card rounded-lg shadow-lg overflow-hidden">
+        {profile.banner_url && (
+          <div className="h-48 w-full relative">
+            <img
+              src={profile.banner_url}
+              alt={`Bannière de ${profile.name}`}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        
+        <div className="p-6">
+          <div className="flex items-center space-x-4">
+            {profile.logo_url ? (
+              <img
+                src={profile.logo_url}
+                alt={profile.name}
+                className="h-20 w-20 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="h-20 w-20 rounded-lg bg-primary/10 flex items-center justify-center">
+                <span className="text-2xl font-semibold">
+                  {profile.name.slice(0, 2).toUpperCase()}
+                </span>
               </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="w-4 h-4" />
-                <span>{entreprise.location}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="w-4 h-4" />
-                <span>{entreprise.employeeCount} employés</span>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold">{profile.name}</h1>
+              <div className="flex items-center space-x-4 mt-2 text-muted-foreground">
+                {profile.location && (
+                  <div className="flex items-center">
+                    <MapPinIcon className="h-4 w-4 mr-1" />
+                    <span>{profile.location}</span>
+                  </div>
+                )}
+                {profile.industry && (
+                  <div className="flex items-center">
+                    <GlobeIcon className="h-4 w-4 mr-1" />
+                    <span>{profile.industry}</span>
+                  </div>
+                )}
+                {profile.size && (
+                  <div className="flex items-center">
+                    <UsersIcon className="h-4 w-4 mr-1" />
+                    <span>{profile.size} employés</span>
+                  </div>
+                )}
+                {profile.founded_year && (
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    <span>Fondée en {profile.founded_year}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+
+          {isOwner && (
+            <div className="mt-4">
+              <Button variant="outline" className="mr-2">
+                Modifier le profil
+              </Button>
+              <Button>
+                Publier une offre
+              </Button>
+            </div>
+          )}
         </div>
-      </Card>
+      </div>
+
+      {/* Contenu principal */}
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="md:col-span-2">
+          <div className="bg-card rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">À propos</h2>
+            <p className="text-muted-foreground whitespace-pre-wrap">
+              {profile.description || 'Aucune description disponible'}
+            </p>
+          </div>
+
+          {profile.company_culture && (
+            <div className="bg-card rounded-lg shadow p-6 mt-6">
+              <h2 className="text-xl font-semibold mb-4">Culture d'entreprise</h2>
+              <p className="text-muted-foreground whitespace-pre-wrap">
+                {profile.company_culture}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="bg-card rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Avantages</h2>
+            <div className="space-y-2">
+              {profile.benefits?.map((benefit: string) => (
+                <div
+                  key={benefit}
+                  className="flex items-center p-2 bg-muted rounded-lg"
+                >
+                  <span>{benefit}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {profile.social_media && (
+            <div className="bg-card rounded-lg shadow p-6 mt-6">
+              <h2 className="text-xl font-semibold mb-4">Réseaux sociaux</h2>
+              <div className="space-y-2">
+                {Object.entries(profile.social_media).map(([platform, url]) => (
+                  <a
+                    key={platform}
+                    href={url as string}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center p-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
+                  >
+                    <span className="capitalize">{platform}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Onglets */}
       <Tabs defaultValue={activeTab} className="space-y-6" onValueChange={setActiveTab}>
@@ -245,7 +311,7 @@ export default function ProfilEntreprise() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <Globe className="w-5 h-5 text-muted-foreground" />
+                      <GlobeIcon className="w-5 h-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium">Site web</p>
                         <a

@@ -8,96 +8,65 @@ import { EditProfileForm } from "@/components/profile/EditProfileForm";
 import { Badge } from "@/components/profile/Badge";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FileText, Briefcase, ThumbsUp, Lock, User } from "lucide-react";
-import { Link } from "react-router-dom";
-
-interface StagiaireData {
-  id: string;
-  name: string;
-  avatar: string;
-  title: string;
-  location: string;
-  bio: string;
-  email: string;
-  phone: string;
-  education: string;
-  disponibility: string;
-  isPremium: boolean;
-  cvs: Array<{
-    id: string;
-    name: string;
-    url: string;
-    uploadDate: string;
-  }>;
-}
+import { FileText, Briefcase, ThumbsUp, Lock, User, Loader2 } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { useProfile } from '@/hooks/useProfile';
+import { useStagiaire } from '@/hooks/useStagiaire';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ProfilStagiaire() {
+  const { id } = useParams();
+  const { isOwner } = useProfile({
+    id: id!,
+    type: 'stagiaire'
+  });
+  const { stagiaire, loading, error, updateStagiaire, uploadAvatar, uploadCV } = useStagiaire(id!);
   const [activeTab, setActiveTab] = useState<"profile" | "cv" | "portfolio" | "recommendations">("profile");
   const [isEditing, setIsEditing] = useState(false);
-  
-  // Simuler les données du stagiaire (à remplacer par les vraies données)
-  const [stagiaire, setStagiaire] = useState<StagiaireData>({
-    id: "1",
-    name: "Jean Dupont",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jean",
-    title: "Développeur Full Stack Junior",
-    location: "Yaoundé, Cameroun",
-    bio: "Passionné par le développement web et mobile, je suis à la recherche de nouvelles opportunités pour développer mes compétences.",
-    email: "jean.dupont@email.com",
-    phone: "+237 6XX XX XX XX",
-    education: "Master en Informatique",
-    disponibility: "immediate",
-    isPremium: false,
-    cvs: [],
-  });
 
-  const tabs = [
-    { id: "profile" as const, label: "Profil", icon: User },
-    { id: "cv" as const, label: "CV", icon: FileText },
-    { id: "portfolio" as const, label: "Portfolio", icon: Briefcase },
-    { id: "recommendations" as const, label: "Recommandations", icon: ThumbsUp },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
-  const handleProfileUpdate = (data: Omit<StagiaireData, "id" | "avatar" | "isPremium" | "cvs">) => {
-    setStagiaire((prev) => ({
-      ...prev,
-      ...data,
-    }));
-    setIsEditing(false);
+  if (error || !stagiaire) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="p-6">
+          <h1 className="text-2xl font-bold text-red-600 mb-2">Erreur</h1>
+          <p className="text-gray-600">{error || "Profil non trouvé"}</p>
+        </Card>
+      </div>
+    );
+  }
+
+  const handleEditSubmit = async (data: any) => {
+    try {
+      await updateStagiaire(data);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+    }
   };
 
-  const handleCVUpload = (file: File) => {
-    const newCV = {
-      id: Date.now().toString(),
-      name: file.name,
-      url: URL.createObjectURL(file),
-      uploadDate: new Date().toLocaleDateString(),
-    };
-    setStagiaire((prev) => ({
-      ...prev,
-      cvs: [...prev.cvs, newCV],
-    }));
+  const handleAvatarUpload = async (file: File) => {
+    try {
+      await uploadAvatar(file);
+    } catch (error) {
+      console.error('Erreur lors du téléchargement de l\'avatar:', error);
+    }
   };
 
-  const handleCVDelete = (cvId: string) => {
-    setStagiaire((prev) => ({
-      ...prev,
-      cvs: prev.cvs.filter((cv) => cv.id !== cvId),
-    }));
+  const handleCVUpload = async (file: File) => {
+    try {
+      await uploadCV(file);
+    } catch (error) {
+      console.error('Erreur lors du téléchargement du CV:', error);
+    }
   };
-
-  const PremiumOverlay = () => (
-    <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-      <Lock className="w-12 h-12 text-muted-foreground mb-4" />
-      <h3 className="text-xl font-semibold mb-2">Fonctionnalité Premium</h3>
-      <p className="text-muted-foreground mb-4">
-        Passez à un abonnement premium pour accéder à toutes les fonctionnalités avancées
-      </p>
-      <Link to="/abonnement">
-        <Button>Voir les abonnements</Button>
-      </Link>
-    </div>
-  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -105,108 +74,124 @@ export default function ProfilStagiaire() {
       <Card className="p-6 mb-8">
         <div className="flex flex-col md:flex-row items-center gap-6">
           <Avatar className="w-24 h-24">
-            <AvatarImage src={stagiaire.avatar} />
+            <AvatarImage src={stagiaire.avatar_url} />
             <AvatarFallback>{stagiaire.name[0]}</AvatarFallback>
           </Avatar>
           <div className="flex-1 text-center md:text-left">
-            <div className="flex items-center gap-2 justify-center md:justify-start">
+            <div className="flex items-center justify-center md:justify-start gap-2">
               <h1 className="text-2xl font-bold">{stagiaire.name}</h1>
-              {stagiaire.isPremium && <Badge type="premium" />}
+              {stagiaire.is_premium && (
+                <Badge variant="premium" />
+              )}
             </div>
-            <p className="text-xl text-muted-foreground mb-2">{stagiaire.title}</p>
-            <p className="text-muted-foreground">{stagiaire.location}</p>
+            <p className="text-muted-foreground">{stagiaire.title}</p>
+            <div className="flex flex-wrap items-center gap-4 mt-4 justify-center md:justify-start">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <User className="w-4 h-4" />
+                <span>{stagiaire.location}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Briefcase className="w-4 h-4" />
+                <span>{stagiaire.education}</span>
+              </div>
+              {stagiaire.disponibility && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Lock className="w-4 h-4" />
+                  <span>{stagiaire.disponibility}</span>
+                </div>
+              )}
+            </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setIsEditing(!isEditing)}
-          >
-            {isEditing ? "Annuler" : "Modifier le profil"}
-          </Button>
+          {isOwner && (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                Modifier le profil
+              </Button>
+            </div>
+          )}
         </div>
-        <p className="mt-4 text-center md:text-left">{stagiaire.bio}</p>
       </Card>
 
-      {/* Navigation */}
-      <div className="flex justify-center gap-4 mb-8">
-        {tabs.map(({ id, label, icon: Icon }) => (
-          <Button
-            key={id}
-            variant={activeTab === id ? "default" : "outline"}
-            onClick={() => setActiveTab(id)}
-            className="flex items-center gap-2"
-          >
-            <Icon className="w-4 h-4" />
-            {label}
-          </Button>
-        ))}
-      </div>
+      {/* Onglets */}
+      <Tabs defaultValue={activeTab} className="space-y-6" onValueChange={(value: any) => setActiveTab(value)}>
+        <TabsList>
+          <TabsTrigger value="profile">Profil</TabsTrigger>
+          <TabsTrigger value="cv">CV</TabsTrigger>
+          <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+          <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
+        </TabsList>
 
-      {/* Contenu */}
-      <div className="max-w-4xl mx-auto relative">
-        {activeTab === "profile" && (
-          isEditing ? (
-            <Card className="p-6">
-              <EditProfileForm
-                initialData={stagiaire}
-                onSubmit={handleProfileUpdate}
-                onCancel={() => setIsEditing(false)}
-              />
-            </Card>
-          ) : (
-            <Card className="p-6">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-semibold mb-2">Contact</h3>
-                    <div className="space-y-2 text-muted-foreground">
-                      <p>Email: {stagiaire.email}</p>
-                      <p>Téléphone: {stagiaire.phone}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2">Formation</h3>
-                    <div className="space-y-2 text-muted-foreground">
-                      <p>{stagiaire.education}</p>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Disponibilité</h3>
-                  <p className="text-muted-foreground">
-                    {stagiaire.disponibility === "immediate"
-                      ? "Immédiate"
-                      : `Dans ${stagiaire.disponibility.replace("months", " mois")}`}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">À propos</h3>
-                  <p className="text-muted-foreground">{stagiaire.bio}</p>
+        <TabsContent value="profile">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">À propos</h2>
+            <p className="text-muted-foreground whitespace-pre-wrap">{stagiaire.bio}</p>
+
+            {stagiaire.skills && stagiaire.skills.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-2">Compétences</h3>
+                <div className="flex flex-wrap gap-2">
+                  {stagiaire.skills.map((skill, index) => (
+                    <Badge key={index}>{skill}</Badge>
+                  ))}
                 </div>
               </div>
-            </Card>
-          )
-        )}
-        
-        {activeTab === "cv" && (
-          <CVManager
-            isPremium={stagiaire.isPremium}
-            cvs={stagiaire.cvs}
-            onUpload={handleCVUpload}
-            onDelete={handleCVDelete}
+            )}
+
+            {stagiaire.languages && stagiaire.languages.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-2">Langues</h3>
+                <div className="flex flex-wrap gap-2">
+                  {stagiaire.languages.map((language, index) => (
+                    <Badge key={index} variant="outline">{language}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {stagiaire.preferred_locations && stagiaire.preferred_locations.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-2">Localisations préférées</h3>
+                <div className="flex flex-wrap gap-2">
+                  {stagiaire.preferred_locations.map((location, index) => (
+                    <Badge key={index} variant="secondary">{location}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cv">
+          <Card className="p-6">
+            {isOwner ? (
+              <CVManager onUpload={handleCVUpload} cvUrl={stagiaire.cv_url} />
+            ) : (
+              <InteractiveCV cvUrl={stagiaire.cv_url} />
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="portfolio">
+          <Portfolio projects={stagiaire.projects || []} isOwner={isOwner} />
+        </TabsContent>
+
+        <TabsContent value="recommendations">
+          <Recommendations 
+            recommendations={stagiaire.recommendations || []} 
+            isOwner={isOwner}
+            stagiaireId={stagiaire.id}
           />
-        )}
+        </TabsContent>
+      </Tabs>
 
-        {activeTab === "portfolio" && (
-          <>
-            <Portfolio />
-            {!stagiaire.isPremium && <PremiumOverlay />}
-          </>
-        )}
-
-        {activeTab === "recommendations" && (
-          <Recommendations isPremium={stagiaire.isPremium} />
-        )}
-      </div>
+      {isEditing && (
+        <EditProfileForm
+          initialData={stagiaire}
+          onSubmit={handleEditSubmit}
+          onCancel={() => setIsEditing(false)}
+          onAvatarUpload={handleAvatarUpload}
+        />
+      )}
     </div>
   );
 }
