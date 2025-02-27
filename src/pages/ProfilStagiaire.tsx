@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { EditProfileForm } from "@/components/profile/EditProfileForm";
 import { useParams } from "react-router-dom";
 import { useProfile } from '@/hooks/useProfile';
@@ -12,16 +12,28 @@ import { Portfolio } from "@/components/profile/Portfolio";
 import { Recommendations } from "@/components/profile/Recommendations";
 import { Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ProfilStagiaire() {
   const { id } = useParams();
-  const { isOwner } = useProfile({
-    id: id!,
-    type: 'stagiaire'
-  });
-  const { stagiaire, loading, error, updateStagiaire, uploadAvatar, uploadCV } = useStagiaire(id!);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const isOwner = user?.id === id;
+  
+  const { stagiaire, loading, error, updateStagiaire, uploadAvatar, uploadCV, fetchRecommendations } = useStagiaire(id!);
+  
   const [activeTab, setActiveTab] = useState<"profile" | "cv" | "portfolio" | "recommendations">("profile");
   const [isEditing, setIsEditing] = useState(false);
+
+  // Charger les recommandations quand on passe à cet onglet
+  useEffect(() => {
+    if (activeTab === "recommendations") {
+      fetchRecommendations().catch(err => {
+        console.error("Erreur lors du chargement des recommandations:", err);
+      });
+    }
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -46,24 +58,51 @@ export default function ProfilStagiaire() {
     try {
       await updateStagiaire(data);
       setIsEditing(false);
+      toast({
+        title: "Succès",
+        description: "Profil mis à jour avec succès",
+      });
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le profil",
+        variant: "destructive",
+      });
     }
   };
 
   const handleAvatarUpload = async (file: File) => {
     try {
       await uploadAvatar(file);
+      toast({
+        title: "Succès",
+        description: "Avatar mis à jour avec succès",
+      });
     } catch (error) {
       console.error('Erreur lors du téléchargement de l\'avatar:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger l'avatar",
+        variant: "destructive",
+      });
     }
   };
 
   const handleCVUpload = async (file: File) => {
     try {
       await uploadCV(file);
+      toast({
+        title: "Succès",
+        description: "CV mis à jour avec succès",
+      });
     } catch (error) {
       console.error('Erreur lors du téléchargement du CV:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le CV",
+        variant: "destructive",
+      });
     }
   };
 
@@ -114,6 +153,7 @@ export default function ProfilStagiaire() {
             recommendations={stagiaire.recommendations || []} 
             isOwner={isOwner}
             stagiaireId={stagiaire.id}
+            isPremium={stagiaire.is_premium}
           />
         </TabsContent>
       </Tabs>

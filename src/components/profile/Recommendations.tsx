@@ -1,15 +1,18 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddRecommendationModal } from "./AddRecommendationModal";
 import { Lock, Star, Award, Building2, Calendar, Info } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/use-toast";
 
 // Structure des recommandations complète
 interface Recommendation {
   id: string;
   entreprise_id: string;
+  stagiaire_id: string;
   entreprise_name?: string;
   entreprise_logo?: string;
   position: string;
@@ -26,9 +29,6 @@ interface Recommendation {
   updated_at: string;
 }
 
-// Type pour la création d'une nouvelle recommandation
-type NewRecommendation = Omit<Recommendation, "id" | "entreprise_name" | "entreprise_logo" | "created_at" | "updated_at">;
-
 interface RecommendationsProps {
   recommendations: Recommendation[];
   isOwner: boolean;
@@ -37,18 +37,124 @@ interface RecommendationsProps {
 }
 
 export function Recommendations({ recommendations = [], isOwner, stagiaireId, isPremium = false }: RecommendationsProps) {
+  const [localRecommendations, setLocalRecommendations] = useState<Recommendation[]>(recommendations);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingRecommendation, setEditingRecommendation] = useState<Recommendation | null>(null);
+  const { toast } = useToast();
 
-  const handleAddRecommendation = (recommendation: NewRecommendation) => {
-    // Cette fonction sera implémentée pour ajouter une recommandation à la base de données
-    console.log("Ajouter recommandation:", recommendation);
-    setShowAddModal(false);
+  useEffect(() => {
+    setLocalRecommendations(recommendations);
+  }, [recommendations]);
+
+  // Fonction pour récupérer les recommandations depuis la BD
+  const fetchRecommendations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('recommendations')
+        .select(`
+          *,
+          entreprises(name, logo_url)
+        `)
+        .eq('stagiaire_id', stagiaireId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Formater les données
+      const formattedData = data.map((rec: any) => ({
+        ...rec,
+        entreprise_name: rec.entreprises?.name,
+        entreprise_logo: rec.entreprises?.logo_url,
+      }));
+
+      setLocalRecommendations(formattedData);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des recommandations:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les recommandations",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddRecommendation = async (recommendation: Omit<Recommendation, "id" | "entreprise_name" | "entreprise_logo" | "created_at" | "updated_at">) => {
+    try {
+      const { data, error } = await supabase
+        .from('recommendations')
+        .insert({
+          ...recommendation,
+          stagiaire_id: stagiaireId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Récupérer les informations de l'entreprise
+      const { data: entrepriseData, error: entrepriseError } = await supabase
+        .from('entreprises')
+        .select('name, logo_url')
+        .eq('id', recommendation.entreprise_id)
+        .single();
+
+      if (entrepriseError) throw entrepriseError;
+
+      // Ajouter la nouvelle recommandation à la liste
+      const newRecommendation = {
+        ...data,
+        entreprise_name: entrepriseData.name,
+        entreprise_logo: entrepriseData.logo_url
+      };
+
+      setLocalRecommendations([newRecommendation, ...localRecommendations]);
+      toast({
+        title: "Succès",
+        description: "Recommandation ajoutée avec succès",
+      });
+      setShowAddModal(false);
+    } catch (error) {
+      console.error("Erreur lors de l'ajout de la recommandation:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter la recommandation",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditRecommendation = (recommendation: Recommendation) => {
     setEditingRecommendation(recommendation);
     setShowAddModal(true);
+  };
+
+  // Fonction pour mettre à jour la visibilité d'une recommandation
+  const toggleRecommendationVisibility = async (id: string, isCurrentlyPublic: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('recommendations')
+        .update({ is_public: !isCurrentlyPublic })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Mettre à jour l'état local
+      setLocalRecommendations(localRecommendations.map(rec => 
+        rec.id === id ? { ...rec, is_public: !isCurrentlyPublic } : rec
+      ));
+
+      toast({
+        title: "Succès",
+        description: `Recommandation rendue ${!isCurrentlyPublic ? 'publique' : 'privée'}`,
+      });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la recommandation:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour la recommandation",
+        variant: "destructive",
+      });
+    }
   };
 
   // Fonction pour rendre les étoiles selon la note (rating)
@@ -90,7 +196,7 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
         </Card>
       )}
 
-      {recommendations.length === 0 && isPremium ? (
+      {localRecommendations.length === 0 && isPremium ? (
         <Card className="p-6 text-center">
           <div className="py-12">
             <Award className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
@@ -112,7 +218,7 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
         </Card>
       ) : (
         <>
-          {recommendations.map((recommendation) => (
+          {localRecommendations.map((recommendation) => (
             <Card key={recommendation.id} className="overflow-hidden">
               <CardHeader>
                 <div className="flex justify-between">
@@ -188,9 +294,22 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
                           : "Cette recommandation est privée"}
                       </span>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => handleEditRecommendation(recommendation)}>
-                      Modifier
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleRecommendationVisibility(recommendation.id, recommendation.is_public)}
+                      >
+                        {recommendation.is_public ? "Rendre privée" : "Rendre publique"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditRecommendation(recommendation)}
+                      >
+                        Modifier
+                      </Button>
+                    </div>
                   </div>
                 </CardFooter>
               )}

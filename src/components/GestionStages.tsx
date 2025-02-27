@@ -1,238 +1,178 @@
-import { useState } from "react";
+
+import React, { useState } from 'react';
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import fr from "date-fns/locale/fr";
+import { 
+  Eye, Plus, MoreHorizontal, Edit, Trash2, Calendar, 
+  MapPin, BriefcaseBusiness, Clock, Ban, CheckCircle2
+} from "lucide-react";
+import { formatDistance } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface Stage {
-  id: number;
+  id: string;
   titre: string;
   description: string;
+  lieu: string;
+  date_debut: string;
   duree: string;
-  dateDebut: Date;
-  competencesRequises: string[];
-  remuneration?: string;
+  remuneration: string;
+  competences: string[];
+  date_publication: string;
+  status?: 'active' | 'expired' | 'draft';
 }
 
 interface GestionStagesProps {
   stages: Stage[];
-  onUpdate: (stages: Stage[]) => void;
+  enterpriseId: string;
 }
 
-export function GestionStages({ stages: initialStages, onUpdate }: GestionStagesProps) {
-  const [stages, setStages] = useState<Stage[]>(initialStages);
-  const [newStage, setNewStage] = useState<Partial<Stage>>({
-    competencesRequises: [],
-  });
-  const [selectedDate, setSelectedDate] = useState<Date>();
+export function GestionStages({ stages, enterpriseId }: GestionStagesProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    if (name === "competencesRequises") {
-      setNewStage((prev) => ({
-        ...prev,
-        [name]: value.split(",").map((s) => s.trim()),
-      }));
-    } else {
-      setNewStage((prev) => ({ ...prev, [name]: value }));
-    }
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    return formatDistance(date, new Date(), { addSuffix: true, locale: fr });
   };
 
-  const handleAddStage = () => {
-    if (newStage.titre && newStage.description && selectedDate) {
-      const stage: Stage = {
-        id: Date.now(),
-        titre: newStage.titre,
-        description: newStage.description,
-        duree: newStage.duree || "",
-        dateDebut: selectedDate,
-        competencesRequises: newStage.competencesRequises || [],
-        remuneration: newStage.remuneration,
-      };
-
-      const updatedStages = [...stages, stage];
-      setStages(updatedStages);
-      onUpdate(updatedStages);
-
-      // Reset form
-      setNewStage({ competencesRequises: [] });
-      setSelectedDate(undefined);
-    }
-  };
-
-  const handleDeleteStage = (id: number) => {
-    const updatedStages = stages.filter((stage) => stage.id !== id);
-    setStages(updatedStages);
-    onUpdate(updatedStages);
-  };
+  const filteredStages = stages.filter(
+    (stage) =>
+      stage.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      stage.lieu.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="space-y-8">
-      {/* Liste des stages existants */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Stages actifs</h3>
-        {stages.map((stage) => (
-          <div
-            key={stage.id}
-            className="p-4 border border-gray-200 rounded-lg hover:border-primary transition-colors"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <h4 className="font-semibold">{stage.titre}</h4>
-                <p className="text-sm text-gray-600 mt-1">{stage.description}</p>
-                <div className="flex gap-4 mt-2 text-sm text-gray-500">
-                  <span>Durée : {stage.duree}</span>
-                  <span>
-                    Début : {format(stage.dateDebut, "MMMM yyyy", { locale: fr })}
-                  </span>
-                </div>
-                {stage.competencesRequises.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-600">Compétences requises :</p>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {stage.competencesRequises.map((comp) => (
-                        <span
-                          key={comp}
-                          className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
-                        >
-                          {comp}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {stage.remuneration && (
-                  <p className="mt-2 text-sm text-gray-600">
-                    Rémunération : {stage.remuneration}
-                  </p>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteStage(stage.id)}
-                className="text-gray-500 hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-semibold">Offres de stages</h2>
+        <Button onClick={() => setShowAddForm(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Ajouter une offre
+        </Button>
       </div>
 
-      {/* Formulaire d'ajout de stage */}
-      <div className="border-t pt-6">
-        <h3 className="text-lg font-semibold mb-4">Ajouter un nouveau stage</h3>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="titre">Titre du stage</Label>
-            <Input
-              id="titre"
-              name="titre"
-              value={newStage.titre || ""}
-              onChange={handleInputChange}
-              className="mt-1"
-              placeholder="ex: Développeur Full-Stack"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={newStage.description || ""}
-              onChange={handleInputChange}
-              className="mt-1"
-              rows={4}
-              placeholder="Décrivez les responsabilités et objectifs du stage..."
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="duree">Durée</Label>
-            <Input
-              id="duree"
-              name="duree"
-              value={newStage.duree || ""}
-              onChange={handleInputChange}
-              className="mt-1"
-              placeholder="ex: 6 mois"
-            />
-          </div>
-
-          <div>
-            <Label>Date de début</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal mt-1",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  initialFocus
-                  disabled={(date) => date < new Date()}
-                  locale={fr}
-                  className="rounded-md border"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div>
-            <Label htmlFor="competencesRequises">
-              Compétences requises (séparées par des virgules)
-            </Label>
-            <Input
-              id="competencesRequises"
-              name="competencesRequises"
-              value={newStage.competencesRequises?.join(", ") || ""}
-              onChange={handleInputChange}
-              className="mt-1"
-              placeholder="ex: React, TypeScript, Node.js"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="remuneration">Rémunération (optionnel)</Label>
-            <Input
-              id="remuneration"
-              name="remuneration"
-              value={newStage.remuneration || ""}
-              onChange={handleInputChange}
-              className="mt-1"
-              placeholder="ex: 1000€/mois"
-            />
-          </div>
-
-          <Button
-            type="button"
-            onClick={handleAddStage}
-            className="w-full"
-            disabled={!newStage.titre || !newStage.description || !selectedDate}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Ajouter le stage
+      {stages.length === 0 ? (
+        <div className="bg-white p-8 rounded-lg text-center">
+          <BriefcaseBusiness className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-4 text-lg font-medium text-gray-900">
+            Aucune offre de stage
+          </h3>
+          <p className="mt-2 text-gray-500">
+            Vous n'avez pas encore publié d'offres de stage. Commencez par en
+            créer une nouvelle.
+          </p>
+          <Button className="mt-4" onClick={() => setShowAddForm(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Créer ma première offre
           </Button>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Titre</TableHead>
+                <TableHead>Lieu</TableHead>
+                <TableHead>Date de début</TableHead>
+                <TableHead>Durée</TableHead>
+                <TableHead>Publiée</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStages.map((stage) => (
+                <TableRow key={stage.id}>
+                  <TableCell className="font-medium">{stage.titre}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                      {stage.lieu}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
+                      {new Date(stage.date_debut).toLocaleDateString()}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                      {stage.duree}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {formatTimeAgo(stage.date_publication)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={
+                        stage.status === 'expired' 
+                          ? 'destructive' 
+                          : stage.status === 'draft' 
+                            ? 'outline' 
+                            : 'default'
+                      }
+                    >
+                      {stage.status === 'expired' ? (
+                        <Ban className="h-3 w-3 mr-1" />
+                      ) : stage.status === 'draft' ? (
+                        <Clock className="h-3 w-3 mr-1" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      )}
+                      {stage.status === 'expired' 
+                        ? 'Expirée' 
+                        : stage.status === 'draft' 
+                          ? 'Brouillon' 
+                          : 'Active'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Voir les détails
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Ici nous pourrions ajouter un formulaire modal pour ajouter/modifier une offre */}
     </div>
   );
 }

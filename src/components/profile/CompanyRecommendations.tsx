@@ -117,6 +117,7 @@ export function CompanyRecommendations({
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddRecommendation}
+          initialData={null}
           stagiaire={{ id: selectedIntern.id, name: selectedIntern.name }}
           company={{ id: companyId, name: companyName, logo: companyLogo }}
         />

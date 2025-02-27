@@ -31,7 +31,7 @@ import { ProfilCandidat } from "./ProfilCandidat";
 import { ChatDiscussion } from "./ChatDiscussion";
 
 interface Candidat {
-  id: string; // Utilisons string pour tous les IDs pour la cohérence
+  id: number; // Gardons number pour la compatibilité avec l'API
   nom: string;
   email: string;
   telephone: string;
@@ -48,9 +48,9 @@ interface Candidat {
 }
 
 interface Candidature {
-  id: string; // String pour la cohérence
+  id: number; // Gardons number pour la compatibilité avec l'API
   candidat: Candidat;
-  stageId: string; // String pour la cohérence
+  stageId: number; // Gardons number pour la compatibilité avec l'API
   stageTitre: string;
   status: "en_attente" | "acceptee" | "refusee" | "en_discussion";
   datePostulation: Date;
@@ -59,8 +59,8 @@ interface Candidature {
 
 interface GestionCandidaturesProps {
   candidatures: Candidature[];
-  onUpdateStatus: (candidatureId: string, newStatus: Candidature["status"]) => void;
-  onAddRecommendation: (candidatId: string) => void;
+  onUpdateStatus: (candidatureId: number, newStatus: Candidature["status"]) => void;
+  onAddRecommendation: (candidatId: number) => void;
 }
 
 export function GestionCandidatures({
@@ -253,7 +253,7 @@ export function GestionCandidatures({
       {selectedCandidat && (
         <ProfilCandidat
           candidat={{
-            id: selectedCandidat.id,
+            id: selectedCandidat.id.toString(),
             name: selectedCandidat.nom,
             avatar: selectedCandidat.photo
           }}
@@ -266,14 +266,14 @@ export function GestionCandidatures({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-2xl">
             <ChatDiscussion
-              candidatureId={chatCandidature.id}
+              candidatureId={chatCandidature.id.toString()}
               entreprise={{
                 id: "entreprise-1", 
                 name: "TechCorp", 
                 avatar: "https://via.placeholder.com/150",
               }}
               candidat={{
-                id: chatCandidature.candidat.id,
+                id: chatCandidature.candidat.id.toString(),
                 name: chatCandidature.candidat.nom,
                 avatar: chatCandidature.candidat.photo
               }}
