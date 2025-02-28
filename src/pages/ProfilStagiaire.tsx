@@ -9,11 +9,12 @@ import { AboutTab } from "@/components/profile/AboutTab";
 import { CVTab } from "@/components/profile/CVTab";
 import { Portfolio } from "@/components/profile/Portfolio";
 import { Recommendations } from "@/components/profile/Recommendations";
-import { Loader2 } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Recommendation } from "@/types/recommendations";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ProfilStagiaire() {
   const { id } = useParams();
@@ -25,30 +26,59 @@ export default function ProfilStagiaire() {
   
   const [activeTab, setActiveTab] = useState<"profile" | "cv" | "portfolio" | "recommendations">("profile");
   const [isEditing, setIsEditing] = useState(false);
-
+  
   // Charger les recommandations quand on passe à cet onglet
   useEffect(() => {
     if (activeTab === "recommendations") {
       fetchRecommendations().catch(err => {
         console.error("Erreur lors du chargement des recommandations:", err);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les recommandations",
+          variant: "destructive",
+        });
       });
     }
   }, [activeTab]);
 
+  // Page de chargement complète
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto px-4 py-16">
+        <Card className="max-w-3xl mx-auto p-8">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-center text-muted-foreground">Chargement du profil...</p>
+          </div>
+        </Card>
       </div>
     );
   }
 
+  // Page d'erreur complète
   if (error || !stagiaire) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="p-6">
-          <h1 className="text-2xl font-bold text-red-600 mb-2">Erreur</h1>
-          <p className="text-gray-600">{error || "Profil non trouvé"}</p>
+      <div className="container mx-auto px-4 py-16">
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-2xl text-red-600 flex items-center gap-2">
+              <AlertCircle className="h-6 w-6" />
+              Erreur
+            </CardTitle>
+            <CardDescription className="text-base">
+              {error || "Ce profil n'existe pas ou n'est plus disponible."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Vous pouvez essayer de :
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
+              <li>Vérifier l'URL et réessayer</li>
+              <li>Revenir à la page d'accueil</li>
+              <li>Contacter l'administrateur si le problème persiste</li>
+            </ul>
+          </CardContent>
         </Card>
       </div>
     );
@@ -108,11 +138,13 @@ export default function ProfilStagiaire() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* En-tête du profil */}
+      {/* En-tête du profil avec gestion des erreurs */}
       <ProfileHeader 
         stagiaire={stagiaire} 
         isOwner={isOwner} 
-        onEditClick={() => setIsEditing(true)} 
+        onEditClick={() => setIsEditing(true)}
+        loading={loading}
+        error={error}
       />
 
       {/* Onglets */}
@@ -125,12 +157,26 @@ export default function ProfilStagiaire() {
         </TabsList>
 
         <TabsContent value="profile">
-          <AboutTab 
-            bio={stagiaire.bio || ""} 
-            skills={stagiaire.skills || []} 
-            languages={stagiaire.languages || []} 
-            preferredLocations={stagiaire.preferred_locations || []}
-          />
+          {stagiaire.bio || stagiaire.skills || stagiaire.languages || stagiaire.preferred_locations ? (
+            <AboutTab 
+              bio={stagiaire.bio || ""} 
+              skills={stagiaire.skills || []} 
+              languages={stagiaire.languages || []} 
+              preferredLocations={stagiaire.preferred_locations || []}
+            />
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Aucune information de profil n'est disponible.
+                    {isOwner && " Cliquez sur 'Modifier le profil' pour ajouter des informations."}
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="cv">
@@ -149,13 +195,24 @@ export default function ProfilStagiaire() {
         </TabsContent>
 
         <TabsContent value="recommendations">
-          {stagiaire.recommendations && (
+          {stagiaire.recommendations && stagiaire.recommendations.length > 0 ? (
             <Recommendations 
               recommendations={stagiaire.recommendations as Recommendation[]}
               isOwner={isOwner}
               stagiaireId={stagiaire.id}
               isPremium={stagiaire.is_premium || false}
             />
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Aucune recommandation n'est disponible pour le moment.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       </Tabs>

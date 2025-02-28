@@ -2,16 +2,59 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/profile/Badge";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Lock, User } from "lucide-react";
+import { Briefcase, Lock, User, AlertCircle, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ProfileHeaderProps {
   stagiaire: any;
   isOwner: boolean;
   onEditClick: () => void;
+  loading?: boolean;
+  error?: string | null;
 }
 
-export function ProfileHeader({ stagiaire, isOwner, onEditClick }: ProfileHeaderProps) {
+export function ProfileHeader({ stagiaire, isOwner, onEditClick, loading = false, error = null }: ProfileHeaderProps) {
+  // Afficher un état de chargement
+  if (loading) {
+    return (
+      <Card className="p-6 mb-8">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-muted-foreground">Chargement du profil...</span>
+        </div>
+      </Card>
+    );
+  }
+
+  // Afficher un message d'erreur
+  if (error) {
+    return (
+      <Card className="p-6 mb-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error || "Une erreur s'est produite lors du chargement du profil. Veuillez réessayer plus tard."}
+          </AlertDescription>
+        </Alert>
+      </Card>
+    );
+  }
+
+  // Vérifier si les données du stagiaire sont disponibles
+  if (!stagiaire) {
+    return (
+      <Card className="p-6 mb-8">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Les informations du profil ne sont pas disponibles pour le moment.
+          </AlertDescription>
+        </Alert>
+      </Card>
+    );
+  }
+
   return (
     <Card className="p-6 mb-8">
       <div className="flex flex-col md:flex-row items-center gap-6">
