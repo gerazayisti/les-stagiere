@@ -28,9 +28,9 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GestionStages } from "@/components/GestionStages";
-import { GestionCandidatures } from "@/components/GestionCandidatures";
+import { GestionCandidatures, GestionCandidaturesProps } from "@/components/GestionCandidatures";
 import { EditEntrepriseForm } from "@/components/EditEntrepriseForm";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { CompanyRecommendations } from "@/components/profile/CompanyRecommendations";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";

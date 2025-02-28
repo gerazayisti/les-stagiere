@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Recommendation } from "@/types/recommendations";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Project } from "@/types/project";
 
 export default function ProfilStagiaire() {
   const { id } = useParams();
@@ -189,7 +190,10 @@ export default function ProfilStagiaire() {
 
         <TabsContent value="portfolio">
           <Portfolio 
-            projects={stagiaire.projects || []} 
+            projects={(stagiaire.projects || []).map(project => ({
+              ...project,
+              technologies: project.technologies || []
+            }))}
             isOwner={isOwner} 
           />
         </TabsContent>

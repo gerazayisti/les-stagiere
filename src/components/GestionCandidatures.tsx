@@ -1,461 +1,318 @@
-// Définition de l'interface Candidat compatible avec le reste du code
-// en utilisant des string pour les IDs
-export interface Candidat {
-  id: string;
-  stagiaire_id: string;
-  stage_id: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'interview';
-  application_date: string;
-  message?: string;
-  stagiaire?: {
-    name: string;
-    avatar_url?: string;
-    title?: string;
-    location?: string;
-  };
-  stage?: {
-    title: string;
-    entreprise_name?: string;
-  };
-}
 
-// Ajoutez ici le reste du contenu du fichier
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Calendar, MapPin, Building, Clock, CheckCircle, XCircle, AlertCircle, MessageSquare } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
-import { fr } from "date-fns/locale";
-import { useAuth } from "@/hooks/useAuth";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { useNavigate } from "react-router-dom";
+import {
+  CheckCircle,
+  ChevronDown,
+  Clock,
+  MessageSquare,
+  Star,
+  Trash2,
+  XCircle,
+} from "lucide-react";
+import { ProfilCandidat } from "./ProfilCandidat";
+import { RecommendationForm } from "./profile/RecommendationForm";
 
-interface GestionCandidaturesProps {
-  entrepriseId?: string;
-  stagiaireId?: string;
-  limit?: number;
-  showViewAll?: boolean;
+interface Candidat {
+  id: string;
+  nom: string;
+  email: string;
+  telephone: string;
+  cv: string;
+  lettre: string;
+  datePostulation: Date;
+  competences: string[];
+  experience: string;
+  formation: string;
+  photo: string;
+  disponibilite: string;
+  location?: string;
+  hasRecommendation?: boolean;
 }
 
-export function GestionCandidatures({ 
-  entrepriseId, 
-  stagiaireId, 
-  limit = 5,
-  showViewAll = true 
+interface Candidature {
+  id: string;
+  candidat: Candidat;
+  stageId: string;
+  stageTitre: string;
+  status: "en_attente" | "acceptee" | "refusee" | "en_discussion";
+  datePostulation: Date;
+  noteInterne?: string;
+}
+
+export interface GestionCandidaturesProps {
+  candidatures: Candidature[];
+  onUpdateStatus: (
+    candidatureId: string,
+    newStatus: Candidature["status"]
+  ) => void;
+  onAddRecommendation: (candidatId: string) => void;
+}
+
+export function GestionCandidatures({
+  candidatures,
+  onUpdateStatus,
+  onAddRecommendation,
 }: GestionCandidaturesProps) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("all");
-  const [candidatures, setCandidatures] = useState<Candidat[]>([]);
-  const [filteredCandidatures, setFilteredCandidatures] = useState<Candidat[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCandidature, setSelectedCandidature] = useState<Candidat | null>(null);
-  const [showReplyDialog, setShowReplyDialog] = useState(false);
-  const [replyMessage, setReplyMessage] = useState("");
-  const [sendingReply, setSendingReply] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedCandidat, setSelectedCandidat] = useState<Candidat | null>(
+    null
+  );
+  const [selectedCandidature, setSelectedCandidature] =
+    useState<Candidature | null>(null);
+  const [isRecommendationFormOpen, setIsRecommendationFormOpen] =
+    useState(false);
 
-  // Déterminer si l'utilisateur est une entreprise ou un stagiaire
-  const isEntreprise = user?.role === 'entreprise';
-  const isStagiaire = user?.role === 'stagiaire';
-
-  // Déterminer si l'utilisateur consulte ses propres candidatures
-  const isOwner = (isEntreprise && entrepriseId === user?.id) || 
-                 (isStagiaire && stagiaireId === user?.id);
-
-  useEffect(() => {
-    fetchCandidatures();
-  }, [entrepriseId, stagiaireId]);
-
-  useEffect(() => {
-    filterCandidatures(activeTab);
-  }, [activeTab, candidatures]);
-
-  const fetchCandidatures = async () => {
-    setLoading(true);
-    try {
-      let query = supabase
-        .from('candidatures')
-        .select(`
-          *,
-          stagiaires (
-            id,
-            name,
-            avatar_url,
-            title,
-            location
-          ),
-          stages (
-            id,
-            title,
-            entreprises (
-              id,
-              name
-            )
-          )
-        `)
-        .order('application_date', { ascending: false });
-
-      // Filtrer selon le contexte (entreprise ou stagiaire)
-      if (entrepriseId) {
-        query = query.eq('stages.entreprises.id', entrepriseId);
-      } else if (stagiaireId) {
-        query = query.eq('stagiaire_id', stagiaireId);
-      }
-
-      // Limiter le nombre de résultats si demandé
-      if (limit) {
-        query = query.limit(limit);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // Formater les données pour faciliter l'accès
-      const formattedData = data.map((candidature: any) => ({
-        ...candidature,
-        stagiaire: candidature.stagiaires,
-        stage: {
-          ...candidature.stages,
-          entreprise_name: candidature.stages?.entreprises?.name
-        }
-      }));
-
-      setCandidatures(formattedData);
-      filterCandidatures(activeTab, formattedData);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des candidatures:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les candidatures",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleStatusChange = (candidatureId: string, newStatus: Candidature["status"]) => {
+    onUpdateStatus(candidatureId, newStatus);
   };
 
-  const filterCandidatures = (status: string, data = candidatures) => {
-    if (status === "all") {
-      setFilteredCandidatures(data);
-    } else {
-      setFilteredCandidatures(data.filter(c => c.status === status));
-    }
+  const handleRecommendation = (candidatId: string) => {
+    onAddRecommendation(candidatId);
+    setIsRecommendationFormOpen(false);
   };
 
-  const updateCandidatureStatus = async (candidatureId: string, newStatus: 'pending' | 'accepted' | 'rejected' | 'interview') => {
-    try {
-      const { error } = await supabase
-        .from('candidatures')
-        .update({ status: newStatus })
-        .eq('id', candidatureId);
-
-      if (error) throw error;
-
-      // Mettre à jour l'état local
-      setCandidatures(candidatures.map(c => 
-        c.id === candidatureId ? { ...c, status: newStatus } : c
-      ));
-
-      toast({
-        title: "Succès",
-        description: `Statut de la candidature mis à jour`,
-      });
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour du statut:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le statut",
-        variant: "destructive",
-      });
-    }
+  const openCandidatModal = (candidat: Candidat) => {
+    setSelectedCandidat(candidat);
+    setModalOpen(true);
   };
 
-  const handleReply = (candidature: Candidat) => {
+  const openRecommendationForm = (candidature: Candidature) => {
     setSelectedCandidature(candidature);
-    setShowReplyDialog(true);
+    setIsRecommendationFormOpen(true);
   };
 
-  const sendReply = async () => {
-    if (!selectedCandidature || !replyMessage.trim()) return;
-
-    setSendingReply(true);
-    try {
-      // Créer un nouveau message dans la table messages
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          sender_id: user?.id,
-          receiver_id: isEntreprise ? selectedCandidature.stagiaire_id : selectedCandidature.stage?.entreprise_id,
-          content: replyMessage,
-          candidature_id: selectedCandidature.id,
-          is_read: false
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Message envoyé",
-        description: "Votre message a été envoyé avec succès",
-      });
-
-      setShowReplyDialog(false);
-      setReplyMessage("");
-    } catch (error) {
-      console.error("Erreur lors de l'envoi du message:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'envoyer le message",
-        variant: "destructive",
-      });
-    } finally {
-      setSendingReply(false);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: Candidature["status"]) => {
     switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">En attente</Badge>;
-      case 'accepted':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Acceptée</Badge>;
-      case 'rejected':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Refusée</Badge>;
-      case 'interview':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Entretien</Badge>;
+      case "en_attente":
+        return (
+          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+            <Clock className="h-3 w-3 mr-1" />
+            En attente
+          </Badge>
+        );
+      case "acceptee":
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Acceptée
+          </Badge>
+        );
+      case "refusee":
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            <XCircle className="h-3 w-3 mr-1" />
+            Refusée
+          </Badge>
+        );
+      case "en_discussion":
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <MessageSquare className="h-3 w-3 mr-1" />
+            En discussion
+          </Badge>
+        );
       default:
-        return <Badge variant="outline">Inconnu</Badge>;
+        return <Badge>{status}</Badge>;
     }
   };
-
-  const getInitials = (name: string) => {
-    if (!name) return "??";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), {
-        addSuffix: true,
-        locale: fr
-      });
-    } catch (e) {
-      return "Date inconnue";
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">
-          {isEntreprise ? "Candidatures reçues" : "Mes candidatures"}
-        </h2>
-        {showViewAll && candidatures.length > limit && (
-          <Button 
-            variant="outline" 
-            onClick={() => navigate(isEntreprise ? "/entreprises/candidatures" : "/stagiaires/candidatures")}
-          >
-            Voir tout
-          </Button>
-        )}
-      </div>
-
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="all">Toutes</TabsTrigger>
-          <TabsTrigger value="pending">En attente</TabsTrigger>
-          <TabsTrigger value="interview">Entretien</TabsTrigger>
-          <TabsTrigger value="accepted">Acceptées</TabsTrigger>
-          <TabsTrigger value="rejected">Refusées</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={activeTab}>
-          {filteredCandidatures.length === 0 ? (
-            <Card className="text-center p-6">
-              <CardContent className="pt-10 pb-10">
-                <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
-                <h3 className="mt-4 text-lg font-medium">Aucune candidature</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {activeTab === "all" 
-                    ? "Vous n'avez pas encore de candidatures." 
-                    : `Vous n'avez pas de candidatures avec le statut "${activeTab}".`}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {filteredCandidatures.map((candidature) => (
-                <Card key={candidature.id} className="overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        {isEntreprise ? (
-                          // Afficher le stagiaire si c'est une entreprise qui consulte
-                          <>
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={candidature.stagiaire?.avatar_url || ""} alt={candidature.stagiaire?.name || ""} />
-                              <AvatarFallback>{getInitials(candidature.stagiaire?.name || "")}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <CardTitle className="text-base">
-                                {candidature.stagiaire?.name || "Candidat"}
-                              </CardTitle>
-                              <CardDescription>
-                                {candidature.stagiaire?.title || "Étudiant"}
-                                {candidature.stagiaire?.location && (
-                                  <span className="flex items-center mt-1 text-xs">
-                                    <MapPin className="h-3 w-3 mr-1" />
-                                    {candidature.stagiaire.location}
-                                  </span>
-                                )}
-                              </CardDescription>
-                            </div>
-                          </>
-                        ) : (
-                          // Afficher l'offre de stage si c'est un stagiaire qui consulte
-                          <>
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Building className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                              <CardTitle className="text-base">
-                                {candidature.stage?.title || "Offre de stage"}
-                              </CardTitle>
-                              <CardDescription>
-                                {candidature.stage?.entreprise_name || "Entreprise"}
-                              </CardDescription>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(candidature.status)}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="pb-3">
-                    {candidature.message && (
-                      <div className="mb-4 text-sm text-muted-foreground">
-                        <p className="font-medium mb-1">Message de candidature :</p>
-                        <p className="whitespace-pre-wrap">{candidature.message}</p>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3 mr-1" />
-                      <span>Candidature envoyée {formatDate(candidature.application_date)}</span>
-                    </div>
-                  </CardContent>
-                  
-                  {isOwner && (
-                    <CardFooter className="bg-muted/50 pt-3 pb-3">
-                      <div className="flex justify-between w-full">
-                        <div className="flex gap-2">
-                          {isEntreprise && candidature.status === 'pending' && (
-                            <>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                                onClick={() => updateCandidatureStatus(candidature.id, 'interview')}
-                              >
-                                Proposer un entretien
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-green-600 border-green-200 hover:bg-green-50"
-                                onClick={() => updateCandidatureStatus(candidature.id, 'accepted')}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Accepter
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-red-600 border-red-200 hover:bg-red-50"
-                                onClick={() => updateCandidatureStatus(candidature.id, 'rejected')}
-                              >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Refuser
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleReply(candidature)}
-                        >
-                          <MessageSquare className="h-4 w-4 mr-1" />
-                          Répondre
-                        </Button>
-                      </div>
-                    </CardFooter>
-                  )}
-                </Card>
-              ))}
+    <div className="space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Candidatures</CardTitle>
+          <CardDescription>
+            Gérez toutes vos candidatures de stage ici
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {candidatures.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Aucune candidature n'a été reçue pour le moment.
             </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Candidat</TableHead>
+                  <TableHead>Stage</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {candidatures.map((candidature) => (
+                  <TableRow key={candidature.id}>
+                    <TableCell className="font-medium">
+                      <div
+                        className="flex items-center space-x-3 cursor-pointer"
+                        onClick={() => openCandidatModal(candidature.candidat)}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={candidature.candidat.photo} />
+                          <AvatarFallback>
+                            {candidature.candidat.nom.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">
+                            {candidature.candidat.nom}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {candidature.candidat.location || "Non spécifié"}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{candidature.stageTitre}</TableCell>
+                    <TableCell>
+                      {candidature.datePostulation.toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(candidature.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <span className="sr-only">Ouvrir menu</span>
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusChange(candidature.id, "en_discussion")
+                              }
+                            >
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Mettre en discussion
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusChange(candidature.id, "acceptee")
+                              }
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Accepter
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusChange(candidature.id, "refusee")
+                              }
+                            >
+                              <XCircle className="mr-2 h-4 w-4" />
+                              Refuser
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => openRecommendationForm(candidature)}
+                              disabled={candidature.candidat.hasRecommendation}
+                            >
+                              <Star className="mr-2 h-4 w-4" />
+                              {candidature.candidat.hasRecommendation
+                                ? "Déjà recommandé"
+                                : "Recommander"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
 
-      <Dialog open={showReplyDialog} onOpenChange={setShowReplyDialog}>
-        <DialogContent>
+      {/* Modal profil candidat */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedCandidat && <ProfilCandidat candidat={selectedCandidat} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de recommandation */}
+      <Dialog
+        open={isRecommendationFormOpen}
+        onOpenChange={setIsRecommendationFormOpen}
+      >
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Répondre à la candidature</DialogTitle>
+            <DialogTitle>Ajouter une recommandation</DialogTitle>
             <DialogDescription>
-              Envoyez un message concernant cette candidature.
+              Partagez votre expérience avec ce stagiaire pour l'aider dans sa
+              recherche de stage.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Votre message</label>
-              <Textarea
-                placeholder="Écrivez votre message ici..."
-                value={replyMessage}
-                onChange={(e) => setReplyMessage(e.target.value)}
-                rows={5}
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReplyDialog(false)}>
-              Annuler
-            </Button>
-            <Button onClick={sendReply} disabled={!replyMessage.trim() || sendingReply}>
-              {sendingReply ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Envoi en cours...
-                </>
-              ) : (
-                "Envoyer"
-              )}
-            </Button>
-          </DialogFooter>
+
+          {selectedCandidature && (
+            <RecommendationForm
+              stagiaire={{
+                id: selectedCandidature.candidat.id,
+                name: selectedCandidature.candidat.nom,
+              }}
+              entreprise={{
+                id: "current-company-id", // À remplacer par l'ID réel de l'entreprise
+                name: "Votre Entreprise",
+              }}
+              stage={{
+                title: selectedCandidature.stageTitre,
+              }}
+              onSubmit={(data) => {
+                console.log("Recommandation soumise:", data);
+                handleRecommendation(selectedCandidature.candidat.id);
+              }}
+              onCancel={() => setIsRecommendationFormOpen(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
