@@ -22,14 +22,14 @@ export default function ProfilStagiaire() {
   const { toast } = useToast();
   const isOwner = user?.id === id;
   
-  const { stagiaire, loading, error, updateStagiaire, uploadAvatar, uploadCV, fetchRecommendations } = useStagiaire(id!);
+  const { stagiaire, loading, error, updateStagiaire, uploadAvatar, uploadCV, fetchRecommendations } = useStagiaire(id || "");
   
   const [activeTab, setActiveTab] = useState<"profile" | "cv" | "portfolio" | "recommendations">("profile");
   const [isEditing, setIsEditing] = useState(false);
   
   // Charger les recommandations quand on passe à cet onglet
   useEffect(() => {
-    if (activeTab === "recommendations") {
+    if (activeTab === "recommendations" && fetchRecommendations) {
       fetchRecommendations().catch(err => {
         console.error("Erreur lors du chargement des recommandations:", err);
         toast({
@@ -39,7 +39,7 @@ export default function ProfilStagiaire() {
         });
       });
     }
-  }, [activeTab]);
+  }, [activeTab, fetchRecommendations, toast]);
 
   // Page de chargement complète
   if (loading) {
@@ -226,7 +226,7 @@ export default function ProfilStagiaire() {
             bio: stagiaire.bio || "",
             email: stagiaire.email,
             phone: stagiaire.phone || "",
-            education: stagiaire.education || "",
+            education: typeof stagiaire.education === 'string' ? stagiaire.education : "",
             disponibility: stagiaire.disponibility || ""
           }}
           onSubmit={handleEditSubmit}

@@ -11,12 +11,12 @@ export interface Recommendation {
   author_name: string;
   author_position: string;
   company_name: string;
-  company_logo?: string;
+  company_logo: string | null;
   created_at: string;
+  updated_at: string;
+  is_public: boolean;
   start_date: string;
   end_date: string;
-  skills?: string[];
-  achievements?: string[];
-  is_public?: boolean;
-  updated_at?: string;
+  skills: string[];
+  achievements: string[];
 }

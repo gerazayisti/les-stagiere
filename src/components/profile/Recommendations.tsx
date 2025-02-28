@@ -58,7 +58,7 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
     }
   };
 
-  // Modifié pour accepter le type correct
+  // Fonction pour ajouter une recommandation
   const handleAddRecommendation = async (data: Omit<Recommendation, "id">) => {
     try {
       // Création de l'objet avec les propriétés requises mais pas forcément présentes dans data
@@ -252,7 +252,7 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
                   {recommendation.content}
                 </p>
 
-                {recommendation.skills?.length > 0 && (
+                {recommendation.skills && recommendation.skills.length > 0 && (
                   <div className="mb-4">
                     <p className="text-sm font-medium mb-2">Compétences</p>
                     <div className="flex flex-wrap gap-2">
@@ -265,7 +265,7 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
                   </div>
                 )}
 
-                {recommendation.achievements?.length > 0 && (
+                {recommendation.achievements && recommendation.achievements.length > 0 && (
                   <div>
                     <p className="text-sm font-medium mb-2">Réalisations</p>
                     <ul className="list-disc list-inside text-sm text-muted-foreground">

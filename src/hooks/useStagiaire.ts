@@ -38,6 +38,7 @@ export interface StagiaireData {
     url: string | null;
     image_url: string | null;
     tags: string[];
+    technologies?: string[];
   }> | null;
   cv_url: string | null;
   social_links: {
@@ -49,17 +50,19 @@ export interface StagiaireData {
   preferred_locations: string[];
   availability_date: string | null;
   internship_duration: string | null;
+  phone: string | null;
+  disponibility: string | null;
   recommendations: Recommendation[];
   is_premium: boolean;
   is_verified: boolean;
   last_active: string;
 }
 
-interface UseStagiaireProps {
-  stagiaireId: string | undefined;
+export interface UseStagiaireProps {
+  stagiaireId: string;
 }
 
-export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
+export function useStagiaire(stagiaireId: string) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [stagiaire, setStagiaire] = useState<StagiaireData | null>(null);
@@ -138,7 +141,7 @@ export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
         description: "Impossible de mettre à jour les informations: ID manquant",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
     try {
@@ -177,14 +180,14 @@ export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
     }
   };
 
-  const addRecommendation = async (recommendation: Omit<Recommendation, 'id' | 'stagiaire_id'>) => {
+  const addRecommendation = async (recommendation: Omit<Recommendation, "id">) => {
     if (!stagiaireId || !stagiaire) {
       toast({
         title: "Erreur",
         description: "Impossible d'ajouter une recommandation: données manquantes",
         variant: "destructive",
       });
-      return;
+      return null;
     }
 
     try {
@@ -201,11 +204,12 @@ export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
       if (error) throw error;
 
       // Mettre à jour l'état local
-      setStagiaire(prev => {
-        if (!prev) return null;
-        const updatedRecommendations = [...prev.recommendations, data as Recommendation];
-        return { ...prev, recommendations: updatedRecommendations };
-      });
+      if (stagiaire && stagiaire.recommendations) {
+        setStagiaire({
+          ...stagiaire,
+          recommendations: [...stagiaire.recommendations, data as Recommendation]
+        });
+      }
 
       toast({
         title: "Succès",
@@ -223,6 +227,163 @@ export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
       });
       
       return null;
+    }
+  };
+
+  // Ajout des méthodes manquantes
+  const uploadAvatar = async (file: File) => {
+    if (!stagiaireId) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger l'avatar: ID manquant",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `avatars/${stagiaireId}/${Date.now()}.${fileExt}`;
+
+      // Upload du fichier
+      const { error: uploadError } = await supabase.storage
+        .from('public')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Récupérer l'URL publique
+      const { data: { publicUrl } } = supabase.storage
+        .from('public')
+        .getPublicUrl(filePath);
+
+      // Mettre à jour le profil
+      const { error: updateError } = await supabase
+        .from('stagiaires')
+        .update({ avatar_url: publicUrl })
+        .eq('id', stagiaireId);
+
+      if (updateError) throw updateError;
+
+      // Mettre à jour l'état local
+      setStagiaire(prev => {
+        if (!prev) return null;
+        return { ...prev, avatar_url: publicUrl };
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error('Erreur lors du téléchargement de l\'avatar:', error);
+      
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors du téléchargement de l'avatar",
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
+  const uploadCV = async (file: File) => {
+    if (!stagiaireId) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le CV: ID manquant",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `cv/${stagiaireId}/${Date.now()}.${fileExt}`;
+
+      // Upload du fichier
+      const { error: uploadError } = await supabase.storage
+        .from('public')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Récupérer l'URL publique
+      const { data: { publicUrl } } = supabase.storage
+        .from('public')
+        .getPublicUrl(filePath);
+
+      // Mettre à jour le profil
+      const { error: updateError } = await supabase
+        .from('stagiaires')
+        .update({ cv_url: publicUrl })
+        .eq('id', stagiaireId);
+
+      if (updateError) throw updateError;
+
+      // Mettre à jour l'état local
+      setStagiaire(prev => {
+        if (!prev) return null;
+        return { ...prev, cv_url: publicUrl };
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error('Erreur lors du téléchargement du CV:', error);
+      
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors du téléchargement du CV",
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
+  const fetchRecommendations = async () => {
+    if (!stagiaireId) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les recommandations: ID manquant",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('recommendations')
+        .select(`
+          *,
+          entreprises(name, logo_url)
+        `)
+        .eq('stagiaire_id', stagiaireId);
+
+      if (error) throw error;
+
+      // Formater les données
+      const formattedData = data.map((rec: any) => ({
+        ...rec,
+        company_name: rec.entreprises?.name || 'Entreprise',
+        company_logo: rec.entreprises?.logo_url || null,
+      }));
+
+      // Mettre à jour l'état local
+      setStagiaire(prev => {
+        if (!prev) return null;
+        return { ...prev, recommendations: formattedData };
+      });
+
+      return formattedData;
+    } catch (error: any) {
+      console.error('Erreur lors du chargement des recommandations:', error);
+      
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors du chargement des recommandations",
+        variant: "destructive",
+      });
+      
+      throw error;
     }
   };
 
@@ -246,6 +407,8 @@ export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
         languages: ["Français (natif)", "Anglais (C1)", "Espagnol (B1)"],
         bio: "Étudiante en Master d'Informatique à l'Université de Lyon, je suis passionnée par les technologies web modernes et l'analyse de données. J'ai participé à plusieurs hackathons et j'ai développé des projets personnels en React et Python.",
         location: "Lyon, France",
+        phone: "+33 6 12 34 56 78",
+        disponibility: "Disponible immédiatement",
         education: [
           {
             school: "Université de Lyon",
@@ -286,14 +449,16 @@ export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
             description: "Application web permettant aux enseignants de créer des cours interactifs avec évaluation automatique.",
             url: "https://github.com/sophiemartin/elearn-platform",
             image_url: "https://images.unsplash.com/photo-1501504905252-473c47e087f8?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
-            tags: ["React", "Node.js", "MongoDB"]
+            tags: ["React", "Node.js", "MongoDB"],
+            technologies: ["React", "Node.js", "MongoDB"]
           },
           {
             title: "Analyse de sentiment sur Twitter",
             description: "Projet d'analyse de données utilisant Python et des techniques de NLP pour analyser le sentiment des tweets.",
             url: "https://github.com/sophiemartin/twitter-sentiment",
             image_url: "https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
-            tags: ["Python", "NLP", "Data Science"]
+            tags: ["Python", "NLP", "Data Science"],
+            technologies: ["Python", "NLTK", "Pandas", "Matplotlib"]
           }
         ],
         cv_url: "https://example.com/cv/sophie-martin.pdf",
@@ -333,7 +498,9 @@ export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
           start_date: "2023-01-01",
           end_date: "2023-06-30",
           updated_at: "2023-07-01",
-          is_public: true
+          is_public: true,
+          skills: ["React", "TypeScript", "Communication"],
+          achievements: ["Développement d'une interface utilisateur complète", "Optimisation des performances"]
         },
         {
           id: "rec2",
@@ -352,7 +519,9 @@ export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
           start_date: "2022-09-01",
           end_date: "2022-12-31",
           updated_at: "2023-01-15",
-          is_public: true
+          is_public: true,
+          skills: ["Python", "Data Analysis", "Teamwork"],
+          achievements: ["Analyse de données complexes", "Présentation des résultats à l'équipe de direction"]
         }
       ];
       
@@ -371,6 +540,9 @@ export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
     loading,
     error,
     updateStagiaire,
-    addRecommendation
+    addRecommendation,
+    uploadAvatar,
+    uploadCV,
+    fetchRecommendations
   };
 }
