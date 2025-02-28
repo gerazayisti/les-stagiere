@@ -1,28 +1,35 @@
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
 
-interface CategoryCardProps {
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Icons } from '@/components/Icons';
+
+export interface CategoryCardProps {
   title: string;
-  vacancies: number;
-  delay?: number;
+  icon: string;
+  count?: number; // Ajout du count comme optionnel pour corriger l'erreur
 }
 
-export const CategoryCard = ({ title, vacancies, delay = 0 }: CategoryCardProps) => {
+const CategoryCard: React.FC<CategoryCardProps> = ({ title, icon, count }) => {
+  // Fonction pour récupérer dynamiquement l'icône selon le nom
+  const IconComponent = Icons[icon as keyof typeof Icons] || Icons.default;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay }}
-    >
-      <Link
-        to={`/stages/categorie/${title.toLowerCase()}`}
-        className="block p-4 rounded-lg border border-border bg-background hover:border-primary transition-colors"
-      >
-        <h3 className="text-foreground font-medium">{title}</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          {vacancies} {vacancies === 1 ? "Offre" : "Offres"}
-        </p>
-      </Link>
-    </motion.div>
+    <Card className="overflow-hidden transition-all hover:shadow-md cursor-pointer">
+      <CardContent className="p-6">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-center bg-primary/10 rounded-md w-12 h-12">
+            <IconComponent className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-medium text-lg">{title}</h3>
+            {count !== undefined && (
+              <p className="text-sm text-muted-foreground">{count} offres</p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
+
+export default CategoryCard;

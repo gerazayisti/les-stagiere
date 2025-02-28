@@ -9,265 +9,324 @@ export interface StagiaireData {
   id: string;
   name: string;
   email: string;
-  bio?: string;
-  avatar_url?: string;
-  cv_url?: string;
-  phone?: string;
-  date_of_birth?: string;
-  skills?: string[];
-  education?: string;
-  experience?: string;
-  location?: string;
-  languages?: string[];
-  preferred_locations?: string[];
-  availability?: string;
-  is_premium?: boolean;
-  is_profile_complete?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  title?: string; // Ajout du titre
-  disponibility?: string; // Ajout de disponibility (même si on a déjà availability)
-  projects?: Array<{
-    id: string;
+  avatar_url: string | null;
+  summary: string | null;
+  title: string | null;
+  looking_for_internship: boolean;
+  skills: string[];
+  languages: string[];
+  bio: string | null;
+  location: string | null;
+  education: Array<{
+    school: string;
+    degree: string;
+    field: string;
+    start_date: string;
+    end_date: string | null;
+    description: string | null;
+  }> | null;
+  experience: Array<{
+    company: string;
+    position: string;
+    start_date: string;
+    end_date: string | null;
+    description: string | null;
+  }> | null;
+  projects: Array<{
     title: string;
     description: string;
-    technologies: string[];
-    link?: string;
-    image_url?: string;
-  }>;
-  recommendations?: Recommendation[];
+    url: string | null;
+    image_url: string | null;
+    tags: string[];
+  }> | null;
+  cv_url: string | null;
+  social_links: {
+    linkedin?: string;
+    github?: string;
+    twitter?: string;
+    website?: string;
+  } | null;
+  preferred_locations: string[];
+  availability_date: string | null;
+  internship_duration: string | null;
+  recommendations: Recommendation[];
+  is_premium: boolean;
+  is_verified: boolean;
+  last_active: string;
 }
 
-export function useStagiaire(stagiaireId: string) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [stagiaire, setStagiaire] = useState<StagiaireData | null>(null);
+interface UseStagiaireProps {
+  stagiaireId: string | undefined;
+}
+
+export function useStagiaire({ stagiaireId }: UseStagiaireProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [stagiaire, setStagiaire] = useState<StagiaireData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchStagiaire();
-  }, [stagiaireId]);
+    async function fetchStagiaire() {
+      if (!stagiaireId) {
+        setError("ID de stagiaire non fourni");
+        setLoading(false);
+        return;
+      }
 
-  const fetchStagiaire = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+      try {
+        // Récupérer les données du stagiaire
+        const { data: stagiaireData, error: stagiaireError } = await supabase
+          .from('stagiaires')
+          .select('*')
+          .eq('id', stagiaireId)
+          .single();
 
-      const { data, error: fetchError } = await supabase
-        .from('stagiaires')
-        .select('*')
-        .eq('id', stagiaireId)
-        .single();
-
-      if (fetchError) {
-        if (fetchError.code === 'PGRST116') {
-          setError("Ce profil n'existe pas");
-          toast({
-            title: "Profil introuvable",
-            description: "Le profil demandé n'existe pas",
-            variant: "destructive",
-          });
-          return;
+        if (stagiaireError) {
+          throw stagiaireError;
         }
-        throw fetchError;
+
+        if (!stagiaireData) {
+          throw new Error('Stagiaire non trouvé');
+        }
+
+        // Récupérer les recommandations
+        const { data: recommendationsData, error: recommendationsError } = await supabase
+          .from('recommendations')
+          .select('*, entreprises(name, logo_url)')
+          .eq('stagiaire_id', stagiaireId)
+          .eq('is_public', true);
+
+        if (recommendationsError) {
+          console.error('Erreur lors de la récupération des recommandations:', recommendationsError);
+        }
+
+        // Formater les données des recommandations
+        const formattedRecommendations = (recommendationsData || []).map((rec: any) => ({
+          ...rec,
+          company_name: rec.entreprises?.name || 'Entreprise',
+          company_logo: rec.entreprises?.logo_url || null,
+        }));
+
+        // Assembler les données du stagiaire
+        const formattedStagiaire: StagiaireData = {
+          ...stagiaireData,
+          recommendations: formattedRecommendations as Recommendation[],
+        };
+
+        setStagiaire(formattedStagiaire);
+      } catch (error: any) {
+        console.error('Erreur lors de la récupération du stagiaire:', error);
+        setError(error.message || 'Une erreur est survenue');
+        
+        // Si le stagiaire n'existe pas, rediriger vers la page 404
+        if (error.code === 'PGRST116' || error.message.includes('non trouvé')) {
+          navigate('/404', { replace: true });
+        }
+      } finally {
+        setLoading(false);
       }
-
-      // Mock data for development (à remplacer par les vraies données quand disponibles)
-      const mockStagiaire: StagiaireData = {
-        id: stagiaireId,
-        name: data?.name || "Utilisateur inconnu",
-        email: data?.email || "email@example.com",
-        bio: data?.bio || "Étudiant passionné en recherche de stage dans le domaine du développement web. Je suis actuellement en formation à l'université et je cherche à mettre en pratique mes compétences techniques dans un environnement professionnel stimulant.",
-        avatar_url: data?.avatar_url || "https://randomuser.me/api/portraits/men/1.jpg",
-        cv_url: data?.cv_url || "",
-        phone: data?.phone || "+33 6 12 34 56 78",
-        skills: data?.skills || ["JavaScript", "React", "Node.js", "TypeScript", "HTML/CSS", "Git"],
-        education: data?.education || "Master en Informatique, Université de Paris",
-        experience: data?.experience || "1 an d'expérience en développement web",
-        location: data?.location || "Paris, France",
-        languages: data?.languages || ["Français (natif)", "Anglais (professionnel)", "Espagnol (intermédiaire)"],
-        preferred_locations: data?.preferred_locations || ["Paris", "Lyon", "Bordeaux", "Télétravail"],
-        availability: data?.availability || "Disponible dès maintenant",
-        title: data?.title || "Étudiant en Informatique",
-        disponibility: data?.disponibility || "Disponible dès maintenant",
-        is_premium: data?.is_premium || false,
-        is_profile_complete: data?.is_profile_complete || true,
-        projects: data?.projects || [
-          {
-            id: "1",
-            title: "Portfolio Personnel",
-            description: "Un site web portfolio créé avec React et Tailwind CSS pour présenter mes projets et compétences.",
-            technologies: ["React", "Tailwind CSS", "Vite"],
-            link: "https://portfolio.example.com",
-            image_url: "https://placehold.co/600x400"
-          },
-          {
-            id: "2",
-            title: "Application de Gestion de Tâches",
-            description: "Une application web permettant de gérer des tâches quotidiennes avec possibilité de créer, modifier et supprimer des tâches.",
-            technologies: ["JavaScript", "Node.js", "MongoDB"],
-            link: "https://tasks.example.com",
-            image_url: "https://placehold.co/600x400"
-          }
-        ],
-        recommendations: []
-      };
-
-      setStagiaire(mockStagiaire);
-
-      // Charger les recommandations si l'utilisateur est premium
-      if (mockStagiaire.is_premium) {
-        fetchRecommendations();
-      }
-    } catch (err: any) {
-      console.error('Erreur lors du chargement du profil:', err);
-      setError(err.message);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger le profil",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
-  };
+
+    fetchStagiaire();
+  }, [stagiaireId, navigate]);
 
   const updateStagiaire = async (updatedData: Partial<StagiaireData>) => {
-    try {
-      setLoading(true);
+    if (!stagiaireId) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour les informations: ID manquant",
+        variant: "destructive",
+      });
+      return;
+    }
 
-      const { error: updateError } = await supabase
+    try {
+      // Exclure les recommandations de la mise à jour
+      const { recommendations, ...dataToUpdate } = updatedData;
+
+      const { error } = await supabase
         .from('stagiaires')
-        .update(updatedData)
+        .update(dataToUpdate)
         .eq('id', stagiaireId);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      setStagiaire(prev => prev ? { ...prev, ...updatedData } : null);
+      // Mettre à jour l'état local
+      setStagiaire(prev => {
+        if (!prev) return null;
+        return { ...prev, ...updatedData };
+      });
 
       toast({
-        title: "Profil mis à jour",
-        description: "Votre profil a été mis à jour avec succès.",
+        title: "Succès",
+        description: "Informations mises à jour avec succès",
       });
 
       return true;
-    } catch (err: any) {
-      console.error('Erreur lors de la mise à jour du profil:', err);
+    } catch (error: any) {
+      console.error('Erreur lors de la mise à jour:', error);
+      
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour le profil",
+        description: error.message || "Une erreur est survenue lors de la mise à jour",
         variant: "destructive",
       });
-      throw err;
-    } finally {
-      setLoading(false);
+      
+      return false;
     }
   };
 
-  const uploadAvatar = async (file: File) => {
-    try {
-      setLoading(true);
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${stagiaireId}-avatar.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      const { error: uploadError, data } = await supabase.storage
-        .from('profiles')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // Construire l'URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('profiles')
-        .getPublicUrl(filePath);
-
-      // Mettre à jour le profil avec la nouvelle URL
-      await updateStagiaire({ avatar_url: publicUrl });
-
-      setStagiaire(prev => prev ? { ...prev, avatar_url: publicUrl } : null);
-
-      toast({
-        title: "Avatar mis à jour",
-        description: "Votre avatar a été mis à jour avec succès.",
-      });
-
-      return publicUrl;
-    } catch (err: any) {
-      console.error('Erreur lors du téléchargement de l\'avatar:', err);
+  const addRecommendation = async (recommendation: Omit<Recommendation, 'id' | 'stagiaire_id'>) => {
+    if (!stagiaireId || !stagiaire) {
       toast({
         title: "Erreur",
-        description: "Impossible de télécharger l'avatar",
+        description: "Impossible d'ajouter une recommandation: données manquantes",
         variant: "destructive",
       });
-      throw err;
-    } finally {
-      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('recommendations')
+        .insert({
+          ...recommendation,
+          stagiaire_id: stagiaireId,
+          is_public: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Mettre à jour l'état local
+      setStagiaire(prev => {
+        if (!prev) return null;
+        const updatedRecommendations = [...prev.recommendations, data as Recommendation];
+        return { ...prev, recommendations: updatedRecommendations };
+      });
+
+      toast({
+        title: "Succès",
+        description: "Recommandation ajoutée avec succès",
+      });
+
+      return data;
+    } catch (error: any) {
+      console.error('Erreur lors de l\'ajout de la recommandation:', error);
+      
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de l'ajout de la recommandation",
+        variant: "destructive",
+      });
+      
+      return null;
     }
   };
 
-  const uploadCV = async (file: File) => {
-    try {
-      setLoading(true);
+  // Fonction de simulation pour le développement
+  const useMockData = import.meta.env.DEV && !stagiaireId;
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${stagiaireId}-cv.${fileExt}`;
-      const filePath = `cvs/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // Construire l'URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(filePath);
-
-      // Mettre à jour le profil avec la nouvelle URL
-      await updateStagiaire({ cv_url: publicUrl });
-
-      setStagiaire(prev => prev ? { ...prev, cv_url: publicUrl } : null);
-
-      toast({
-        title: "CV mis à jour",
-        description: "Votre CV a été mis à jour avec succès.",
-      });
-
-      return publicUrl;
-    } catch (err: any) {
-      console.error('Erreur lors du téléchargement du CV:', err);
-      toast({
-        title: "Erreur",
-        description: "Impossible de télécharger le CV",
-        variant: "destructive",
-      });
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRecommendations = async () => {
-    try {
+  useEffect(() => {
+    if (useMockData) {
+      console.log("Utilisation de données fictives pour le développement");
+      
+      // Données fictives de stagiaire
+      const mockStagiaire: StagiaireData = {
+        id: "mock-id-1",
+        name: "Sophie Martin",
+        email: "sophie.martin@example.com",
+        avatar_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=4&w=256&h=256&q=60",
+        title: "Étudiante en informatique",
+        summary: "Passionnée par le développement web et la data science, je cherche un stage pour mettre en pratique mes compétences.",
+        looking_for_internship: true,
+        skills: ["React", "TypeScript", "Python", "UI/UX Design", "Node.js"],
+        languages: ["Français (natif)", "Anglais (C1)", "Espagnol (B1)"],
+        bio: "Étudiante en Master d'Informatique à l'Université de Lyon, je suis passionnée par les technologies web modernes et l'analyse de données. J'ai participé à plusieurs hackathons et j'ai développé des projets personnels en React et Python.",
+        location: "Lyon, France",
+        education: [
+          {
+            school: "Université de Lyon",
+            degree: "Master",
+            field: "Informatique, spécialité IA",
+            start_date: "2022-09",
+            end_date: null,
+            description: "Spécialisation en intelligence artificielle et développement web."
+          },
+          {
+            school: "IUT de Lyon",
+            degree: "BUT",
+            field: "Informatique",
+            start_date: "2019-09",
+            end_date: "2022-06",
+            description: "Formation généraliste en informatique avec projets pratiques."
+          }
+        ],
+        experience: [
+          {
+            company: "TechStart",
+            position: "Développeuse frontend (stage)",
+            start_date: "2022-05",
+            end_date: "2022-08",
+            description: "Développement d'interfaces utilisateur en React. Mise en place de tests automatisés. Collaboration dans une équipe agile."
+          },
+          {
+            company: "Association CodeForAll",
+            position: "Bénévole",
+            start_date: "2021-01",
+            end_date: null,
+            description: "Animation d'ateliers d'initiation à la programmation pour les jeunes défavorisés."
+          }
+        ],
+        projects: [
+          {
+            title: "Plateforme d'apprentissage en ligne",
+            description: "Application web permettant aux enseignants de créer des cours interactifs avec évaluation automatique.",
+            url: "https://github.com/sophiemartin/elearn-platform",
+            image_url: "https://images.unsplash.com/photo-1501504905252-473c47e087f8?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
+            tags: ["React", "Node.js", "MongoDB"]
+          },
+          {
+            title: "Analyse de sentiment sur Twitter",
+            description: "Projet d'analyse de données utilisant Python et des techniques de NLP pour analyser le sentiment des tweets.",
+            url: "https://github.com/sophiemartin/twitter-sentiment",
+            image_url: "https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
+            tags: ["Python", "NLP", "Data Science"]
+          }
+        ],
+        cv_url: "https://example.com/cv/sophie-martin.pdf",
+        social_links: {
+          linkedin: "https://linkedin.com/in/sophiemartin",
+          github: "https://github.com/sophiemartin",
+          twitter: "https://twitter.com/sophiemartin",
+          website: "https://sophiemartin.dev"
+        },
+        preferred_locations: ["Lyon", "Paris", "Remote"],
+        availability_date: "2023-06-01",
+        internship_duration: "3 mois",
+        recommendations: [],
+        is_premium: true,
+        is_verified: true,
+        last_active: new Date().toISOString(),
+      };
+      
       console.log("Fetching recommendations for stagiaire ID:", stagiaireId);
       
-      // Simuler une réponse d'API pour le développement
+      // Simuler des recommandations
       const mockRecommendations: Recommendation[] = [
         {
           id: "rec1",
           entreprise_id: "ent1",
-          stagiaire_id: stagiaireId,
-          position: "Développeur Frontend",
-          department: "Équipe Web",
-          period: "Janvier - Juin 2023",
-          content: "Jean a fait preuve d'une grande autonomie et d'une capacité d'apprentissage remarquable durant son stage. Il a contribué significativement à plusieurs projets clés.",
+          stagiaire_id: "mock-id-1",
+          position: "Développeuse frontend",
+          department: "Équipe produit",
+          period: "Mai - Août 2022",
+          content: "Sophie a été une stagiaire exceptionnelle. Elle a démontré une grande capacité d'apprentissage et une forte motivation. Ses compétences en React et TypeScript ont été très appréciées par l'équipe.",
           rating: 5,
-          author_name: "Marie Dupont",
-          author_position: "Directrice Technique",
+          author_name: "Jean Dupont",
+          author_position: "CTO",
           company_name: "TechSolutions",
           company_logo: "https://placehold.co/100",
           created_at: "2023-07-01",
@@ -279,14 +338,14 @@ export function useStagiaire(stagiaireId: string) {
         {
           id: "rec2",
           entreprise_id: "ent2",
-          stagiaire_id: stagiaireId,
-          position: "Assistant Marketing Digital",
-          department: "Marketing",
+          stagiaire_id: "mock-id-1",
+          position: "Développeuse data",
+          department: "Data Science",
           period: "Septembre - Décembre 2022",
-          content: "Un stagiaire motivé qui a su s'intégrer rapidement dans l'équipe. Ses compétences en analyse de données ont été particulièrement utiles pour nos campagnes.",
+          content: "Une excellente collaboratrice, capable de s'adapter rapidement à de nouveaux environnements. Ses analyses ont été précieuses pour notre équipe.",
           rating: 4,
-          author_name: "Pierre Martin",
-          author_position: "Responsable Marketing",
+          author_name: "Marie Robert",
+          author_position: "Lead Data Scientist",
           company_name: "InnovCorp",
           company_logo: "https://placehold.co/100",
           created_at: "2023-01-15",
@@ -296,100 +355,22 @@ export function useStagiaire(stagiaireId: string) {
           is_public: true
         }
       ];
-
-      setStagiaire(prev => prev ? { ...prev, recommendations: mockRecommendations } : null);
       
-    } catch (error) {
-      console.error("Erreur lors de la récupération des recommandations:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les recommandations",
-        variant: "destructive",
+      // Mettre à jour l'état avec les données simulées
+      setStagiaire({
+        ...mockStagiaire,
+        recommendations: mockRecommendations
       });
-    }
-  };
-
-  const addProject = async (projectData: any) => {
-    try {
-      setLoading(true);
-
-      // Dans un environnement réel, nous enverrions ces données à l'API
-      // Simulons-le pour le développement
-      const newProject = {
-        id: `proj-${Date.now()}`,
-        ...projectData,
-      };
-
-      const updatedProjects = stagiaire?.projects 
-        ? [...stagiaire.projects, newProject] 
-        : [newProject];
-
-      // Update local state
-      setStagiaire(prev => prev ? { 
-        ...prev, 
-        projects: updatedProjects 
-      } : null);
-
-      toast({
-        title: "Projet ajouté",
-        description: "Votre projet a été ajouté avec succès au portfolio.",
-      });
-
-      return newProject;
-    } catch (err: any) {
-      console.error('Erreur lors de l\'ajout du projet:', err);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'ajouter le projet",
-        variant: "destructive",
-      });
-      throw err;
-    } finally {
+      
       setLoading(false);
     }
-  };
-
-  const deleteProject = async (projectId: string) => {
-    try {
-      setLoading(true);
-
-      if (!stagiaire?.projects) return;
-
-      const updatedProjects = stagiaire.projects.filter(
-        project => project.id !== projectId
-      );
-
-      setStagiaire(prev => prev ? { 
-        ...prev, 
-        projects: updatedProjects 
-      } : null);
-
-      toast({
-        title: "Projet supprimé",
-        description: "Le projet a été supprimé de votre portfolio.",
-      });
-    } catch (err: any) {
-      console.error('Erreur lors de la suppression du projet:', err);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le projet",
-        variant: "destructive",
-      });
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [useMockData, stagiaireId]);
 
   return {
     stagiaire,
     loading,
     error,
     updateStagiaire,
-    uploadAvatar,
-    uploadCV,
-    fetchRecommendations,
-    addProject,
-    deleteProject
+    addRecommendation
   };
 }

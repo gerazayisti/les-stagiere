@@ -58,16 +58,24 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
     }
   };
 
+  // Modifié pour accepter le type correct
   const handleAddRecommendation = async (data: Omit<Recommendation, "id">) => {
     try {
+      // Création de l'objet avec les propriétés requises mais pas forcément présentes dans data
+      const completeData = {
+        ...data,
+        stagiaire_id: stagiaireId,
+        is_public: true,
+        updated_at: new Date().toISOString(),
+        created_at: data.created_at || new Date().toISOString(),
+        author_name: data.author_name || "",
+        author_position: data.author_position || "",
+        company_name: data.company_name || "",
+      };
+
       const { data: responseData, error } = await supabase
         .from('recommendations')
-        .insert({
-          ...data,
-          stagiaire_id: stagiaireId,
-          is_public: true,
-          updated_at: new Date().toISOString()
-        })
+        .insert(completeData)
         .select()
         .single();
 

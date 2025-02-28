@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 export default function Connexion() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,10 +23,23 @@ export default function Connexion() {
     password: "",
   });
 
+  // Récupérer le paramètre de redirection s'il existe
+  const getRedirectPath = () => {
+    const params = new URLSearchParams(location.search);
+    return params.get('redirect') || null;
+  };
+
   // Rediriger si déjà connecté
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Rediriger selon le rôle
+      // Vérifier s'il y a un chemin de redirection
+      const redirectPath = getRedirectPath();
+      if (redirectPath) {
+        navigate(redirectPath);
+        return;
+      }
+
+      // Sinon, rediriger selon le rôle
       if (user.role === 'entreprise') {
         navigate(`/entreprises/${user.id}`);
       } else if (user.role === 'stagiaire') {
@@ -40,7 +53,7 @@ export default function Connexion() {
         description: "Redirection en cours..."
       });
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, location.search]);
 
   // Récupérer les éventuels messages d'erreur de la redirection
   useEffect(() => {
@@ -64,11 +77,18 @@ export default function Connexion() {
       const { user } = await auth.signIn(formData);
       console.log("Utilisateur connecté:", user);
       
+      // Rafraîchir les données utilisateur dans le contexte d'authentification
+      await refreshUser();
+      
+      // Vérifier s'il y a un chemin de redirection
+      const redirectPath = getRedirectPath();
+      
       // Redirection vers la page appropriée après un court délai
       // pour laisser le temps au state de se mettre à jour
       setTimeout(() => {
-        // Rediriger selon le rôle
-        if (user.user_metadata?.role === 'entreprise') {
+        if (redirectPath) {
+          navigate(redirectPath);
+        } else if (user.user_metadata?.role === 'entreprise') {
           navigate('/entreprises/' + user.id);
         } else if (user.user_metadata?.role === 'stagiaire') {
           navigate('/stagiaires/' + user.id);
@@ -77,7 +97,7 @@ export default function Connexion() {
         }
         
         setLoading(false);
-      }, 800);
+      }, 500); // Réduit à 500ms pour une expérience plus fluide
     } catch (error: any) {
       console.error("Erreur de connexion:", error);
       setFormError(error.message || "Une erreur s'est produite lors de la connexion");
