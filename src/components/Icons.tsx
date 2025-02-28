@@ -1,15 +1,22 @@
 
-// Si ce fichier n'existe pas, je le crée
+import { 
+  Code, 
+  Briefcase, 
+  Building, 
+  Cpu, 
+  Globe, 
+  BookOpen, 
+  ChefHat, 
+  Landmark, 
+  HeartPulse, 
+  Palette, 
+  Music, 
+  ShoppingBag, 
+  LucideIcon 
+} from 'lucide-react';
 
-import { LucideIcon } from 'lucide-react';
-import { Code, Briefcase, Building, Cpu, Globe, BookOpen, ChefHat, Landmark, HeartPulse, Palette, Music, ShoppingBag, default as DefaultIcon } from 'lucide-react';
-
-type IconsType = {
-  [key: string]: LucideIcon;
-  default: LucideIcon;
-};
-
-export const Icons: IconsType = {
+// Define the Icons object with LucideIcon type
+export const Icons: Record<string, LucideIcon> = {
   code: Code,
   briefcase: Briefcase,
   building: Building,
@@ -22,5 +29,6 @@ export const Icons: IconsType = {
   art: Palette,
   music: Music,
   retail: ShoppingBag,
-  default: DefaultIcon
+  // Provide a default fallback
+  default: Briefcase
 };

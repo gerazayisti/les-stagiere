@@ -6,7 +6,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { TargetAudience } from "@/components/TargetAudience";
 import { ServiceCard } from "@/components/ServiceCard";
-import { CategoryCard } from "@/components/CategoryCard";
+import CategoryCard from "@/components/CategoryCard";
 
 // Animations
 const slideUp = {
@@ -17,12 +17,12 @@ const slideUp = {
 const Index = () => {
   // Données pour la section "Catégories populaires"
   const popularCategories = [
-    { title: "Développement Web", icon: "💻", count: 0 },
-    { title: "Marketing Digital", icon: "📊", count: 0 },
-    { title: "Design & UX/UI", icon: "🎨", count: 0 },
-    { title: "Finance & Comptabilité", icon: "💰", count: 0 },
-    { title: "Ressources Humaines", icon: "👥", count: 0 },
-    { title: "Gestion de Projet", icon: "📋", count: 0 },
+    { title: "Développement Web", icon: "code", count: 0 },
+    { title: "Marketing Digital", icon: "briefcase", count: 0 },
+    { title: "Design & UX/UI", icon: "art", count: 0 },
+    { title: "Finance & Comptabilité", icon: "finance", count: 0 },
+    { title: "Ressources Humaines", icon: "building", count: 0 },
+    { title: "Gestion de Projet", icon: "briefcase", count: 0 },
   ];
 
   // Données pour les services proposés
@@ -82,8 +82,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Navigation />
-      
       {/* Hero Section */}
       <section className="relative h-[500px] md:h-[600px] bg-gradient-to-r from-primary/80 to-primary">
         <div className="absolute inset-0 bg-[url('/hero1.webp')] bg-cover bg-center opacity-30"></div>
