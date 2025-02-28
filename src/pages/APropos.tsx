@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ServiceCard } from "@/components/ServiceCard";
 import { TargetAudience } from "@/components/TargetAudience";
+import { User, Building, HeartHandshake } from "lucide-react";
 
 export default function APropos() {
   return (
@@ -64,17 +65,17 @@ export default function APropos() {
           <ServiceCard
             title="Pour les Étudiants"
             description="Accédez à des milliers d'offres de stages, créez un profil professionnel attractif et recevez des recommandations personnalisées."
-            icon="User"
+            icon={User}
           />
           <ServiceCard
             title="Pour les Entreprises"
             description="Publiez vos offres de stages, découvrez des candidats qualifiés et gérez tout le processus de recrutement en un seul endroit."
-            icon="Building"
+            icon={Building}
           />
           <ServiceCard
             title="Accompagnement"
             description="Bénéficiez de conseils personnalisés, d'ateliers de préparation et d'outils d'aide à la décision pour faire les meilleurs choix."
-            icon="HeartHandshake"
+            icon={HeartHandshake}
           />
         </div>
       </section>

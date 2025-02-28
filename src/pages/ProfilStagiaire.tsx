@@ -2,8 +2,7 @@
 import { useState, useEffect } from "react";
 import { EditProfileForm } from "@/components/profile/EditProfileForm";
 import { useParams } from "react-router-dom";
-import { useProfile } from '@/hooks/useProfile';
-import { useStagiaire } from '@/hooks/useStagiaire';
+import { useStagiaire, StagiaireData } from '@/hooks/useStagiaire';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { AboutTab } from "@/components/profile/AboutTab";
@@ -14,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
+import { Recommendation } from "@/types/recommendations";
 
 export default function ProfilStagiaire() {
   const { id } = useParams();
@@ -54,7 +54,7 @@ export default function ProfilStagiaire() {
     );
   }
 
-  const handleEditSubmit = async (data: any) => {
+  const handleEditSubmit = async (data: Partial<StagiaireData>) => {
     try {
       await updateStagiaire(data);
       setIsEditing(false);
@@ -126,7 +126,7 @@ export default function ProfilStagiaire() {
 
         <TabsContent value="profile">
           <AboutTab 
-            bio={stagiaire.bio} 
+            bio={stagiaire.bio || ""} 
             skills={stagiaire.skills || []} 
             languages={stagiaire.languages || []} 
             preferredLocations={stagiaire.preferred_locations || []}
@@ -151,10 +151,10 @@ export default function ProfilStagiaire() {
         <TabsContent value="recommendations">
           {stagiaire.recommendations && (
             <Recommendations 
-              recommendations={stagiaire.recommendations}
+              recommendations={stagiaire.recommendations as Recommendation[]}
               isOwner={isOwner}
               stagiaireId={stagiaire.id}
-              isPremium={stagiaire.is_premium}
+              isPremium={stagiaire.is_premium || false}
             />
           )}
         </TabsContent>
@@ -162,10 +162,18 @@ export default function ProfilStagiaire() {
 
       {isEditing && (
         <EditProfileForm
-          initialData={stagiaire}
+          initialData={{
+            name: stagiaire.name,
+            title: stagiaire.title || "",
+            location: stagiaire.location || "",
+            bio: stagiaire.bio || "",
+            email: stagiaire.email,
+            phone: stagiaire.phone || "",
+            education: stagiaire.education || "",
+            disponibility: stagiaire.disponibility || ""
+          }}
           onSubmit={handleEditSubmit}
           onCancel={() => setIsEditing(false)}
-          onAvatarUpload={handleAvatarUpload}
         />
       )}
     </div>

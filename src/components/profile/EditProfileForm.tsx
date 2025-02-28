@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,12 +26,14 @@ interface EditProfileFormProps {
   initialData: StagiaireData;
   onSubmit: (data: StagiaireData) => void;
   onCancel: () => void;
+  onAvatarUpload?: (file: File) => void;
 }
 
 export function EditProfileForm({
   initialData,
   onSubmit,
   onCancel,
+  onAvatarUpload,
 }: EditProfileFormProps) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -48,9 +51,31 @@ export function EditProfileForm({
     onSubmit(data);
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && onAvatarUpload) {
+      onAvatarUpload(e.target.files[0]);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
+        {onAvatarUpload && (
+          <div className="space-y-2">
+            <Label htmlFor="avatar">Photo de profil</Label>
+            <Input
+              id="avatar"
+              name="avatar"
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+            />
+            <p className="text-sm text-muted-foreground">
+              Téléchargez une image pour personnaliser votre profil.
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nom complet</Label>

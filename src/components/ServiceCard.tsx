@@ -1,24 +1,27 @@
-import { motion } from "framer-motion";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
 
 interface ServiceCardProps {
   title: string;
   description: string;
   icon: LucideIcon;
-  delay?: number;
 }
 
-export const ServiceCard = ({ title, description, icon: Icon, delay = 0 }: ServiceCardProps) => {
+export function ServiceCard({ title, description, icon: Icon }: ServiceCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay }}
-      className="p-6 rounded-lg bg-background border border-border hover:border-primary transition-colors"
-    >
-      <Icon className="h-8 w-8 text-primary mb-4" />
-      <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
-      <p className="text-muted-foreground">{description}</p>
-    </motion.div>
+    <Card className="flex flex-col h-full transition-all hover:shadow-lg">
+      <CardHeader>
+        <div className="flex items-center gap-2 mb-2">
+          <div className="p-2 rounded-full bg-primary/10">
+            <Icon className="h-6 w-6 text-primary" />
+          </div>
+          <CardTitle className="text-xl">{title}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-grow">
+        <p className="text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
   );
-};
+}

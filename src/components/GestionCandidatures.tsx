@@ -252,11 +252,7 @@ export function GestionCandidatures({
 
       {selectedCandidat && (
         <ProfilCandidat
-          candidat={{
-            id: selectedCandidat.id,
-            name: selectedCandidat.nom,
-            avatar: selectedCandidat.photo
-          }}
+          candidat={selectedCandidat}
           isOpen={!!selectedCandidat}
           onClose={() => setSelectedCandidat(null)}
         />
@@ -266,7 +262,7 @@ export function GestionCandidatures({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-2xl">
             <ChatDiscussion
-              candidatureId={chatCandidature.id.toString()}
+              candidatureId={chatCandidature.id}
               entreprise={{
                 id: "entreprise-1", 
                 name: "TechCorp", 
