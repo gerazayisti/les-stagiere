@@ -1,64 +1,31 @@
 
-import { supabase } from './supabase'
+import { supabase } from './supabase';
+import { toast } from 'sonner';
 
-export type UserRole = 'stagiaire' | 'entreprise' | 'admin'
+export type UserRole = 'stagiaire' | 'entreprise' | 'admin';
 
 interface SignUpData {
-  email: string
-  password: string
-  role: UserRole
-  name: string
+  email: string;
+  password: string;
+  role: UserRole;
+  name: string;
 }
 
 interface SignInData {
-  email: string
-  password: string
-}
-
-// Configuration pour la gestion des retries
-const RETRY_CONFIG = {
-  maxRetries: 2, // Réduit pour éviter des attentes trop longues
-  initialDelay: 1000, // Réduit pour une meilleure expérience utilisateur
-  maxDelay: 5000, // Réduit pour une meilleure expérience utilisateur
-  backoffFactor: 2
-}
-
-// Fonction utilitaire pour gérer les retries avec exponential backoff
-async function withRetry<T>(
-  operation: () => Promise<T>,
-  retryCount = 0
-): Promise<T> {
-  try {
-    return await operation()
-  } catch (error: any) {
-    console.error(`Erreur (tentative ${retryCount + 1}):`, error);
-    
-    if (
-      retryCount >= RETRY_CONFIG.maxRetries ||
-      error.status !== 429
-    ) {
-      throw error
-    }
-
-    const delay = Math.min(
-      RETRY_CONFIG.initialDelay * Math.pow(RETRY_CONFIG.backoffFactor, retryCount),
-      RETRY_CONFIG.maxDelay
-    )
-
-    console.log(`Rate limit atteint. Nouvelle tentative dans ${delay/1000}s...`);
-    await new Promise(resolve => setTimeout(resolve, delay))
-    console.log(`Tentative ${retryCount + 1}/${RETRY_CONFIG.maxRetries}...`)
-    return withRetry(operation, retryCount + 1)
-  }
+  email: string;
+  password: string;
 }
 
 // Fonction pour synchroniser un utilisateur avec les tables public
-const syncUserData = async (authUser: any) => {
+async function syncUserData(authUser: any) {
+  if (!authUser) {
+    console.warn("syncUserData appelé sans utilisateur");
+    return;
+  }
+
+  console.log("Synchronisation des données utilisateur:", authUser.id);
+  
   try {
-    if (!authUser) return;
-
-    console.log("Synchronisation des données utilisateur:", authUser.id);
-
     // Insérer/mettre à jour dans la table users
     const { error: userError } = await supabase
       .from('users')
@@ -70,9 +37,12 @@ const syncUserData = async (authUser: any) => {
         is_active: true,
         last_login: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
+      });
 
-    if (userError) throw userError
+    if (userError) {
+      console.error("Erreur lors de la mise à jour de la table users:", userError);
+      throw userError;
+    }
 
     // Si c'est un stagiaire, synchroniser avec la table stagiaires
     if (authUser.user_metadata?.role === 'stagiaire') {
@@ -82,15 +52,17 @@ const syncUserData = async (authUser: any) => {
           id: authUser.id,
           name: authUser.user_metadata?.name || authUser.email.split('@')[0],
           email: authUser.email,
-          avatar_url: authUser.user_metadata?.avatar_url,
+          avatar_url: authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.user_metadata?.name || authUser.email.split('@')[0])}&background=random`,
           skills: [],
           languages: [],
           preferred_locations: [],
-          preferred_domains: [],
           last_active: new Date().toISOString(),
-        }, { onConflict: 'id' })
+        }, { onConflict: 'id' });
 
-      if (stagiaireError) throw stagiaireError
+      if (stagiaireError) {
+        console.error("Erreur lors de la mise à jour de la table stagiaires:", stagiaireError);
+        throw stagiaireError;
+      }
     }
 
     // Si c'est une entreprise, synchroniser avec la table entreprises
@@ -101,18 +73,24 @@ const syncUserData = async (authUser: any) => {
           id: authUser.id,
           name: authUser.user_metadata?.name || authUser.email.split('@')[0],
           email: authUser.email,
-          logo_url: authUser.user_metadata?.avatar_url,
+          logo_url: authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.user_metadata?.name || authUser.email.split('@')[0])}&background=random`,
           industry: authUser.user_metadata?.industry || '',
           location: authUser.user_metadata?.location || '',
           benefits: [],
-        }, { onConflict: 'id' })
+          description: '',
+          size: '',
+        }, { onConflict: 'id' });
 
-      if (entrepriseError) throw entrepriseError
+      if (entrepriseError) {
+        console.error("Erreur lors de la mise à jour de la table entreprises:", entrepriseError);
+        throw entrepriseError;
+      }
     }
     
     console.log("Synchronisation terminée avec succès");
   } catch (error) {
-    console.error('Erreur lors de la synchronisation des données:', error)
+    console.error('Erreur lors de la synchronisation des données:', error);
+    throw error;
   }
 }
 
@@ -121,11 +99,14 @@ export const initAuthListener = () => {
   // Écouter les changements de session
   supabase.auth.onAuthStateChange(async (event, session) => {
     console.log("Auth state change:", event);
+    
     if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-      await syncUserData(session?.user)
+      await syncUserData(session?.user);
     }
-  })
-}
+  });
+  
+  console.log("Auth listener initialisé");
+};
 
 // Fonction pour télécharger et supprimer un avatar
 export const uploadAvatar = async (file: File, userId: string): Promise<string> => {
@@ -159,10 +140,17 @@ export const deleteAvatar = async (url: string): Promise<void> => {
 
 export const auth = {
   async signUp(data: SignUpData) {
-    const { email, password, role, name } = data
-
-    return withRetry(async () => {
+    const { email, password, role, name } = data;
+    
+    try {
       console.log("Tentative d'inscription...");
+      
+      // Vérification des données
+      if (!email || !password || !role || !name) {
+        throw new Error("Toutes les informations sont requises");
+      }
+      
+      // Inscription via Supabase
       const result = await supabase.auth.signUp({
         email,
         password,
@@ -173,115 +161,189 @@ export const auth = {
             avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
           },
         },
-      })
+      });
 
-      if (result.error) throw result.error
+      if (result.error) throw result.error;
       
       // Synchroniser immédiatement les données utilisateur
       if (result.data.user) {
         await syncUserData(result.data.user);
       }
       
-      return result
-    })
+      toast.success("Inscription réussie", {
+        description: "Vérifiez votre email pour confirmer votre compte"
+      });
+      
+      return { data: result.data };
+    } catch (error: any) {
+      console.error("Erreur d'inscription:", error);
+      
+      let message = "Une erreur est survenue lors de l'inscription";
+      
+      if (error.message.includes("User already registered")) {
+        message = "Cette adresse email est déjà utilisée";
+      } else if (error.message.includes("Password should be")) {
+        message = "Le mot de passe doit contenir au moins 6 caractères";
+      }
+      
+      toast.error("Erreur d'inscription", {
+        description: message
+      });
+      
+      throw error;
+    }
   },
 
   async signIn({ email, password }: SignInData) {
-    return withRetry(async () => {
+    try {
       console.log("Tentative de connexion...");
+      
+      // Connexion via Supabase
       const result = await supabase.auth.signInWithPassword({
         email,
         password,
-      })
+      });
 
-      if (result.error) throw result.error
+      if (result.error) throw result.error;
+      
+      console.log("Connexion réussie:", result.data.user);
       
       // Synchroniser immédiatement les données utilisateur
       await syncUserData(result.data.user);
       
-      return result.data
-    })
+      toast.success("Connexion réussie", {
+        description: `Bienvenue, ${result.data.user.user_metadata?.name || result.data.user.email}`
+      });
+      
+      return { user: result.data.user };
+    } catch (error: any) {
+      console.error("Erreur de connexion:", error);
+      
+      let message = "Identifiants incorrects";
+      
+      if (error.message.includes("Invalid login credentials")) {
+        message = "Email ou mot de passe incorrect";
+      } else if (error.message.includes("Email not confirmed")) {
+        message = "Veuillez confirmer votre email avant de vous connecter";
+      }
+      
+      toast.error("Échec de connexion", {
+        description: message
+      });
+      
+      throw error;
+    }
   },
 
   async signOut() {
-    console.log("Tentative de déconnexion depuis auth.ts...");
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
-    console.log("Déconnexion réussie depuis auth.ts");
+    try {
+      console.log("Tentative de déconnexion depuis auth.ts...");
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
+      console.log("Déconnexion réussie depuis auth.ts");
+      
+      return true;
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+      throw error;
+    }
   },
 
   async getCurrentUser() {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession()
-      if (error) throw error
-      if (!session) return null
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (!session) return null;
 
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError) throw userError
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
       
-      return user
+      return user;
     } catch (error) {
-      console.error('Erreur lors de la récupération de l\'utilisateur:', error)
-      return null
+      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+      return null;
     }
   },
 
   // Fonction pour mettre à jour le profil utilisateur
   async updateProfile(userData: any) {
-    const { data: authData, error: updateError } = await supabase.auth.updateUser({
-      data: userData
-    })
-
-    if (updateError) throw updateError
-
-    // La synchronisation sera gérée par le listener
-    return authData
-  },
-
-  // Nouvelles fonctions ajoutées pour les opérations sur les avatars
-  uploadAvatar,
-  deleteAvatar,
-
-  // Nouvelle fonction pour initialiser les données de test
-  initializeTestData: async () => {
     try {
-      // Créer un admin
-      const adminEmail = 'admin@les-stagiaires.fr'
-      const adminPassword = 'admin123'
-      
-      const adminSignUp = await auth.signUp({
-        email: adminEmail,
-        password: adminPassword,
-        role: 'admin',
-        name: 'Admin'
-      })
-      
-      // Créer une entreprise de test
-      const entrepriseEmail = 'entreprise@test.fr'
-      const entreprisePassword = 'test123'
-      
-      const entrepriseSignUp = await auth.signUp({
-        email: entrepriseEmail,
-        password: entreprisePassword,
-        role: 'entreprise',
-        name: 'Entreprise Test'
-      })
-      
-      // Créer un stagiaire de test
-      const stagiaireEmail = 'stagiaire@test.fr'
-      const stagiairePassword = 'test123'
-      
-      const stagiaireSignUp = await auth.signUp({
-        email: stagiaireEmail,
-        password: stagiairePassword,
-        role: 'stagiaire',
-        name: 'Stagiaire Test'
-      })
+      const { data: authData, error: updateError } = await supabase.auth.updateUser({
+        data: userData
+      });
 
-      return { success: true, message: 'Données de test initialisées avec succès' }
+      if (updateError) throw updateError;
+
+      // Synchroniser les données avec les tables publiques
+      await syncUserData(authData.user);
+      
+      toast.success("Profil mis à jour avec succès");
+      
+      return authData;
     } catch (error) {
-      console.error('Erreur lors de l\'initialisation des données de test:', error)
-      return { success: false, message: 'Erreur lors de l\'initialisation des données' }
+      console.error("Erreur lors de la mise à jour du profil:", error);
+      
+      toast.error("Erreur", {
+        description: "Impossible de mettre à jour le profil"
+      });
+      
+      throw error;
     }
   },
-}
+
+  // Fonctions pour les avatars
+  uploadAvatar,
+  deleteAvatar,
+  
+  // Fonction pour réinitialiser le mot de passe
+  async resetPassword(email: string) {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Email envoyé", {
+        description: "Vérifiez votre boîte mail pour réinitialiser votre mot de passe"
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du mail de réinitialisation:", error);
+      
+      toast.error("Erreur", {
+        description: "Impossible d'envoyer l'email de réinitialisation"
+      });
+      
+      throw error;
+    }
+  },
+  
+  // Fonction pour mettre à jour le mot de passe
+  async updatePassword(newPassword: string) {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Mot de passe mis à jour", {
+        description: "Votre mot de passe a été modifié avec succès"
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du mot de passe:", error);
+      
+      toast.error("Erreur", {
+        description: "Impossible de mettre à jour le mot de passe"
+      });
+      
+      throw error;
+    }
+  }
+};
