@@ -149,12 +149,14 @@ export default function ProfilStagiaire() {
         </TabsContent>
 
         <TabsContent value="recommendations">
-          <Recommendations 
-            recommendations={stagiaire.recommendations || []} 
-            isOwner={isOwner}
-            stagiaireId={stagiaire.id}
-            isPremium={stagiaire.is_premium}
-          />
+          {stagiaire.recommendations && (
+            <Recommendations 
+              recommendations={stagiaire.recommendations}
+              isOwner={isOwner}
+              stagiaireId={stagiaire.id}
+              isPremium={stagiaire.is_premium}
+            />
+          )}
         </TabsContent>
       </Tabs>
 

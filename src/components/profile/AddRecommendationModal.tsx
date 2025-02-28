@@ -133,7 +133,7 @@ export function AddRecommendationModal({
         description: "Votre recommandation a été ajoutée avec succès.",
       });
 
-      onSubmit({ ...filteredData, id: data.id });
+      onSubmit(filteredData);
       onClose();
     } catch (error) {
       console.error("Erreur lors de l'ajout de la recommandation:", error);

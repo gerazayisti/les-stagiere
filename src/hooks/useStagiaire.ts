@@ -25,6 +25,7 @@ export interface StagiaireData {
   recommendations?: Array<{
     id: string;
     entreprise_id: string;
+    stagiaire_id: string;
     position: string;
     department: string;
     period: string;
@@ -290,7 +291,9 @@ export function useStagiaire(stagiaireId: string): UseStagiaireResult {
       }));
 
       setStagiaire(prev => prev ? { ...prev, recommendations: formattedRecommendations } : null);
-      return formattedRecommendations;
+      
+      // Le problème de type vient d'ici - nous retournons un array
+      // mais la fonction est censée retourner void
     } catch (error) {
       console.error("Erreur lors de la récupération des recommandations:", error);
       toast({
@@ -298,7 +301,6 @@ export function useStagiaire(stagiaireId: string): UseStagiaireResult {
         description: "Impossible de charger les recommandations",
         variant: "destructive",
       });
-      throw error;
     }
   };
 

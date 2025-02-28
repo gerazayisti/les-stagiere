@@ -31,7 +31,7 @@ import { ProfilCandidat } from "./ProfilCandidat";
 import { ChatDiscussion } from "./ChatDiscussion";
 
 interface Candidat {
-  id: number; // Gardons number pour la compatibilité avec l'API
+  id: string;
   nom: string;
   email: string;
   telephone: string;
@@ -48,9 +48,9 @@ interface Candidat {
 }
 
 interface Candidature {
-  id: number; // Gardons number pour la compatibilité avec l'API
+  id: string;
   candidat: Candidat;
-  stageId: number; // Gardons number pour la compatibilité avec l'API
+  stageId: string;
   stageTitre: string;
   status: "en_attente" | "acceptee" | "refusee" | "en_discussion";
   datePostulation: Date;
@@ -59,8 +59,8 @@ interface Candidature {
 
 interface GestionCandidaturesProps {
   candidatures: Candidature[];
-  onUpdateStatus: (candidatureId: number, newStatus: Candidature["status"]) => void;
-  onAddRecommendation: (candidatId: number) => void;
+  onUpdateStatus: (candidatureId: string, newStatus: Candidature["status"]) => void;
+  onAddRecommendation: (candidatId: string) => void;
 }
 
 export function GestionCandidatures({
@@ -253,7 +253,7 @@ export function GestionCandidatures({
       {selectedCandidat && (
         <ProfilCandidat
           candidat={{
-            id: selectedCandidat.id.toString(),
+            id: selectedCandidat.id,
             name: selectedCandidat.nom,
             avatar: selectedCandidat.photo
           }}
@@ -273,7 +273,7 @@ export function GestionCandidatures({
                 avatar: "https://via.placeholder.com/150",
               }}
               candidat={{
-                id: chatCandidature.candidat.id.toString(),
+                id: chatCandidature.candidat.id,
                 name: chatCandidature.candidat.nom,
                 avatar: chatCandidature.candidat.photo
               }}
