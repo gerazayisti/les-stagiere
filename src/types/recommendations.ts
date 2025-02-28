@@ -13,8 +13,8 @@ export interface Recommendation {
   company_name: string;
   company_logo?: string;
   created_at: string;
-  start_date?: string;
-  end_date?: string;
+  start_date: string;  // Changé de optionnel à obligatoire pour correspondre à l'usage
+  end_date: string;    // Changé de optionnel à obligatoire pour correspondre à l'usage
   skills?: string[];
   achievements?: string[];
   is_public?: boolean;
