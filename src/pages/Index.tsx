@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Users2, Building2, TrendingUp, Briefcase, Search, UserPlus } from "lucide-react";
@@ -57,6 +58,21 @@ const Index = () => {
     { title: "Agriculture & Agribusiness", vacancies: 0 },
     { title: "Mining & Natural Resources", vacancies: 0 },
     { title: "Energy & Renewable", vacancies: 0 },
+  ];
+  
+  // Données pour le composant TargetAudience
+  const studentItems = [
+    "Étudiants en recherche de stage pratique",
+    "Jeunes diplômés en quête de leur première expérience professionnelle",
+    "Professionnels en reconversion cherchant de nouvelles opportunités",
+    "Personnes souhaitant développer de nouvelles compétences dans un environnement professionnel"
+  ];
+  
+  const companyItems = [
+    "Entreprises à la recherche de talents motivés et compétents",
+    "Startups ayant besoin de renforcer leurs équipes avec des profils juniors",
+    "Grandes entreprises proposant des programmes de stages structurés",
+    "Organisations souhaitant contribuer à la formation de la future génération professionnelle"
   ];
 
   return (
@@ -146,7 +162,29 @@ const Index = () => {
       </section>
 
       {/* Public Cible Section */}
-          <TargetAudience />
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-muted">
+        <div className="max-w-7xl mx-auto">
+          <motion.h2
+            initial="hidden"
+            animate="visible"
+            variants={slideUp}
+            transition={{ duration: 0.6 }}
+            className="text-3xl font-semibold text-foreground mb-8 text-center"
+          >
+            À qui s'adresse notre plateforme ?
+          </motion.h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <TargetAudience 
+              title="Pour les étudiants et chercheurs d'emploi" 
+              items={studentItems} 
+            />
+            <TargetAudience 
+              title="Pour les entreprises et recruteurs" 
+              items={companyItems} 
+            />
+          </div>
+        </div>
+      </section>
       
       {/* Services Proposés Section */}
       <section className="py-16 bg-muted px-4 sm:px-6 lg:px-8">
