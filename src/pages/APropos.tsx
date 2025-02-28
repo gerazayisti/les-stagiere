@@ -1,5 +1,5 @@
-import Layout from "@/components/Layout";
-import { Button } from "@/components/ui/button";
+
+import { Separator } from "@/components/ui/separator";
 import {
   Card,
   CardContent,
@@ -7,184 +7,154 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Users,
-  Target,
-  Award,
-  Rocket,
-  CheckCircle,
-  Building2,
-  GraduationCap,
-  Handshake,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ServiceCard } from "@/components/ServiceCard";
+import { TargetAudience } from "@/components/TargetAudience";
 
 export default function APropos() {
-  const stats = [
-    {
-      value: "10K+",
-      label: "Stagiaires",
-      icon: Users,
-    },
-    {
-      value: "500+",
-      label: "Entreprises",
-      icon: Building2,
-    },
-    {
-      value: "2K+",
-      label: "Stages",
-      icon: GraduationCap,
-    },
-    {
-      value: "95%",
-      label: "Satisfaction",
-      icon: CheckCircle,
-    },
-  ];
-
-  const values = [
-    {
-      title: "Innovation",
-      description:
-        "Nous utilisons les dernières technologies pour connecter les talents aux meilleures opportunités.",
-      icon: Rocket,
-    },
-    {
-      title: "Excellence",
-      description:
-        "Nous nous engageons à fournir un service de haute qualité à nos utilisateurs.",
-      icon: Award,
-    },
-    {
-      title: "Impact",
-      description:
-        "Notre mission est de transformer positivement le parcours professionnel des étudiants.",
-      icon: Target,
-    },
-    {
-      title: "Collaboration",
-      description:
-        "Nous créons des partenariats durables entre entreprises et stagiaires.",
-      icon: Handshake,
-    },
-  ];
-
   return (
-    <Layout>
-      {/* Hero Section */}
-      <section className="relative pt-24 pb-16 bg-gradient-to-br from-primary/10 via-primary/5 to-background">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-              À Propos de Les Stagiaires
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              Nous construisons l'avenir de l'emploi en connectant les talents aux
-              meilleures opportunités de stage.
-            </p>
-            <Button size="lg" variant="default">
-              Rejoignez-nous
-            </Button>
-          </div>
-        </div>
-        <div className="absolute inset-0 bg-grid-white/10 bg-[size:20px_20px] [mask-image:radial-gradient(white,transparent_70%)] pointer-events-none" />
+    <div className="container mx-auto px-4 py-8 space-y-10">
+      <section className="text-center max-w-3xl mx-auto">
+        <h1 className="text-4xl font-bold mb-6">À propos de StageConnect</h1>
+        <p className="text-xl text-muted-foreground mb-8">
+          Nous connectons les étudiants talentueux avec les entreprises qui
+          cherchent à innover et à grandir.
+        </p>
+        <Separator className="my-8" />
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <Card key={index} className="text-center bg-background/50 backdrop-blur">
-                <CardContent className="pt-6">
-                  <stat.icon className="h-8 w-8 mx-auto mb-4 text-primary" />
-                  <div className="text-3xl font-bold text-foreground mb-2">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {stat.label}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+      <section className="grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <h2 className="text-3xl font-bold mb-4">Notre Mission</h2>
+          <p className="text-lg mb-4">
+            StageConnect est né d'une simple observation : le processus de
+            recherche de stage est souvent fastidieux, tant pour les étudiants
+            que pour les entreprises. Notre mission est de simplifier cette
+            expérience en créant une plateforme qui valorise le potentiel de
+            chacun.
+          </p>
+          <p className="text-lg mb-4">
+            Nous croyons que chaque étudiant mérite de trouver un stage qui lui
+            permettra de développer ses compétences et de lancer sa carrière.
+            Parallèlement, nous aidons les entreprises à découvrir des talents
+            prometteurs qui apporteront une nouvelle perspective à leurs équipes.
+          </p>
+          <Button size="lg" className="mt-4">
+            Découvrir nos services
+          </Button>
         </div>
-      </section>
-
-      {/* Mission Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Notre Mission</h2>
-            <p className="text-muted-foreground">
-              Faciliter l'accès aux stages et à l'emploi pour les étudiants tout en
-              aidant les entreprises à trouver les meilleurs talents de demain.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {values.map((value, index) => (
-              <Card key={index}>
-                <CardHeader>
-                  <value.icon className="h-8 w-8 text-primary mb-4" />
-                  <CardTitle>{value.title}</CardTitle>
-                  <CardDescription>{value.description}</CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
+        <div className="relative">
+          <img
+            src="/hero1.webp"
+            alt="L'équipe StageConnect en réunion"
+            className="rounded-lg shadow-xl"
+          />
+          <div className="absolute -bottom-6 -right-6 bg-primary text-primary-foreground p-4 rounded-lg shadow-lg">
+            <p className="font-bold">+5000</p>
+            <p className="text-sm">Stages pourvus</p>
           </div>
         </div>
       </section>
 
-      {/* Team Section */}
-      <section className="py-16 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Notre Équipe</h2>
-            <p className="text-muted-foreground">
-              Une équipe passionnée dédiée à votre réussite professionnelle.
-            </p>
-          </div>
+      <Separator className="my-12" />
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[1, 2, 3].map((member) => (
-              <Card key={member}>
-                <CardHeader className="text-center">
-                  <div className="w-24 h-24 rounded-full bg-primary/10 mx-auto mb-4" />
-                  <CardTitle>Nom du Membre</CardTitle>
-                  <CardDescription>Poste / Fonction</CardDescription>
-                </CardHeader>
-                <CardContent className="text-center text-muted-foreground">
-                  "Citation ou description du rôle du membre dans l'équipe"
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+      <section>
+        <h2 className="text-3xl font-bold text-center mb-12">Nos Services</h2>
+        <div className="grid md:grid-cols-3 gap-6">
+          <ServiceCard
+            title="Pour les Étudiants"
+            description="Accédez à des milliers d'offres de stages, créez un profil professionnel attractif et recevez des recommandations personnalisées."
+            icon="User"
+          />
+          <ServiceCard
+            title="Pour les Entreprises"
+            description="Publiez vos offres de stages, découvrez des candidats qualifiés et gérez tout le processus de recrutement en un seul endroit."
+            icon="Building"
+          />
+          <ServiceCard
+            title="Accompagnement"
+            description="Bénéficiez de conseils personnalisés, d'ateliers de préparation et d'outils d'aide à la décision pour faire les meilleurs choix."
+            icon="HeartHandshake"
+          />
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-primary/5">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-4">
-              Prêt à Commencer Votre Carrière ?
-            </h2>
-            <p className="text-muted-foreground mb-8">
-              Rejoignez Les Stagiaires et découvrez les meilleures opportunités de
-              stage.
-            </p>
-            <div className="flex justify-center gap-4">
-              <Button size="lg" variant="default">
-                Chercher un Stage
-              </Button>
-              <Button size="lg" variant="outline">
-                Publier une Offre
-              </Button>
-            </div>
-          </div>
+      <Separator className="my-12" />
+
+      <section>
+        <h2 className="text-3xl font-bold text-center mb-8">
+          Pour Qui Est StageConnect?
+        </h2>
+        <p className="text-xl text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
+          Notre plateforme s'adresse à tous ceux qui cherchent à transformer
+          l'expérience du stage en une opportunité enrichissante.
+        </p>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          <TargetAudience
+            title="Étudiants"
+            items={[
+              "Étudiants en formation initiale",
+              "Personnes en reconversion professionnelle",
+              "Jeunes diplômés à la recherche d'une première expérience",
+              "Étudiants internationaux cherchant des stages en France",
+            ]}
+          />
+          <TargetAudience
+            title="Entreprises"
+            items={[
+              "Startups en pleine croissance",
+              "PME cherchant à innover",
+              "Grandes entreprises avec des programmes de stages établis",
+              "Organisations à but non lucratif et institutions publiques",
+            ]}
+          />
         </div>
       </section>
-    </Layout>
+
+      <Separator className="my-12" />
+
+      <section className="bg-muted p-8 rounded-lg">
+        <h2 className="text-3xl font-bold text-center mb-8">Notre Histoire</h2>
+        <div className="max-w-3xl mx-auto">
+          <p className="text-lg mb-4">
+            StageConnect a été fondé en 2020 par une équipe d'anciens étudiants
+            qui ont eux-mêmes vécu les défis de la recherche de stage. Frustrés
+            par le manque d'outils adaptés, ils ont décidé de créer la
+            plateforme qu'ils auraient aimé avoir pendant leurs études.
+          </p>
+          <p className="text-lg mb-4">
+            Ce qui a commencé comme un petit projet est rapidement devenu une
+            plateforme nationale, connectant des milliers d'étudiants à des
+            entreprises innovantes chaque année. Aujourd'hui, StageConnect
+            continue d'évoluer en intégrant de nouvelles technologies et en
+            répondant aux besoins changeants du marché du travail.
+          </p>
+          <p className="text-lg">
+            Notre équipe s'est agrandie, mais notre mission reste la même :
+            rendre la recherche de stage plus simple, plus juste et plus
+            enrichissante pour tous.
+          </p>
+        </div>
+      </section>
+
+      <Separator className="my-12" />
+
+      <section className="text-center max-w-3xl mx-auto">
+        <h2 className="text-3xl font-bold mb-6">Rejoignez-nous</h2>
+        <p className="text-xl text-muted-foreground mb-8">
+          Que vous soyez étudiant à la recherche d'un stage ou une entreprise
+          cherchant à recruter, StageConnect est là pour vous aider à réussir.
+        </p>
+        <div className="flex flex-wrap justify-center gap-4">
+          <Button size="lg" variant="default">
+            S'inscrire gratuitement
+          </Button>
+          <Button size="lg" variant="outline">
+            En savoir plus
+          </Button>
+        </div>
+      </section>
+    </div>
   );
 }

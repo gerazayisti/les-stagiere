@@ -1,41 +1,29 @@
+
 import { useState } from "react";
-import Layout from "@/components/Layout";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import {
-  Mail,
-  Phone,
-  MapPin,
-  Send,
-  Linkedin,
-  Facebook,
-  Twitter,
-  Instagram,
-} from "lucide-react";
-import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
+import { Mail, Phone, MapPin, MessageSquare } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
-    nom: "",
+    name: "",
     email: "",
-    sujet: "",
+    subject: "",
     message: "",
   });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Message envoyé avec succès !");
-    setFormData({ nom: "", email: "", sujet: "", message: "" });
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -44,190 +32,239 @@ export default function Contact() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    // Simulating API call
+    setTimeout(() => {
+      setIsSubmitting(false);
+      toast({
+        title: "Message envoyé",
+        description: "Nous vous répondrons dans les plus brefs délais.",
+      });
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+    }, 1500);
+  };
+
   return (
-    <Layout>
-      {/* Hero Section */}
-      <section className="relative pt-24 pb-16 bg-gradient-to-br from-primary/10 via-primary/5 to-background">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-              Contactez Notre Équipe
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              Notre équipe d'experts est là pour vous accompagner dans votre recherche de stage
-              et répondre à toutes vos questions.
-            </p>
-            <div className="flex justify-center gap-4">
-              <Button size="lg" variant="default">
-                <Phone className="h-4 w-4 mr-2" />
-                Appelez-nous
-              </Button>
-              <Button size="lg" variant="outline">
-                <Mail className="h-4 w-4 mr-2" />
-                Écrivez-nous
-              </Button>
-            </div>
-          </div>
-        </div>
-        <div className="absolute inset-0 bg-grid-white/10 bg-[size:20px_20px] [mask-image:radial-gradient(white,transparent_70%)] pointer-events-none" />
+    <div className="container mx-auto px-4 py-8 space-y-10">
+      <section className="text-center max-w-3xl mx-auto">
+        <h1 className="text-4xl font-bold mb-6">Contactez-nous</h1>
+        <p className="text-xl text-muted-foreground mb-8">
+          Une question, une suggestion ou besoin d'aide ? Notre équipe est là
+          pour vous répondre.
+        </p>
+        <Separator className="my-8" />
       </section>
 
-      {/* Main Content */}
-      <section className="bg-background py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Informations de contact */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Nos coordonnées</CardTitle>
-                  <CardDescription>
-                    Plusieurs moyens de nous contacter
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-primary" />
-                    <span>contact@les-stagiaires.com</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-5 w-5 text-primary" />
-                    <span>+33 1 23 45 67 89</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <span>123 Avenue des Stages, 75000 Paris</span>
-                  </div>
+      <div className="grid md:grid-cols-2 gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Envoyez-nous un message</CardTitle>
+            <CardDescription>
+              Nous vous répondrons dans les plus brefs délais.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="name" className="text-sm font-medium">
+                    Nom complet
+                  </label>
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="Votre nom"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="votre@email.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="subject" className="text-sm font-medium">
+                    Sujet
+                  </label>
+                  <Input
+                    id="subject"
+                    name="subject"
+                    placeholder="Sujet de votre message"
+                    value={formData.subject}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="message" className="text-sm font-medium">
+                    Message
+                  </label>
+                  <Textarea
+                    id="message"
+                    name="message"
+                    placeholder="Votre message"
+                    value={formData.message}
+                    onChange={handleChange}
+                    rows={5}
+                    required
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Envoi en cours..." : "Envoyer"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-                  <div className="pt-6">
-                    <h3 className="font-medium text-lg mb-4">Suivez-nous</h3>
-                    <div className="flex space-x-4">
-                      <a
-                        href="#"
-                        className="text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <Linkedin className="h-6 w-6" />
-                      </a>
-                      <a
-                        href="#"
-                        className="text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <Facebook className="h-6 w-6" />
-                      </a>
-                      <a
-                        href="#"
-                        className="text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <Twitter className="h-6 w-6" />
-                      </a>
-                      <a
-                        href="#"
-                        className="text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <Instagram className="h-6 w-6" />
-                      </a>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Nos coordonnées</CardTitle>
+              <CardDescription>
+                Plusieurs façons de nous contacter
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start space-x-4">
+                <Mail className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <h3 className="font-medium">Email</h3>
+                  <p className="text-sm text-muted-foreground">
+                    <a
+                      href="mailto:contact@stageconnect.fr"
+                      className="text-primary hover:underline"
+                    >
+                      contact@stageconnect.fr
+                    </a>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Réponse sous 24-48h ouvrées
+                  </p>
+                </div>
+              </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Horaires d'ouverture</CardTitle>
-                  <CardDescription>
-                    Notre équipe est disponible aux horaires suivants
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Lundi - Vendredi</span>
-                      <span>9h00 - 18h00</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Samedi</span>
-                      <span>9h00 - 12h00</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Dimanche</span>
-                      <span>Fermé</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+              <div className="flex items-start space-x-4">
+                <Phone className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <h3 className="font-medium">Téléphone</h3>
+                  <p className="text-sm text-muted-foreground">
+                    <a
+                      href="tel:+33123456789"
+                      className="text-primary hover:underline"
+                    >
+                      +33 1 23 45 67 89
+                    </a>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Du lundi au vendredi, 9h-18h
+                  </p>
+                </div>
+              </div>
 
-            {/* Formulaire de contact */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Envoyez-nous un message</CardTitle>
-                <CardDescription>
-                  Remplissez le formulaire ci-dessous et nous vous répondrons dans
-                  les plus brefs délais
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="nom">Nom complet</Label>
-                    <Input
-                      id="nom"
-                      name="nom"
-                      value={formData.nom}
-                      onChange={handleChange}
-                      placeholder="Votre nom"
-                      required
-                    />
-                  </div>
+              <div className="flex items-start space-x-4">
+                <MapPin className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <h3 className="font-medium">Adresse</h3>
+                  <p className="text-sm text-muted-foreground">
+                    123 Avenue de l'Innovation
+                    <br />
+                    75001 Paris, France
+                  </p>
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="votre@email.com"
-                      required
-                    />
-                  </div>
+              <div className="flex items-start space-x-4">
+                <MessageSquare className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <h3 className="font-medium">Chat en direct</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Disponible sur notre site web
+                    <br />
+                    Du lundi au vendredi, 10h-17h
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="sujet">Sujet</Label>
-                    <Input
-                      id="sujet"
-                      name="sujet"
-                      value={formData.sujet}
-                      onChange={handleChange}
-                      placeholder="Le sujet de votre message"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="message">Message</Label>
-                    <Textarea
-                      id="message"
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      placeholder="Votre message..."
-                      className="h-32"
-                      required
-                    />
-                  </div>
-
-                  <Button type="submit" className="w-full">
-                    <Send className="h-4 w-4 mr-2" />
-                    Envoyer le message
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Foire aux questions</CardTitle>
+              <CardDescription>
+                Retrouvez les réponses aux questions fréquentes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                <li>
+                  <a
+                    href="#"
+                    className="text-primary hover:underline"
+                  >
+                    Comment créer un compte ?
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="text-primary hover:underline"
+                  >
+                    Comment publier une offre de stage ?
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="text-primary hover:underline"
+                  >
+                    Comment postuler à un stage ?
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="text-primary hover:underline"
+                  >
+                    Quels sont les tarifs pour les entreprises ?
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="text-primary hover:underline"
+                  >
+                    Voir toutes les FAQ
+                  </a>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
         </div>
-      </section>
-    </Layout>
+      </div>
+    </div>
   );
 }

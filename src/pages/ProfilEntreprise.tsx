@@ -1,7 +1,4 @@
 
-// Ce fichier contient beaucoup de code, nous allons modifier uniquement les parties problématiques
-// pour gérer les types d'identifiants comme des strings plutôt que des nombres
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,7 +35,7 @@ import { CompanyRecommendations } from "@/components/profile/CompanyRecommendati
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
-// Adapté pour utiliser des string IDs partout
+// Interfaces using string IDs
 interface Stage {
   id: string;
   titre: string;
@@ -51,7 +48,6 @@ interface Stage {
   date_publication: string;
 }
 
-// Adapté pour utiliser des string IDs
 interface Candidat {
   id: string;
   nom: string;
@@ -69,7 +65,6 @@ interface Candidat {
   hasRecommendation?: boolean;
 }
 
-// Adapté pour utiliser des string IDs
 interface Candidature {
   id: string;
   candidat: Candidat;
@@ -107,24 +102,34 @@ export default function ProfilEntreprise() {
   const isOwner = user?.id === id;
 
   useEffect(() => {
-    fetchCompanyData();
-    if (isOwner) {
-      fetchStages();
-      fetchCandidatures();
+    if (id) {
+      fetchCompanyData();
+      if (isOwner) {
+        fetchStages();
+        fetchCandidatures();
+      }
     }
   }, [id, isOwner]);
 
   const fetchCompanyData = async () => {
+    if (!id) return;
+    
     try {
       setLoading(true);
+      console.log("Fetching company data for ID:", id);
+      
       const { data, error } = await supabase
         .from("entreprises")
         .select("*")
         .eq("id", id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching company data:", error);
+        throw error;
+      }
 
+      console.log("Company data received:", data);
       setCompany(data as CompanyData);
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
@@ -139,16 +144,22 @@ export default function ProfilEntreprise() {
   };
 
   const fetchStages = async () => {
+    if (!id) return;
+    
     try {
       const { data, error } = await supabase
         .from("stages")
         .select("*")
-        .eq("entreprise_id", id)
-        .order("date_publication", { ascending: false });
+        .eq("entreprise_id", id);
 
       if (error) throw error;
 
-      setStages(data as Stage[]);
+      // Sort by creation date if available, otherwise use an empty array
+      const sortedData = data 
+        ? [...data].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+        : [];
+        
+      setStages(sortedData as Stage[]);
     } catch (error) {
       console.error("Erreur lors du chargement des stages:", error);
       toast({
@@ -267,6 +278,8 @@ export default function ProfilEntreprise() {
   };
 
   const handleUpdateCompany = async (data: Partial<CompanyData>) => {
+    if (!id) return;
+    
     try {
       setLoading(true);
 
@@ -296,7 +309,7 @@ export default function ProfilEntreprise() {
     }
   };
 
-  if (loading && !company) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -304,17 +317,21 @@ export default function ProfilEntreprise() {
     );
   }
 
-  const companyDisplay = company ? {
-    nom: company.name,
-    logo: company.logo_url || "",
-    description: company.description,
-    secteur: company.industry,
-    taille: company.size,
-    localisation: company.location,
-    site: company.website || "",
-    email: company.email,
-    telephone: company.phone || ""
-  } : null;
+  // Handle case where no company data is found
+  if (!company && !loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Profil non trouvé</CardTitle>
+            <CardDescription>
+              Le profil d'entreprise que vous recherchez n'existe pas ou vous n'avez pas les permissions nécessaires pour y accéder.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -420,7 +437,7 @@ export default function ProfilEntreprise() {
 
             {isOwner && (
               <TabsContent value="stages">
-                <GestionStages stages={stages} enterpriseId={id} />
+                <GestionStages stages={stages} enterpriseId={id || ""} />
               </TabsContent>
             )}
 
@@ -437,7 +454,7 @@ export default function ProfilEntreprise() {
             {isOwner && (
               <TabsContent value="recommandations">
                 <CompanyRecommendations
-                  companyId={id}
+                  companyId={id || ""}
                   companyName={company.name}
                   companyLogo={company.logo_url || ""}
                   interns={[
