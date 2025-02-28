@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { AddRecommendationModal } from "./AddRecommendationModal";
 import { Lock, Star, Award, Building2, Calendar, Info } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Recommendation } from "@/types/recommendations";
 
 interface RecommendationsProps {
@@ -58,12 +58,12 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
     }
   };
 
-  const handleAddRecommendation = async (recommendation: Omit<Recommendation, "id" | "created_at">) => {
+  const handleAddRecommendation = async (data: Omit<Recommendation, "id">) => {
     try {
-      const { data, error } = await supabase
+      const { data: responseData, error } = await supabase
         .from('recommendations')
         .insert({
-          ...recommendation,
+          ...data,
           stagiaire_id: stagiaireId,
           is_public: true,
           updated_at: new Date().toISOString()
@@ -77,14 +77,14 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
       const { data: entrepriseData, error: entrepriseError } = await supabase
         .from('entreprises')
         .select('name, logo_url')
-        .eq('id', recommendation.entreprise_id)
+        .eq('id', data.entreprise_id)
         .single();
 
       if (entrepriseError) throw entrepriseError;
 
       // Ajouter la nouvelle recommandation à la liste
       const newRecommendation = {
-        ...data,
+        ...responseData,
         company_name: entrepriseData.name,
         company_logo: entrepriseData.logo_url
       };

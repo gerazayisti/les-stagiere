@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Recommendation } from '@/types/recommendations';
 
 export interface StagiaireData {
@@ -256,7 +256,7 @@ export function useStagiaire(stagiaireId: string) {
       console.log("Fetching recommendations for stagiaire ID:", stagiaireId);
       
       // Simuler une réponse d'API pour le développement
-      const mockRecommendations = [
+      const mockRecommendations: Recommendation[] = [
         {
           id: "rec1",
           entreprise_id: "ent1",
@@ -271,6 +271,8 @@ export function useStagiaire(stagiaireId: string) {
           company_name: "TechSolutions",
           company_logo: "https://placehold.co/100",
           created_at: "2023-07-01",
+          start_date: "2023-01-01",
+          end_date: "2023-06-30",
           updated_at: "2023-07-01",
           is_public: true
         },
@@ -288,6 +290,8 @@ export function useStagiaire(stagiaireId: string) {
           company_name: "InnovCorp",
           company_logo: "https://placehold.co/100",
           created_at: "2023-01-15",
+          start_date: "2022-09-01",
+          end_date: "2022-12-31",
           updated_at: "2023-01-15",
           is_public: true
         }
