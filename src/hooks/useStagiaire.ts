@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
+import { Recommendation } from '@/types/recommendations';
 
 export interface StagiaireData {
   id: string;
@@ -24,6 +25,8 @@ export interface StagiaireData {
   is_profile_complete?: boolean;
   created_at?: string;
   updated_at?: string;
+  title?: string; // Ajout du titre
+  disponibility?: string; // Ajout de disponibility (même si on a déjà availability)
   projects?: Array<{
     id: string;
     title: string;
@@ -32,21 +35,7 @@ export interface StagiaireData {
     link?: string;
     image_url?: string;
   }>;
-  recommendations?: Array<{
-    id: string;
-    entreprise_id: string;
-    stagiaire_id: string;
-    position: string;
-    department: string;
-    period: string;
-    content: string;
-    rating: number;
-    author_name: string;
-    author_position: string;
-    company_name: string;
-    company_logo?: string;
-    created_at: string;
-  }>;
+  recommendations?: Recommendation[];
 }
 
 export function useStagiaire(stagiaireId: string) {
@@ -100,6 +89,8 @@ export function useStagiaire(stagiaireId: string) {
         languages: data?.languages || ["Français (natif)", "Anglais (professionnel)", "Espagnol (intermédiaire)"],
         preferred_locations: data?.preferred_locations || ["Paris", "Lyon", "Bordeaux", "Télétravail"],
         availability: data?.availability || "Disponible dès maintenant",
+        title: data?.title || "Étudiant en Informatique",
+        disponibility: data?.disponibility || "Disponible dès maintenant",
         is_premium: data?.is_premium || false,
         is_profile_complete: data?.is_profile_complete || true,
         projects: data?.projects || [
@@ -279,7 +270,9 @@ export function useStagiaire(stagiaireId: string) {
           author_position: "Directrice Technique",
           company_name: "TechSolutions",
           company_logo: "https://placehold.co/100",
-          created_at: "2023-07-01"
+          created_at: "2023-07-01",
+          updated_at: "2023-07-01",
+          is_public: true
         },
         {
           id: "rec2",
@@ -294,7 +287,9 @@ export function useStagiaire(stagiaireId: string) {
           author_position: "Responsable Marketing",
           company_name: "InnovCorp",
           company_logo: "https://placehold.co/100",
-          created_at: "2023-01-15"
+          created_at: "2023-01-15",
+          updated_at: "2023-01-15",
+          is_public: true
         }
       ];
 

@@ -6,9 +6,10 @@ interface ServiceCardProps {
   title: string;
   description: string;
   icon: LucideIcon;
+  delay?: number; // Ajout de la prop delay optionnelle
 }
 
-export function ServiceCard({ title, description, icon: Icon }: ServiceCardProps) {
+export function ServiceCard({ title, description, icon: Icon, delay }: ServiceCardProps) {
   return (
     <Card className="flex flex-col h-full transition-all hover:shadow-lg">
       <CardHeader>

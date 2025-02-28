@@ -7,27 +7,7 @@ import { AddRecommendationModal } from "./AddRecommendationModal";
 import { Lock, Star, Award, Building2, Calendar, Info } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
-
-// Structure des recommandations complète
-interface Recommendation {
-  id: string;
-  entreprise_id: string;
-  stagiaire_id: string;
-  entreprise_name?: string;
-  entreprise_logo?: string;
-  position: string;
-  department: string;
-  period: string;
-  start_date: string;
-  end_date: string;
-  rating: number;
-  content: string;
-  skills: string[];
-  achievements: string[];
-  is_public: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { Recommendation } from "@/types/recommendations";
 
 interface RecommendationsProps {
   recommendations: Recommendation[];
@@ -78,13 +58,15 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
     }
   };
 
-  const handleAddRecommendation = async (recommendation: Omit<Recommendation, "id" | "entreprise_name" | "entreprise_logo" | "created_at" | "updated_at">) => {
+  const handleAddRecommendation = async (recommendation: Omit<Recommendation, "id" | "created_at">) => {
     try {
       const { data, error } = await supabase
         .from('recommendations')
         .insert({
           ...recommendation,
-          stagiaire_id: stagiaireId
+          stagiaire_id: stagiaireId,
+          is_public: true,
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -103,11 +85,11 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
       // Ajouter la nouvelle recommandation à la liste
       const newRecommendation = {
         ...data,
-        entreprise_name: entrepriseData.name,
-        entreprise_logo: entrepriseData.logo_url
+        company_name: entrepriseData.name,
+        company_logo: entrepriseData.logo_url
       };
 
-      setLocalRecommendations([newRecommendation, ...localRecommendations]);
+      setLocalRecommendations([newRecommendation as Recommendation, ...localRecommendations]);
       toast({
         title: "Succès",
         description: "Recommandation ajoutée avec succès",
@@ -133,7 +115,10 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
     try {
       const { error } = await supabase
         .from('recommendations')
-        .update({ is_public: !isCurrentlyPublic })
+        .update({ 
+          is_public: !isCurrentlyPublic,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id);
 
       if (error) throw error;
@@ -223,10 +208,10 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
               <CardHeader>
                 <div className="flex justify-between">
                   <div className="flex items-center gap-4">
-                    {recommendation.entreprise_logo ? (
+                    {recommendation.company_logo ? (
                       <img
-                        src={recommendation.entreprise_logo}
-                        alt={recommendation.entreprise_name || "Entreprise"}
+                        src={recommendation.company_logo}
+                        alt={recommendation.company_name || "Entreprise"}
                         className="w-10 h-10 rounded-full object-cover border"
                       />
                     ) : (
@@ -236,7 +221,7 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
                     )}
                     <div>
                       <CardTitle className="text-lg">
-                        {recommendation.entreprise_name || "Entreprise"}
+                        {recommendation.company_name || "Entreprise"}
                       </CardTitle>
                       <CardDescription>
                         {recommendation.position} • {recommendation.department}
@@ -252,7 +237,7 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
                 <div className="mb-4 flex items-center text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4 mr-1" />
                   <span>
-                    {recommendation.period || `${recommendation.start_date} - ${recommendation.end_date}`}
+                    {recommendation.period || `${recommendation.start_date || ''} - ${recommendation.end_date || ''}`}
                   </span>
                 </div>
                 <p className="mb-4 text-muted-foreground whitespace-pre-wrap">
@@ -298,7 +283,7 @@ export function Recommendations({ recommendations = [], isOwner, stagiaireId, is
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => toggleRecommendationVisibility(recommendation.id, recommendation.is_public)}
+                        onClick={() => toggleRecommendationVisibility(recommendation.id, !!recommendation.is_public)}
                       >
                         {recommendation.is_public ? "Rendre privée" : "Rendre publique"}
                       </Button>

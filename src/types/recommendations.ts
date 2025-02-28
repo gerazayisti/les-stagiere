@@ -17,4 +17,6 @@ export interface Recommendation {
   end_date?: string;
   skills?: string[];
   achievements?: string[];
+  is_public?: boolean;
+  updated_at?: string;
 }

@@ -26,7 +26,7 @@ export function ProfileHeader({ stagiaire, isOwner, onEditClick }: ProfileHeader
               <Badge variant="premium" />
             )}
           </div>
-          <p className="text-muted-foreground">{stagiaire.title || "Titre non défini"}</p>
+          <p className="text-muted-foreground">{stagiaire.title || "Étudiant(e)"}</p>
           <div className="flex flex-wrap items-center gap-4 mt-4 justify-center md:justify-start">
             {stagiaire.location && (
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -40,10 +40,10 @@ export function ProfileHeader({ stagiaire, isOwner, onEditClick }: ProfileHeader
                 <span>{stagiaire.education}</span>
               </div>
             )}
-            {stagiaire.disponibility && (
+            {(stagiaire.disponibility || stagiaire.availability) && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Lock className="w-4 h-4" />
-                <span>{stagiaire.disponibility}</span>
+                <span>{stagiaire.disponibility || stagiaire.availability || "Disponible"}</span>
               </div>
             )}
           </div>

@@ -2,60 +2,65 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Users2, Building2, TrendingUp, Briefcase, Search, UserPlus } from "lucide-react";
-import Navigation from "../components/Navigation";
-import { ServiceCard } from "../components/ServiceCard";
-import { CategoryCard } from "../components/CategoryCard";
-import { TargetAudience } from "../components/TargetAudience";
-import { Pricing } from "../components/Pricing";
-import Footer from "../components/Footer";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
+import { TargetAudience } from "@/components/TargetAudience";
+import { ServiceCard } from "@/components/ServiceCard";
+import { CategoryCard } from "@/components/CategoryCard";
+
+// Animations
+const slideUp = {
+  hidden: { opacity: 0, y: 50 },
+  visible: { opacity: 1, y: 0 },
+};
 
 const Index = () => {
-  const fadeIn = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-  };
-
-  const slideUp = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1 },
-  };
-
-  const stats = [
-    { icon: Users2, label: "Stagiaires inscrits", value: "10,000+" },
-    { icon: Building2, label: "Entreprises partenaires", value: "500+" },
-    { icon: TrendingUp, label: "Taux de placement", value: "85%" },
-    { icon: Briefcase, label: "Stages disponibles", value: "1,000+" }
+  // Données pour la section "Catégories populaires"
+  const popularCategories = [
+    { title: "Développement Web", icon: "💻", count: 0 },
+    { title: "Marketing Digital", icon: "📊", count: 0 },
+    { title: "Design & UX/UI", icon: "🎨", count: 0 },
+    { title: "Finance & Comptabilité", icon: "💰", count: 0 },
+    { title: "Ressources Humaines", icon: "👥", count: 0 },
+    { title: "Gestion de Projet", icon: "📋", count: 0 },
   ];
 
+  // Données pour les services proposés
   const services = [
     {
+      key: "search",
       icon: Search,
-      title: "Recherche intelligente",
-      description: "Trouvez le stage parfait grâce à notre algorithme de matching avancé."
+      title: "Recherche simplifiée",
+      description: "Trouvez rapidement des stages correspondant à vos critères grâce à notre système de recherche avancée.",
+      delay: 0.2,
     },
     {
+      key: "profile",
       icon: UserPlus,
-      title: "Profil professionnel",
-      description: "Créez un profil attractif pour vous démarquer auprès des recruteurs."
+      title: "Profil personnalisé",
+      description: "Créez un profil qui vous représente et mettez en avant vos compétences et expériences.",
+      delay: 0.4,
     },
     {
-      icon: Building2,
-      title: "Entreprises vérifiées",
-      description: "Accédez à un réseau d'entreprises et d'institutions de confiance."
-    }
+      key: "matching",
+      icon: TrendingUp,
+      title: "Matching intelligent",
+      description: "Notre algorithme vous propose des offres pertinentes en fonction de votre profil et de vos préférences.",
+      delay: 0.6,
+    },
   ];
 
-  const categories = [
+  // Données pour les secteurs d'activité
+  const sectors = [
+    { title: "Technology", vacancies: 0 },
+    { title: "Healthcare", vacancies: 0 },
+    { title: "Finance", vacancies: 0 },
+    { title: "Education", vacancies: 0 },
+    { title: "Retail", vacancies: 0 },
+    { title: "Marketing", vacancies: 0 },
+    { title: "Hospitality", vacancies: 0 },
     { title: "Engineering", vacancies: 0 },
-    { title: "Construction", vacancies: 0 },
-    { title: "Sales", vacancies: 0 },
-    { title: "Banking & Finance", vacancies: 0 },
-    { title: "Manufacturing & Industrialization", vacancies: 0 },
-    { title: "Telecommunications", vacancies: 0 },
-    { title: "Education & Training", vacancies: 0 },
-    { title: "Health, Safety & Environment", vacancies: 0 },
-    { title: "Hospitality & Tourism", vacancies: 0 },
-    { title: "Agriculture & Agribusiness", vacancies: 0 },
+    { title: "Media & Entertainment", vacancies: 0 },
     { title: "Mining & Natural Resources", vacancies: 0 },
     { title: "Energy & Renewable", vacancies: 0 },
   ];
@@ -78,86 +83,91 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navigation />
-
+      
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 relative">
-        <div className="absolute inset-0 z-0">
-          <img src="/hero1.webp" alt="Hero Background" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/50"></div>
-        </div>
-        <div className="max-w-7xl mx-auto text-center relative z-10">
-          <motion.h1
+      <section className="relative h-[500px] md:h-[600px] bg-gradient-to-r from-primary/80 to-primary">
+        <div className="absolute inset-0 bg-[url('/hero1.webp')] bg-cover bg-center opacity-30"></div>
+        <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center">
+          <motion.h1 
             initial="hidden"
             animate="visible"
-            variants={fadeIn}
-            transition={{ duration: 0.6 }}
-            className="text-4xl md:text-6xl font-display font-bold text-white mb-6"
+            variants={slideUp}
+            transition={{ duration: 0.5 }}
+            className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white max-w-2xl"
           >
-            Trouvez le stage parfait pour votre avenir
+            Trouvez le stage parfait pour votre avenir professionnel
           </motion.h1>
-          <motion.p
+          <motion.p 
             initial="hidden"
             animate="visible"
             variants={slideUp}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xl text-gray-200 max-w-2xl mx-auto mb-8"
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="mt-6 text-xl text-white max-w-2xl"
           >
-            La plateforme qui connecte les étudiants talentueux aux meilleures opportunités de stages.
+            Connectez-vous avec les meilleures entreprises et démarrez votre carrière dès aujourd'hui.
           </motion.p>
-          <motion.div
+          <motion.div 
             initial="hidden"
             animate="visible"
             variants={slideUp}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex justify-center gap-4"
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="mt-10 flex gap-4"
           >
-            <Link
-              to="/stages"
-              className="inline-flex items-center px-6 py-3 rounded-lg bg-secondary hover:bg-secondary/90 text-secondary-foreground transition-colors font-semibold"
-            >
-              Je cherche un stage
-              <ArrowRight className="ml-2 h-5 w-5" />
+            <Link to="/stages" className="bg-white text-primary px-8 py-3 rounded-md font-medium hover:bg-gray-100 transition-colors">
+              Parcourir les stages
             </Link>
-            <Link
-              to="/inscription"
-              className="inline-flex items-center px-6 py-3 rounded-lg border-2 border-secondary bg-transparent hover:bg-secondary/10 text-secondary-foreground transition-colors font-semibold"
-            >
-              Je recrute un stagiaire
+            <Link to="/inscription" className="bg-primary-dark text-white px-8 py-3 rounded-md font-medium hover:bg-primary-darker transition-colors border border-white">
+              S'inscrire
             </Link>
           </motion.div>
         </div>
       </section>
 
-      {/* Notre Objectif Section */}
+      {/* Statistics Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto text-center">
-          <motion.h2
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+          <motion.div
             initial="hidden"
-            animate="visible"
+            whileInView="visible"
+            viewport={{ once: true }}
             variants={slideUp}
-            transition={{ duration: 0.6 }}
-            className="text-3xl font-semibold text-foreground mb-8"
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center"
           >
-            Notre Objectif
-          </motion.h2>
-          <motion.p
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Briefcase className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-2xl font-bold">+ 500</h3>
+            <p className="text-center text-muted-foreground">Stages disponibles</p>
+          </motion.div>
+          <motion.div
             initial="hidden"
-            animate="visible"
+            whileInView="visible"
+            viewport={{ once: true }}
             variants={slideUp}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg text-muted-foreground mb-8"
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex flex-col items-center"
           >
-            Bienvenue sur notre plateforme de recherche d'emploi et de stage dans votre région. Nous nous engageons à vous aider à trouver l'opportunité de carrière idéale en un rien de temps.
-          </motion.p>
-          <motion.p
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Building2 className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-2xl font-bold">+ 200</h3>
+            <p className="text-center text-muted-foreground">Entreprises partenaires</p>
+          </motion.div>
+          <motion.div
             initial="hidden"
-            animate="visible"
+            whileInView="visible"
+            viewport={{ once: true }}
             variants={slideUp}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-lg text-muted-foreground"
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="flex flex-col items-center"
           >
-            On vous propose une vaste sélection d'offres d'emploi et de stage. Parcourez des milliers d'opportunités dans différents secteurs et localités. Grâce à une recherche personnalisée, trouvez des offres correspondant à vos critères spécifiques.
-          </motion.p>
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Users2 className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-2xl font-bold">+ 1000</h3>
+            <p className="text-center text-muted-foreground">Stagiaires placés</p>
+          </motion.div>
         </div>
       </section>
 
@@ -191,235 +201,124 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           <motion.h2
             initial="hidden"
-            animate="visible"
+            whileInView="visible"
+            viewport={{ once: true }}
             variants={slideUp}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.5 }}
             className="text-3xl font-semibold text-foreground mb-8 text-center"
           >
-            Services Proposés
+            Nos services
           </motion.h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {services.map((service, index) => (
-              <ServiceCard
-                key={service.title}
-                icon={service.icon}
-                title={service.title}
-                description={service.description}
-                delay={0.2 * index}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
- {/* Les Services Que Nous Proposons Section */}
-      <section className="py-16 bg-muted px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <motion.h2
-            initial="hidden"
-            animate="visible"
-            variants={slideUp}
-            transition={{ duration: 0.6 }}
-            className="text-3xl font-semibold text-foreground mb-8 text-center"
-          >
-            Autres Services Que Nous Proposons
-          </motion.h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="p-4 rounded-lg border border-border bg-background hover:border-primary transition-colors"
-            >
-              Offre de stage
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="p-4 rounded-lg border border-border bg-background hover:border-primary transition-colors"
-            >
-              Insertion professionnelle
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="p-4 rounded-lg border border-border bg-background hover:border-primary transition-colors"
-            >
-              Placement du personnel
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              className="p-4 rounded-lg border border-border bg-background hover:border-primary transition-colors"
-            >
-              Répétition à domicile
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 1 }}
-              className="p-4 rounded-lg border border-border bg-background hover:border-primary transition-colors"
-            >
-              Campagne publicitaire
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 1.2 }}
-              className="p-4 rounded-lg border border-border bg-background hover:border-primary transition-colors"
-            >
-              Marketing
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 1.4 }}
-              className="p-4 rounded-lg border border-border bg-background hover:border-primary transition-colors"
-            >
-              Bodyguard
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={slideUp}
-              transition={{ duration: 0.6, delay: 1.6 }}
-              className="p-4 rounded-lg border border-border bg-background hover:border-primary transition-colors"
-            >
-              Événementiel
-            </motion.div>
-          </div>
-        </div>
-      </section>
-      {/* Stages par Catégorie Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <motion.h2
-            initial="hidden"
-            animate="visible"
-            variants={slideUp}
-            transition={{ duration: 0.6 }}
-            className="text-3xl font-semibold text-foreground mb-8 text-center"
-          >
-            Stages par Catégorie
-          </motion.h2>
-          <motion.p
-            initial="hidden"
-            animate="visible"
-            variants={slideUp}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg text-muted-foreground mb-8 text-center"
-          >
-            A better career is out there. We'll help you find it. We're your first step to becoming everything you want to be.
-          </motion.p>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {categories.map((category, index) => (
-              <CategoryCard key={category.title} title={category.title} vacancies={category.vacancies} delay={0.1 * index} />
+            {services.map((service) => (
+              <motion.div
+                key={service.key}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={slideUp}
+                transition={{ duration: 0.5, delay: service.delay }}
+              >
+                <ServiceCard
+                  icon={service.icon}
+                  title={service.title}
+                  description={service.description}
+                />
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      <Pricing />
-
-      {/* Job Search Section */}
-      <section className="py-16 bg-muted px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
+      {/* Catégories Populaires Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
           <motion.h2
             initial="hidden"
-            animate="visible"
+            whileInView="visible"
+            viewport={{ once: true }}
             variants={slideUp}
-            transition={{ duration: 0.6 }}
-            className="text-3xl font-semibold text-foreground mb-8"
+            transition={{ duration: 0.5 }}
+            className="text-3xl font-semibold text-foreground mb-8 text-center"
           >
-            Job Search
+            Catégories populaires
           </motion.h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <motion.h3
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+            {popularCategories.map((category, index) => (
+              <motion.div
+                key={category.title}
                 initial="hidden"
-                animate="visible"
+                whileInView="visible"
+                viewport={{ once: true }}
                 variants={slideUp}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-2xl font-semibold text-foreground mb-4"
+                transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                Pour les chercheurs d'emploi
-              </motion.h3>
-              <motion.p
-                initial="hidden"
-                animate="visible"
-                variants={slideUp}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="text-lg text-muted-foreground mb-4"
-              >
-                Vous cherchez un emploi qui vous correspond ? Quelle que soit votre formation ou votre expérience, notre plateforme d'emploi vous permettra de trouver l'opportunité qui vous convient.
-              </motion.p>
-              <Link
-                to="/inscription"
-                className="inline-flex items-center px-6 py-3 rounded-lg bg-secondary hover:bg-secondary/90 text-secondary-foreground transition-colors font-semibold"
-              >
-                S'inscrire en tant qu'étudiant
-              </Link>
-            </div>
-            <div>
-              <motion.h3
-                initial="hidden"
-                animate="visible"
-                variants={slideUp}
-                transition={{ duration: 0.6, delay: 0.6 }}
-                className="text-2xl font-semibold text-foreground mb-4"
-              >
-                Pour les recruteurs
-              </motion.h3>
-              <motion.p
-                initial="hidden"
-                animate="visible"
-                variants={slideUp}
-                transition={{ duration: 0.6, delay: 0.8 }}
-                className="text-lg text-muted-foreground mb-4"
-              >
-                Vous recherchez les meilleurs talents pour votre entreprise ? Inscrivez-vous dès maintenant sur notre plateforme dédiée au recrutement. Que vous soyez une startup, une PME ou une grande entreprise, vous trouverez ici les profils qualifiés dont vous avez besoin.
-              </motion.p>
-              <Link
-                to="/inscription"
-                className="inline-flex items-center px-6 py-3 rounded-lg bg-secondary hover:bg-secondary/90 text-secondary-foreground transition-colors font-semibold"
-              >
-                S'inscrire en tant que recruteur
-              </Link>
-            </div>
+                <Link to={`/stages?category=${encodeURIComponent(category.title)}`}>
+                  <CategoryCard
+                    title={category.title}
+                    count={category.count}
+                    icon={category.icon}
+                  />
+                </Link>
+              </motion.div>
+            ))}
           </div>
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={slideUp}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="mt-8 text-center"
+          >
+            <Link
+              to="/stages"
+              className="inline-flex items-center gap-2 text-primary hover:underline"
+            >
+              Voir toutes les catégories <ArrowRight className="h-4 w-4" />
+            </Link>
+          </motion.div>
         </div>
       </section>
 
-      {/* Blog Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto text-center">
+      {/* Call-to-Action Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-primary text-white">
+        <div className="max-w-7xl mx-auto text-center space-y-8">
           <motion.h2
             initial="hidden"
-            animate="visible"
+            whileInView="visible"
+            viewport={{ once: true }}
             variants={slideUp}
-            transition={{ duration: 0.6 }}
-            className="text-3xl font-semibold text-foreground mb-8"
+            transition={{ duration: 0.5 }}
+            className="text-3xl font-semibold"
           >
-            Blog : Nos Articles à la Une
+            Prêt à commencer votre aventure professionnelle ?
           </motion.h2>
           <motion.p
             initial="hidden"
-            animate="visible"
+            whileInView="visible"
+            viewport={{ once: true }}
             variants={slideUp}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg text-muted-foreground"
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-xl max-w-2xl mx-auto"
           >
-            Plongez dans l'univers captivant de nos articles exclusifs. Élargissez vos horizons avec nos articles vibrants et pertinents.
+            Inscrivez-vous dès aujourd'hui et accédez à des centaines d'offres de
+            stage dans tous les domaines.
           </motion.p>
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={slideUp}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <Link
+              to="/inscription"
+              className="inline-block bg-white text-primary px-8 py-3 rounded-md font-medium hover:bg-gray-100 transition-colors"
+            >
+              Créer un compte gratuitement
+            </Link>
+          </motion.div>
         </div>
       </section>
 
