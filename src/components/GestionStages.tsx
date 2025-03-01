@@ -44,7 +44,7 @@ export interface Stage {
   status?: 'active' | 'expired' | 'draft';
 }
 
-interface GestionStagesProps {
+export interface GestionStagesProps {
   enterpriseId: string;
 }
 

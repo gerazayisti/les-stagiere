@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface StagiaireData {
+export interface StagiaireData {
   name: string;
   title: string;
   location: string;
@@ -23,8 +23,8 @@ interface StagiaireData {
 }
 
 interface EditProfileFormProps {
-  initialData: StagiaireData;
-  onSubmit: (data: StagiaireData) => void;
+  initialData: Partial<StagiaireData>;
+  onSubmit: (data: Partial<StagiaireData>) => void;
   onCancel: () => void;
   onAvatarUpload?: (file: File) => void;
 }
@@ -82,7 +82,7 @@ export function EditProfileForm({
             <Input
               id="name"
               name="name"
-              defaultValue={initialData.name}
+              defaultValue={initialData.name || ""}
               placeholder="Jean Dupont"
               required
             />
@@ -92,7 +92,7 @@ export function EditProfileForm({
             <Input
               id="title"
               name="title"
-              defaultValue={initialData.title}
+              defaultValue={initialData.title || ""}
               placeholder="Développeur Full Stack Junior"
               required
             />
@@ -106,7 +106,7 @@ export function EditProfileForm({
               id="email"
               name="email"
               type="email"
-              defaultValue={initialData.email}
+              defaultValue={initialData.email || ""}
               placeholder="jean.dupont@email.com"
               required
             />
@@ -117,7 +117,7 @@ export function EditProfileForm({
               id="phone"
               name="phone"
               type="tel"
-              defaultValue={initialData.phone}
+              defaultValue={initialData.phone || ""}
               placeholder="+237 6XX XX XX XX"
             />
           </div>
@@ -128,7 +128,7 @@ export function EditProfileForm({
           <Input
             id="location"
             name="location"
-            defaultValue={initialData.location}
+            defaultValue={initialData.location || ""}
             placeholder="Yaoundé, Cameroun"
             required
           />
@@ -139,7 +139,7 @@ export function EditProfileForm({
           <Input
             id="education"
             name="education"
-            defaultValue={initialData.education}
+            defaultValue={initialData.education || ""}
             placeholder="Master en Informatique"
             required
           />
@@ -147,7 +147,7 @@ export function EditProfileForm({
 
         <div className="space-y-2">
           <Label htmlFor="disponibility">Disponibilité</Label>
-          <Select name="disponibility" defaultValue={initialData.disponibility}>
+          <Select name="disponibility" defaultValue={initialData.disponibility || "immediate"}>
             <SelectTrigger>
               <SelectValue placeholder="Sélectionnez votre disponibilité" />
             </SelectTrigger>
@@ -166,7 +166,7 @@ export function EditProfileForm({
           <Textarea
             id="bio"
             name="bio"
-            defaultValue={initialData.bio}
+            defaultValue={initialData.bio || ""}
             placeholder="Décrivez votre parcours et vos objectifs professionnels..."
             className="h-32"
             required

@@ -437,7 +437,7 @@ export default function ProfilEntreprise() {
 
             {isOwner && (
               <TabsContent value="stages">
-                <GestionStages stages={stages} enterpriseId={id || ""} />
+                <GestionStages enterpriseId={id || ""} />
               </TabsContent>
             )}
 
