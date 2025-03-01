@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AddRecommendationModal } from "./AddRecommendationModal";
-import { Search, Star, User } from "lucide-react";
+import { Search, Star, User, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 type Intern = {
@@ -13,18 +13,24 @@ type Intern = {
   hasRecommendation: boolean;
 };
 
-interface CompanyRecommendationsProps {
-  companyId: string;
-  companyName: string;
-  companyLogo: string;
-  interns: Intern[];
+export interface CompanyRecommendationsProps {
+  userId: string;
+  companyId?: string;
+  companyName?: string;
+  companyLogo?: string;
+  interns?: Intern[];
+  onMessageClick?: (entrepriseId: string) => Promise<void>;
+  isPremium?: boolean;
 }
 
 export function CompanyRecommendations({
+  userId,
   companyId,
   companyName,
   companyLogo,
-  interns
+  interns = [],
+  onMessageClick,
+  isPremium = false
 }: CompanyRecommendationsProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -44,6 +50,25 @@ export function CompanyRecommendations({
     intern.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Si nous sommes sur le profil d'un stagiaire
+  if (!companyId) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recommandations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>
+              Aucune entreprise n'a encore recommandé ce profil.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Si nous sommes sur le profil d'une entreprise
   return (
     <div className="space-y-6">
       <Card>
@@ -119,7 +144,7 @@ export function CompanyRecommendations({
           onSubmit={handleAddRecommendation}
           initialData={null}
           stagiaire={{ id: selectedIntern.id, name: selectedIntern.name }}
-          company={{ id: companyId, name: companyName, logo: companyLogo }}
+          company={{ id: companyId, name: companyName || "", logo: companyLogo }}
         />
       )}
     </div>

@@ -1,52 +1,51 @@
 
-import { Badge } from "@/components/profile/Badge";
-import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
-interface AboutTabProps {
-  bio: string;
-  skills: string[];
-  languages: string[];
-  preferredLocations: string[];
+export interface AboutTabProps {
+  bio?: string;
+  education?: string;
+  disponibility?: string;
+  isPremium?: boolean;
 }
 
-export function AboutTab({ bio, skills, languages, preferredLocations }: AboutTabProps) {
+export function AboutTab({ bio, education, disponibility, isPremium = false }: AboutTabProps) {
   return (
-    <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-4">À propos</h2>
-      <p className="text-muted-foreground whitespace-pre-wrap">{bio}</p>
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="text-xl font-semibold mb-4">Biographie</h3>
+          {bio ? (
+            <p className="text-muted-foreground whitespace-pre-line">{bio}</p>
+          ) : (
+            <p className="text-muted-foreground italic">
+              Aucune biographie disponible.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-      {skills && skills.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-2">Compétences</h3>
-          <div className="flex flex-wrap gap-2">
-            {skills.map((skill, index) => (
-              <Badge key={index}>{skill}</Badge>
-            ))}
-          </div>
-        </div>
-      )}
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="text-xl font-semibold mb-4">Formation</h3>
+          {education ? (
+            <p className="text-muted-foreground whitespace-pre-line">{education}</p>
+          ) : (
+            <p className="text-muted-foreground italic">
+              Aucune information sur la formation disponible.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-      {languages && languages.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-2">Langues</h3>
-          <div className="flex flex-wrap gap-2">
-            {languages.map((language, index) => (
-              <Badge key={index} variant="outline">{language}</Badge>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {preferredLocations && preferredLocations.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-2">Localisations préférées</h3>
-          <div className="flex flex-wrap gap-2">
-            {preferredLocations.map((location, index) => (
-              <Badge key={index} variant="secondary">{location}</Badge>
-            ))}
-          </div>
-        </div>
-      )}
-    </Card>
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="text-xl font-semibold mb-4">Disponibilité</h3>
+          <Badge variant={disponibility === 'immediate' ? 'success' : 'outline'}>
+            {disponibility === 'immediate' ? 'Disponible immédiatement' : 'Disponible prochainement'}
+          </Badge>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

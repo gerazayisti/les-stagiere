@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, ExternalLink, Github, Image as ImageIcon } from "lucide-react";
+import { Plus, ExternalLink, Github, Image as ImageIcon, Edit, Trash } from "lucide-react";
 import { AddProjectModal } from "./AddProjectModal";
 
 interface Project {
@@ -16,12 +16,14 @@ interface Project {
   github_url?: string;
 }
 
-interface PortfolioProps {
-  projects: Project[];
-  isOwner: boolean;
+export interface PortfolioProps {
+  userId: string;
+  projects?: Project[];
+  isOwner?: boolean;
+  isPremium?: boolean;
 }
 
-export function Portfolio({ projects = [], isOwner }: PortfolioProps) {
+export function Portfolio({ userId, projects = [], isOwner = false, isPremium = false }: PortfolioProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
@@ -34,6 +36,12 @@ export function Portfolio({ projects = [], isOwner }: PortfolioProps) {
   const handleEditProject = (project: Project) => {
     setEditingProject(project);
     setShowAddModal(true);
+  };
+
+  const handleDeleteProject = (projectId: string | undefined) => {
+    if (!projectId) return;
+    // Cette fonction sera implémentée pour supprimer un projet de la base de données
+    console.log("Supprimer projet:", projectId);
   };
 
   return (
@@ -123,13 +131,23 @@ export function Portfolio({ projects = [], isOwner }: PortfolioProps) {
                   )}
                 </div>
                 {isOwner && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleEditProject(project)}
-                  >
-                    Modifier
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEditProject(project)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteProject(project.id)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
                 )}
               </CardFooter>
             </Card>
@@ -145,6 +163,7 @@ export function Portfolio({ projects = [], isOwner }: PortfolioProps) {
             setEditingProject(null);
           }}
           onSubmit={handleAddProject}
+          initialData={editingProject || undefined}
         />
       )}
     </div>
