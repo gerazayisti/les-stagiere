@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Paperclip, Send, Image as ImageIcon, File } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 interface Message {
   id: string;
@@ -52,6 +53,26 @@ export function ChatArea({ conversationId, recipient }: ChatAreaProps) {
 
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const conversationParam = queryParams.get('conversation');
+    
+    if (conversationParam && conversationParam === conversationId) {
+      const systemMessage: Message = {
+        id: Date.now().toString(),
+        sender: "other",
+        content: "La candidature est maintenant en discussion. Vous pouvez échanger des informations supplémentaires ici.",
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        type: "text",
+      };
+      
+      if (!messages.some(msg => msg.content === systemMessage.content)) {
+        setMessages(prevMessages => [...prevMessages, systemMessage]);
+      }
+    }
+  }, [location.search, conversationId, messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -84,7 +105,6 @@ export function ChatArea({ conversationId, recipient }: ChatAreaProps) {
   };
 
   const handleFileUpload = (type: "file" | "image") => {
-    // Simuler l'upload d'un fichier
     const message: Message = {
       id: Date.now().toString(),
       sender: "user",

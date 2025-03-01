@@ -70,6 +70,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useNavigate } from "react-router-dom";
 
 // Types
 export interface Candidat {
@@ -113,6 +114,7 @@ export function GestionCandidatures({
   onUpdateStatus,
   onAddRecommendation,
 }: GestionCandidaturesProps) {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [selectedCandidature, setSelectedCandidature] =
@@ -132,6 +134,17 @@ export function GestionCandidatures({
   const handleStatusChange = (newStatus: Candidature["status"]) => {
     if (selectedCandidature) {
       onUpdateStatus(selectedCandidature.id, newStatus);
+      
+      if (newStatus === "en_discussion") {
+        setIsDialogOpen(false);
+        
+        const conversationId = "1";
+        
+        setTimeout(() => {
+          navigate(`/messagerie?conversation=${conversationId}`);
+        }, 500);
+      }
+      
       setSelectedCandidature({
         ...selectedCandidature,
         status: newStatus,
@@ -344,7 +357,6 @@ export function GestionCandidatures({
         </CardContent>
       </Card>
 
-      {/* Détails de la candidature */}
       {selectedCandidature && (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -544,7 +556,6 @@ export function GestionCandidatures({
         </Dialog>
       )}
 
-      {/* Formulaire de recommandation */}
       {selectedCandidat && (
         <Dialog
           open={showRecommendationForm}
@@ -558,7 +569,6 @@ export function GestionCandidatures({
               </DialogDescription>
             </DialogHeader>
             
-            {/* Placeholder du formulaire de recommandation */}
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <label htmlFor="recommendation" className="text-sm font-medium">

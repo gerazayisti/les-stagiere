@@ -23,6 +23,7 @@ import { RequireProfileCompletion } from "./components/RequireProfileCompletion"
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import Admin from "./pages/Admin";
+import Settings from "./pages/Settings";
 import './App.css';
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
             <Route path="entreprises/:id" element={<ProfilEntreprise />} />
             <Route path="profil-enrichi/:id" element={<ProfilEnrichi />} />
             <Route path="complete-profile" element={<CompleteProfile />} />
+            <Route path="settings" element={<Settings />} />
             
             {/* Pages qui nécessitent un profil complet */}
             <Route path="messagerie" element={

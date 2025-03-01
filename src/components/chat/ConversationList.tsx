@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+
+import { useState, useEffect } from "react";
+import { Search, UserRound } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Conversation {
   id: string;
-  user: {
+  recipient: {
     name: string;
     avatar: string;
     status: "online" | "offline";
@@ -14,130 +15,153 @@ interface Conversation {
   lastMessage: {
     text: string;
     time: string;
-    unread: boolean;
+    isRead: boolean;
   };
 }
 
 interface ConversationListProps {
-  onSelectConversation: (conversationId: string) => void;
+  onSelectConversation: (id: string) => void;
   selectedConversationId?: string;
+  onEmptyConversations?: (empty: boolean) => void;
 }
 
 export function ConversationList({
   onSelectConversation,
   selectedConversationId,
+  onEmptyConversations,
 }: ConversationListProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Simulated conversations data
-  const conversations: Conversation[] = [
+  const [conversations, setConversations] = useState<Conversation[]>([
     {
       id: "1",
-      user: {
+      recipient: {
         name: "Tech Startup Sarl",
         avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=company1",
         status: "online",
       },
       lastMessage: {
-        text: "Nous avons examiné votre candidature...",
+        text: "Bonjour ! Nous avons bien reçu votre candidature pour le stage.",
         time: "14:30",
-        unread: true,
+        isRead: false,
       },
     },
     {
       id: "2",
-      user: {
+      recipient: {
         name: "Digital Africa Inc",
         avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=company2",
         status: "offline",
       },
       lastMessage: {
-        text: "Merci pour votre message. Pouvons-nous...",
+        text: "Merci pour votre candidature. Pouvons-nous prévoir un entretien ?",
         time: "Hier",
-        unread: false,
+        isRead: true,
       },
     },
     {
       id: "3",
-      user: {
+      recipient: {
         name: "Innovation Lab",
         avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=company3",
         status: "online",
       },
       lastMessage: {
-        text: "Le stage commence le 1er mars...",
-        time: "Hier",
-        unread: false,
+        text: "Votre profil nous intéresse, pouvez-vous nous envoyer plus d'informations ?",
+        time: "Lun",
+        isRead: true,
       },
     },
-  ];
+  ]);
 
-  const filteredConversations = conversations.filter((conv) =>
-    conv.user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredConversations = conversations.filter((conversation) =>
+    conversation.recipient.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Notify parent component about empty conversations
+  useEffect(() => {
+    if (onEmptyConversations) {
+      onEmptyConversations(conversations.length === 0);
+    }
+  }, [conversations, onEmptyConversations]);
+
   return (
-    <div className="w-full max-w-sm border-r">
-      {/* Search */}
+    <div className="w-80 border-r flex flex-col">
       <div className="p-4 border-b">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher une conversation..."
+            placeholder="Rechercher..."
+            className="pl-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
           />
         </div>
       </div>
 
-      {/* Conversations */}
-      <div className="divide-y">
-        {filteredConversations.map((conversation) => (
-          <Button
-            key={conversation.id}
-            variant="ghost"
-            className={`w-full justify-start p-4 h-auto ${
-              selectedConversationId === conversation.id ? "bg-muted" : ""
-            }`}
-            onClick={() => onSelectConversation(conversation.id)}
-          >
-            <div className="flex items-start gap-3 w-full">
-              <div className="relative">
-                <Avatar>
-                  <AvatarImage src={conversation.user.avatar} />
-                  <AvatarFallback>{conversation.user.name[0]}</AvatarFallback>
-                </Avatar>
-                <span
-                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
-                    conversation.user.status === "online"
-                      ? "bg-green-500"
-                      : "bg-muted"
-                  }`}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="font-medium truncate">
-                    {conversation.user.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground flex-shrink-0">
-                    {conversation.lastMessage.time}
-                  </span>
+      <ScrollArea className="flex-1">
+        <div className="space-y-0.5">
+          {filteredConversations.length > 0 ? (
+            filteredConversations.map((conversation) => (
+              <button
+                key={conversation.id}
+                className={`w-full p-3 text-left flex items-start space-x-3 hover:bg-muted/50 transition-colors ${
+                  selectedConversationId === conversation.id
+                    ? "bg-muted"
+                    : ""
+                }`}
+                onClick={() => onSelectConversation(conversation.id)}
+              >
+                <div className="relative">
+                  <Avatar>
+                    <AvatarImage src={conversation.recipient.avatar} />
+                    <AvatarFallback>
+                      {conversation.recipient.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span
+                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+                      conversation.recipient.status === "online"
+                        ? "bg-green-500"
+                        : "bg-muted"
+                    }`}
+                  />
                 </div>
-                <div className="flex justify-between items-start">
-                  <p className="text-sm text-muted-foreground truncate">
-                    {conversation.lastMessage.text}
-                  </p>
-                  {conversation.lastMessage.unread && (
-                    <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
-                  )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium text-sm">
+                      {conversation.recipient.name}
+                    </h4>
+                    <span className="text-xs text-muted-foreground">
+                      {conversation.lastMessage.time}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <p
+                      className={`text-xs truncate ${
+                        !conversation.lastMessage.isRead
+                          ? "font-medium text-foreground"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {conversation.lastMessage.text}
+                    </p>
+                    {!conversation.lastMessage.isRead && (
+                      <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                    )}
+                  </div>
                 </div>
-              </div>
+              </button>
+            ))
+          ) : (
+            <div className="py-8 px-4 text-center">
+              <UserRound className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Aucune conversation trouvée
+              </p>
             </div>
-          </Button>
-        ))}
-      </div>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

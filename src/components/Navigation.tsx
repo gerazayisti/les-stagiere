@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +14,7 @@ import { useEffect, useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { Settings } from "lucide-react";
 
 export default function Navigation() {
   const navigate = useNavigate();
@@ -22,7 +22,6 @@ export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
-  // Obtenir les initiales du nom ou de l'email
   const getInitials = (text: string) => {
     if (!text) return "??";
     if (text.includes("@")) {
@@ -58,7 +57,6 @@ export default function Navigation() {
       setIsSigningOut(true);
       console.log("Déconnexion initiée depuis Navigation");
       
-      // Utiliser directement l'API de Supabase pour la déconnexion
       const success = await signOut();
       
       if (success) {
@@ -171,14 +169,11 @@ export default function Navigation() {
                   >
                     Messagerie
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      navigate("/parametres");
-                      setIsOpen(false);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    Paramètres
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Paramètres</span>
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { StagiaireData, EditProfileForm } from "@/components/profile/EditProfileForm";
@@ -8,10 +9,15 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
+// Extend StagiaireData to include avatar_url
+interface ExtendedStagiaireData extends StagiaireData {
+  avatar_url?: string;
+}
+
 export default function ProfilStagiaire() {
   const { user, loading, isAuthenticated } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState<StagiaireData | null>(null);
+  const [profileData, setProfileData] = useState<ExtendedStagiaireData | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -27,7 +33,7 @@ export default function ProfilStagiaire() {
             throw error;
           }
 
-          setProfileData(data as StagiaireData);
+          setProfileData(data as ExtendedStagiaireData);
         } catch (error: any) {
           console.error("Error fetching profile:", error.message);
           toast.error("Failed to load profile data.");
@@ -38,7 +44,7 @@ export default function ProfilStagiaire() {
     fetchProfile();
   }, [user, isAuthenticated]);
 
-  const updateProfile = async (data: Partial<StagiaireData>) => {
+  const updateProfile = async (data: Partial<ExtendedStagiaireData>) => {
     if (user?.id) {
       try {
         const { error } = await supabase
@@ -50,7 +56,7 @@ export default function ProfilStagiaire() {
           throw error;
         }
 
-        setProfileData({ ...profileData, ...data } as StagiaireData);
+        setProfileData({ ...profileData, ...data } as ExtendedStagiaireData);
         toast.success("Profile updated successfully!");
       } catch (error: any) {
         console.error("Error updating profile:", error.message);
@@ -95,7 +101,7 @@ export default function ProfilStagiaire() {
 
       // Update the user's profile with the new avatar URL
       await updateProfile({ avatar_url });
-      setProfileData(prevData => ({ ...prevData, avatar_url } as StagiaireData));
+      setProfileData(prevData => ({ ...prevData, avatar_url } as ExtendedStagiaireData));
 
       toast.success("Avatar updated successfully!");
     } catch (error: any) {

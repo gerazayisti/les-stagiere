@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Mail, Phone, MapPin, MessageSquare } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/lib/supabase";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -32,24 +32,39 @@ export default function Contact() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    // Simulating API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      toast({
-        title: "Message envoyé",
-        description: "Nous vous répondrons dans les plus brefs délais.",
-      });
+    
+    try {
+      // Store the message in the database
+      const { error } = await supabase
+        .from('contact_messages')
+        .insert({
+          nom: formData.name,
+          email: formData.email,
+          sujet: formData.subject,
+          message: formData.message,
+          forwarded_to_email: false
+        });
+      
+      if (error) throw error;
+      
+      // In a real implementation, you would set up a serverless function or backend service
+      // to periodically check for unforwarded messages and send them to gerazayisti@gmail.com
+      // using an email service like SendGrid, Mailgun, etc.
+      
+      toast.success("Message envoyé avec succès! Nous vous répondrons dans les plus brefs délais.");
+      // Reset form fields
       setFormData({
         name: "",
         email: "",
         subject: "",
         message: "",
       });
-    }, 1500);
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      toast.error("Erreur lors de l'envoi du message. Veuillez réessayer.");
+    }
   };
 
   return (

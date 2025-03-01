@@ -1,6 +1,8 @@
+
 import { useState } from "react";
 import { ConversationList } from "@/components/chat/ConversationList";
 import { ChatArea } from "@/components/chat/ChatArea";
+import { MessageSquare } from "lucide-react";
 
 // Simulated recipient data
 const recipients = {
@@ -23,6 +25,7 @@ const recipients = {
 
 export default function Messagerie() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>();
+  const [hasMessages, setHasMessages] = useState<boolean>(true);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -31,6 +34,7 @@ export default function Messagerie() {
           <ConversationList
             onSelectConversation={setSelectedConversationId}
             selectedConversationId={selectedConversationId}
+            onEmptyConversations={(empty) => setHasMessages(!empty)}
           />
           {selectedConversationId ? (
             <div className="flex-1">
@@ -40,8 +44,18 @@ export default function Messagerie() {
               />
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              Sélectionnez une conversation pour commencer
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+              {hasMessages ? (
+                "Sélectionnez une conversation pour commencer"
+              ) : (
+                <>
+                  <MessageSquare className="h-12 w-12 mb-4 text-muted" />
+                  <h3 className="text-lg font-medium mb-1">Aucun message</h3>
+                  <p className="text-sm text-center max-w-md">
+                    Vous n'avez pas encore de messages. Les messages apparaîtront ici lorsque vous commencerez une conversation.
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
