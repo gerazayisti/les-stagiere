@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -32,10 +33,89 @@ export type Database = {
       stages: {
         Row: {
           id: string
-          titre: string
+          title: string
           description: string
+          short_description: string
+          requirements?: string
+          responsibilities?: string
+          location: string
+          remote_policy?: string
+          type: 'temps_plein' | 'temps_partiel' | 'alternance' | 'remote'
+          duration: string
+          start_date: string
+          compensation?: {
+            amount: number
+            currency: string
+            period: string
+          }
+          required_skills: string[]
+          preferred_skills?: string[]
+          education_level?: string
           entreprise_id: string
+          status: 'active' | 'expired' | 'draft'
+          views_count?: number
+          applications_count?: number
           created_at: string
+          updated_at?: string
+          deadline?: string
+          is_featured?: boolean
+          is_urgent?: boolean
+        }
+        Insert: {
+          title: string
+          description: string
+          short_description: string
+          requirements?: string
+          responsibilities?: string
+          location: string
+          remote_policy?: string
+          type: 'temps_plein' | 'temps_partiel' | 'alternance' | 'remote'
+          duration: string
+          start_date: string
+          compensation?: {
+            amount: number
+            currency: string
+            period: string
+          }
+          required_skills: string[]
+          preferred_skills?: string[]
+          education_level?: string
+          entreprise_id: string
+          status?: 'active' | 'expired' | 'draft'
+          views_count?: number
+          applications_count?: number
+          created_at?: string
+          updated_at?: string
+          deadline?: string
+          is_featured?: boolean
+          is_urgent?: boolean
+        }
+        Update: {
+          title?: string
+          description?: string
+          short_description?: string
+          requirements?: string
+          responsibilities?: string
+          location?: string
+          remote_policy?: string
+          type?: 'temps_plein' | 'temps_partiel' | 'alternance' | 'remote'
+          duration?: string
+          start_date?: string
+          compensation?: {
+            amount: number
+            currency: string
+            period: string
+          }
+          required_skills?: string[]
+          preferred_skills?: string[]
+          education_level?: string
+          status?: 'active' | 'expired' | 'draft'
+          views_count?: number
+          applications_count?: number
+          updated_at?: string
+          deadline?: string
+          is_featured?: boolean
+          is_urgent?: boolean
         }
       }
       candidatures: {

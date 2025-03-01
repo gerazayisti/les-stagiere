@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Table,
   TableBody,
@@ -18,42 +18,98 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   Eye, Plus, MoreHorizontal, Edit, Trash2, Calendar, 
-  MapPin, BriefcaseBusiness, Clock, Ban, CheckCircle2
+  MapPin, BriefcaseBusiness, Clock, Ban, CheckCircle2, Search
 } from "lucide-react";
 import { formatDistance } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Input } from "@/components/ui/input";
+import { AddStageForm } from './AddStageForm';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
-interface Stage {
+export interface Stage {
   id: string;
-  titre: string;
+  title: string;
   description: string;
-  lieu: string;
-  date_debut: string;
-  duree: string;
-  remuneration: string;
-  competences: string[];
-  date_publication: string;
+  location: string;
+  start_date: string;
+  duration: string;
+  compensation?: {
+    amount: number;
+    currency: string;
+    period: string;
+  };
+  required_skills: string[];
+  created_at: string;
   status?: 'active' | 'expired' | 'draft';
 }
 
 interface GestionStagesProps {
-  stages: Stage[];
   enterpriseId: string;
 }
 
-export function GestionStages({ stages, enterpriseId }: GestionStagesProps) {
+export function GestionStages({ enterpriseId }: GestionStagesProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStages();
+  }, [enterpriseId]);
+
+  const fetchStages = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('stages')
+        .select('*')
+        .eq('entreprise_id', enterpriseId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setStages(data || []);
+    } catch (error) {
+      console.error("Erreur lors du chargement des stages:", error);
+      toast.error("Impossible de charger les offres de stage");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     return formatDistance(date, new Date(), { addSuffix: true, locale: fr });
   };
 
+  const handleDeleteStage = async (stageId: string) => {
+    if (confirm("Êtes-vous sûr de vouloir supprimer cette offre de stage ?")) {
+      try {
+        const { error } = await supabase
+          .from('stages')
+          .delete()
+          .eq('id', stageId);
+
+        if (error) {
+          throw error;
+        }
+
+        setStages(stages.filter(stage => stage.id !== stageId));
+        toast.success("Offre de stage supprimée avec succès");
+      } catch (error) {
+        console.error("Erreur lors de la suppression du stage:", error);
+        toast.error("Impossible de supprimer l'offre de stage");
+      }
+    }
+  };
+
   const filteredStages = stages.filter(
     (stage) =>
-      stage.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      stage.lieu.toLowerCase().includes(searchTerm.toLowerCase())
+      stage.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      stage.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -65,7 +121,22 @@ export function GestionStages({ stages, enterpriseId }: GestionStagesProps) {
         </Button>
       </div>
 
-      {stages.length === 0 ? (
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <Input
+          placeholder="Rechercher par titre ou lieu..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8">
+          <Clock className="animate-spin h-8 w-8 mx-auto text-gray-400 mb-2" />
+          <p className="text-gray-500">Chargement des offres...</p>
+        </div>
+      ) : stages.length === 0 ? (
         <div className="bg-white p-8 rounded-lg text-center">
           <BriefcaseBusiness className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-4 text-lg font-medium text-gray-900">
@@ -96,27 +167,27 @@ export function GestionStages({ stages, enterpriseId }: GestionStagesProps) {
             <TableBody>
               {filteredStages.map((stage) => (
                 <TableRow key={stage.id}>
-                  <TableCell className="font-medium">{stage.titre}</TableCell>
+                  <TableCell className="font-medium">{stage.title}</TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                      {stage.lieu}
+                      {stage.location}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-                      {new Date(stage.date_debut).toLocaleDateString()}
+                      {new Date(stage.start_date).toLocaleDateString()}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                      {stage.duree}
+                      {stage.duration}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {formatTimeAgo(stage.date_publication)}
+                    {formatTimeAgo(stage.created_at)}
                   </TableCell>
                   <TableCell>
                     <Badge 
@@ -158,7 +229,10 @@ export function GestionStages({ stages, enterpriseId }: GestionStagesProps) {
                           <Edit className="h-4 w-4 mr-2" />
                           Modifier
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem 
+                          className="text-red-600"
+                          onClick={() => handleDeleteStage(stage.id)}
+                        >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Supprimer
                         </DropdownMenuItem>
@@ -172,7 +246,12 @@ export function GestionStages({ stages, enterpriseId }: GestionStagesProps) {
         </div>
       )}
 
-      {/* Ici nous pourrions ajouter un formulaire modal pour ajouter/modifier une offre */}
+      <AddStageForm
+        isOpen={showAddForm}
+        onClose={() => setShowAddForm(false)}
+        entrepriseId={enterpriseId}
+        onSuccess={fetchStages}
+      />
     </div>
   );
 }
