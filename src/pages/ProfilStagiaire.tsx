@@ -2,12 +2,18 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { StagiaireData, EditProfileForm } from "@/components/profile/EditProfileForm";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { AboutTab } from "@/components/profile/AboutTab";
+import { CVTab } from "@/components/profile/CVTab";
+import { Portfolio } from "@/components/profile/Portfolio";
+import { CompanyRecommendations } from "@/components/profile/CompanyRecommendations";
 
 // Extend StagiaireData to include avatar_url
 interface ExtendedStagiaireData extends StagiaireData {
@@ -18,6 +24,8 @@ export default function ProfilStagiaire() {
   const { user, loading, isAuthenticated } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState<ExtendedStagiaireData | null>(null);
+  const [activeTab, setActiveTab] = useState("about");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -110,6 +118,48 @@ export default function ProfilStagiaire() {
     }
   };
 
+  const handleMessageButtonClick = async (entrepriseId: string) => {
+    try {
+      // Vérifier si une conversation existe déjà
+      const { data: existingConversations, error: convError } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`sender_id.eq.${user?.id},receiver_id.eq.${user?.id}`)
+        .or(`sender_id.eq.${entrepriseId},receiver_id.eq.${entrepriseId}`);
+      
+      if (convError) throw convError;
+      
+      let conversationId;
+      
+      if (existingConversations && existingConversations.length > 0) {
+        // Utiliser la conversation existante
+        conversationId = existingConversations[0].id;
+      } else {
+        // Créer une nouvelle conversation
+        const { data: newConversation, error: createError } = await supabase
+          .from('conversations')
+          .insert({
+            sender_id: user?.id,
+            receiver_id: entrepriseId,
+            last_message: 'Nouvelle conversation',
+            created_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+        
+        if (createError) throw createError;
+        conversationId = newConversation.id;
+      }
+      
+      // Rediriger vers la messagerie avec l'ID de conversation
+      navigate(`/messagerie?conversation=${conversationId}`);
+      
+    } catch (error: any) {
+      console.error("Error initiating conversation:", error.message);
+      toast.error("Impossible d'initier la conversation.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -145,35 +195,45 @@ export default function ProfilStagiaire() {
   }
 
   return (
-    <div className="container mx-auto py-12 px-4">
-      <h1 className="text-3xl font-bold mb-6">Profil Stagiaire</h1>
-
+    <div className="container max-w-6xl mx-auto py-12 px-4">
       {profileData ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Informations personnelles</CardTitle>
-                <CardDescription>
-                  Consultez et modifiez vos informations personnelles.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-16 w-16">
-                    {profileData.avatar_url ? (
-                      <AvatarImage src={profileData.avatar_url} alt={profileData.name} />
-                    ) : (
-                      <AvatarFallback>{profileData.name?.charAt(0)}</AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div>
-                    <h2 className="text-lg font-semibold">{profileData.name}</h2>
-                    <p className="text-sm text-muted-foreground">{profileData.title}</p>
+        <>
+          <div className="flex flex-col lg:flex-row gap-8">
+            <div className="w-full lg:w-1/3 space-y-4">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex flex-col items-center text-center">
+                    <Avatar className="h-24 w-24 mb-4">
+                      {profileData.avatar_url ? (
+                        <AvatarImage src={profileData.avatar_url} alt={profileData.name} />
+                      ) : (
+                        <AvatarFallback>{profileData.name?.charAt(0)}</AvatarFallback>
+                      )}
+                    </Avatar>
+                    <h2 className="text-2xl font-bold">{profileData.name}</h2>
+                    <p className="text-muted-foreground">{profileData.title}</p>
+                    <div className="flex items-center mt-2">
+                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                        {profileData.disponibility === 'immediate' ? 'Disponible immédiatement' : 'Disponible prochainement'}
+                      </span>
+                    </div>
+                    <div className="mt-4 w-full">
+                      <Button 
+                        className="w-full" 
+                        onClick={() => setIsEditing(true)}
+                      >
+                        Modifier le profil
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <dl className="space-y-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Coordonnées</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
                   <div>
                     <dt className="text-sm font-medium">Email</dt>
                     <dd className="text-sm text-muted-foreground">{profileData.email}</dd>
@@ -186,30 +246,48 @@ export default function ProfilStagiaire() {
                     <dt className="text-sm font-medium">Localisation</dt>
                     <dd className="text-sm text-muted-foreground">{profileData.location}</dd>
                   </div>
-                  <div>
-                    <dt className="text-sm font-medium">Formation</dt>
-                    <dd className="text-sm text-muted-foreground">{profileData.education}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium">Disponibilité</dt>
-                    <dd className="text-sm text-muted-foreground">{profileData.disponibility}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium">Bio</dt>
-                    <dd className="text-sm text-muted-foreground">{profileData.bio}</dd>
-                  </div>
-                </dl>
+                </CardContent>
+              </Card>
+            </div>
 
-                <Button onClick={() => setIsEditing(true)}>
-                  Modifier le profil
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="w-full lg:w-2/3">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="w-full justify-start mb-4">
+                  <TabsTrigger value="about">À propos</TabsTrigger>
+                  <TabsTrigger value="cv">CV</TabsTrigger>
+                  <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+                  <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="about">
+                  <AboutTab 
+                    bio={profileData.bio} 
+                    education={profileData.education}
+                    disponibility={profileData.disponibility}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="cv">
+                  <CVTab userId={user.id} />
+                </TabsContent>
+                
+                <TabsContent value="portfolio">
+                  <Portfolio userId={user.id} />
+                </TabsContent>
+                
+                <TabsContent value="recommendations">
+                  <CompanyRecommendations 
+                    userId={user.id}
+                    onMessageClick={handleMessageButtonClick}
+                  />
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
 
           {isEditing && (
-            <div>
-              <Card>
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                 <CardHeader>
                   <CardTitle>Modifier le profil</CardTitle>
                   <CardDescription>
@@ -227,7 +305,7 @@ export default function ProfilStagiaire() {
               </Card>
             </div>
           )}
-        </div>
+        </>
       ) : (
         <div className="text-center py-8">
           <Loader2 className="animate-spin h-8 w-8 mx-auto text-gray-400 mb-2" />

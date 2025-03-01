@@ -1,9 +1,6 @@
-
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Users2, Building2, TrendingUp, Briefcase, Search, UserPlus } from "lucide-react";
-import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
 import { TargetAudience } from "@/components/TargetAudience";
 import { ServiceCard } from "@/components/ServiceCard";
 import CategoryCard from "@/components/CategoryCard";
@@ -319,8 +316,6 @@ const Index = () => {
           </motion.div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 };

@@ -1,5 +1,4 @@
 
-import Navigation from "@/components/Navigation";
 import { Search, MapPin, Building2, Calendar, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from 'react';
@@ -36,7 +35,7 @@ const OffresStages = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
+      {/* Suppression de la Navigation qui est en double */}
       
       <div className="max-w-7xl mx-auto pt-32 px-4 sm:px-6 lg:px-8">
         {/* Search Section */}
