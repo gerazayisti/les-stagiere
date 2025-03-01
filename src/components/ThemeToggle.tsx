@@ -1,5 +1,6 @@
+
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "./theme-provider";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -12,6 +13,7 @@ export function ThemeToggle() {
       size="icon"
       onClick={() => setTheme(theme === "light" ? "dark" : "light")}
       className="relative w-10 h-10"
+      aria-label="Toggle theme"
     >
       <AnimatePresence mode="wait">
         {theme === "light" ? (
@@ -24,7 +26,7 @@ export function ThemeToggle() {
             className="absolute inset-0 flex items-center justify-center"
           >
             <Sun className="h-5 w-5" />
-            <span className="sr-only">Mode clair</span>
+            <span className="sr-only">Light mode</span>
           </motion.div>
         ) : (
           <motion.div
@@ -36,7 +38,7 @@ export function ThemeToggle() {
             className="absolute inset-0 flex items-center justify-center"
           >
             <Moon className="h-5 w-5" />
-            <span className="sr-only">Mode sombre</span>
+            <span className="sr-only">Dark mode</span>
           </motion.div>
         )}
       </AnimatePresence>
