@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GestionStages } from "@/components/GestionStages";
-import { GestionCandidatures, GestionCandidaturesProps } from "@/components/GestionCandidatures";
+import { GestionCandidatures } from "@/components/GestionCandidatures";
 import { EditEntrepriseForm } from "@/components/EditEntrepriseForm";
 import { useToast } from "@/hooks/use-toast";
 import { CompanyRecommendations } from "@/components/profile/CompanyRecommendations";
@@ -91,9 +91,11 @@ interface CompanyData {
 export default function ProfilEntreprise() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("about");
   const [isEditMode, setIsEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [stages, setStages] = useState<Stage[]>([]);
   const [candidatures, setCandidatures] = useState<Candidature[]>([]);
@@ -102,46 +104,60 @@ export default function ProfilEntreprise() {
   const isOwner = user?.id === id;
 
   useEffect(() => {
-    if (id) {
-      fetchCompanyData();
-      if (isOwner) {
-        fetchStages();
-        fetchCandidatures();
-      }
-    }
-  }, [id, isOwner]);
-
-  const fetchCompanyData = async () => {
-    if (!id) return;
+    let isMounted = true;
     
-    try {
-      setLoading(true);
-      console.log("Fetching company data for ID:", id);
+    const fetchData = async () => {
+      if (!id) return;
       
-      const { data, error } = await supabase
-        .from("entreprises")
-        .select("*")
-        .eq("id", id)
-        .single();
+      try {
+        setLoading(true);
+        setError(null);
+        console.log("Fetching company data for ID:", id);
+        
+        const { data, error } = await supabase
+          .from("entreprises")
+          .select("*")
+          .eq("id", id)
+          .single();
 
-      if (error) {
-        console.error("Error fetching company data:", error);
-        throw error;
+        if (error) {
+          console.error("Error fetching company data:", error);
+          throw error;
+        }
+
+        if (isMounted) {
+          console.log("Company data received:", data);
+          setCompany(data as CompanyData);
+          
+          // Only fetch these if the user is the owner
+          if (isOwner) {
+            await fetchStages();
+            await fetchCandidatures();
+          }
+        }
+      } catch (error: any) {
+        if (isMounted) {
+          console.error("Erreur lors du chargement des données:", error);
+          setError(error.message || "Impossible de charger les données de l'entreprise");
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les données de l'entreprise",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
+    };
 
-      console.log("Company data received:", data);
-      setCompany(data as CompanyData);
-    } catch (error) {
-      console.error("Erreur lors du chargement des données:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les données de l'entreprise",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchData();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [id, isOwner, toast]);
 
   const fetchStages = async () => {
     if (!id) return;
@@ -267,6 +283,17 @@ export default function ProfilEntreprise() {
       title: "Statut mis à jour",
       description: "Le statut de la candidature a été mis à jour avec succès",
     });
+    
+    // If status is "en_discussion", open a message thread with the candidate
+    const candidature = candidatures.find(c => c.id === candidatureId);
+    if (newStatus === "en_discussion" && candidature) {
+      // Navigate to messagerie with this candidate
+      toast({
+        title: "Discussion ouverte",
+        description: `Une conversation a été ouverte avec ${candidature.candidat.nom}`,
+      });
+      navigate('/messagerie');
+    }
   };
 
   const addRecommendation = (candidatId: string) => {
@@ -313,6 +340,26 @@ export default function ProfilEntreprise() {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Erreur</CardTitle>
+            <CardDescription>
+              {error}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => window.location.reload()}>
+              Réessayer
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
