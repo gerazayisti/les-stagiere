@@ -1,241 +1,232 @@
-
 import { useState, useEffect } from "react";
-import { EditProfileForm } from "@/components/profile/EditProfileForm";
-import { useParams } from "react-router-dom";
-import { useStagiaire, StagiaireData } from '@/hooks/useStagiaire';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ProfileHeader } from "@/components/profile/ProfileHeader";
-import { AboutTab } from "@/components/profile/AboutTab";
-import { CVTab } from "@/components/profile/CVTab";
-import { Portfolio } from "@/components/profile/Portfolio";
-import { Recommendations } from "@/components/profile/Recommendations";
-import { Loader2, AlertCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-import { Recommendation } from "@/types/recommendations";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Project } from "@/types/project";
+import { StagiaireData, EditProfileForm } from "@/components/profile/EditProfileForm";
+import { Loader2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export default function ProfilStagiaire() {
-  const { id } = useParams();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const isOwner = user?.id === id;
-  
-  const { stagiaire, loading, error, updateStagiaire, uploadAvatar, uploadCV, fetchRecommendations } = useStagiaire(id || "");
-  
-  const [activeTab, setActiveTab] = useState<"profile" | "cv" | "portfolio" | "recommendations">("profile");
+  const { user, loading, isAuthenticated } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  
-  // Charger les recommandations quand on passe à cet onglet
-  useEffect(() => {
-    if (activeTab === "recommendations" && fetchRecommendations) {
-      fetchRecommendations().catch(err => {
-        console.error("Erreur lors du chargement des recommandations:", err);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les recommandations",
-          variant: "destructive",
-        });
-      });
-    }
-  }, [activeTab, fetchRecommendations, toast]);
+  const [profileData, setProfileData] = useState<StagiaireData | null>(null);
 
-  // Page de chargement complète
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (isAuthenticated && user?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('stagiaires')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (error) {
+            throw error;
+          }
+
+          setProfileData(data as StagiaireData);
+        } catch (error: any) {
+          console.error("Error fetching profile:", error.message);
+          toast.error("Failed to load profile data.");
+        }
+      }
+    };
+
+    fetchProfile();
+  }, [user, isAuthenticated]);
+
+  const updateProfile = async (data: Partial<StagiaireData>) => {
+    if (user?.id) {
+      try {
+        const { error } = await supabase
+          .from('stagiaires')
+          .update(data)
+          .eq('id', user.id);
+
+        if (error) {
+          throw error;
+        }
+
+        setProfileData({ ...profileData, ...data } as StagiaireData);
+        toast.success("Profile updated successfully!");
+      } catch (error: any) {
+        console.error("Error updating profile:", error.message);
+        toast.error("Failed to update profile.");
+      }
+    }
+  };
+
+  const handleProfileUpdate = (data: Partial<StagiaireData>) => {
+    updateProfile(data);
+    setIsEditing(false);
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!user?.id) {
+      toast.error("User not authenticated.");
+      return;
+    }
+
+    try {
+      const filePath = `avatars/${user.id}/${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: storageData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      if (!storageData?.publicUrl) {
+        throw new Error("Failed to retrieve public URL for avatar.");
+      }
+
+      const avatar_url = storageData.publicUrl;
+
+      // Update the user's profile with the new avatar URL
+      await updateProfile({ avatar_url });
+      setProfileData(prevData => ({ ...prevData, avatar_url } as StagiaireData));
+
+      toast.success("Avatar updated successfully!");
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error.message);
+      toast.error("Failed to upload avatar.");
+    }
+  };
+
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <Card className="max-w-3xl mx-auto p-8">
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-center text-muted-foreground">Chargement du profil...</p>
-          </div>
-        </Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse flex flex-col items-center gap-2">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Chargement...</p>
+        </div>
       </div>
     );
   }
 
-  // Page d'erreur complète
-  if (error || !stagiaire) {
+  if (!isAuthenticated) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <Card className="max-w-3xl mx-auto">
+      <div className="container mx-auto py-12 px-4">
+        <Card className="max-w-md mx-auto">
           <CardHeader>
-            <CardTitle className="text-2xl text-red-600 flex items-center gap-2">
-              <AlertCircle className="h-6 w-6" />
-              Erreur
-            </CardTitle>
-            <CardDescription className="text-base">
-              {error || "Ce profil n'existe pas ou n'est plus disponible."}
+            <CardTitle>Accès refusé</CardTitle>
+            <CardDescription>
+              Vous devez être connecté pour voir votre profil
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              Vous pouvez essayer de :
+              Veuillez vous connecter pour accéder à cette page.
             </p>
-            <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-              <li>Vérifier l'URL et réessayer</li>
-              <li>Revenir à la page d'accueil</li>
-              <li>Contacter l'administrateur si le problème persiste</li>
-            </ul>
+            <Button onClick={() => window.location.href = '/login'}>
+              Se connecter
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const handleEditSubmit = async (data: Partial<StagiaireData>) => {
-    try {
-      await updateStagiaire(data);
-      setIsEditing(false);
-      toast({
-        title: "Succès",
-        description: "Profil mis à jour avec succès",
-      });
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le profil",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleAvatarUpload = async (file: File) => {
-    try {
-      await uploadAvatar(file);
-      toast({
-        title: "Succès",
-        description: "Avatar mis à jour avec succès",
-      });
-    } catch (error) {
-      console.error('Erreur lors du téléchargement de l\'avatar:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de télécharger l'avatar",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCVUpload = async (file: File) => {
-    try {
-      await uploadCV(file);
-      toast({
-        title: "Succès",
-        description: "CV mis à jour avec succès",
-      });
-    } catch (error) {
-      console.error('Erreur lors du téléchargement du CV:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de télécharger le CV",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* En-tête du profil avec gestion des erreurs */}
-      <ProfileHeader 
-        stagiaire={stagiaire} 
-        isOwner={isOwner} 
-        onEditClick={() => setIsEditing(true)}
-        loading={loading}
-        error={error}
-      />
+    <div className="container mx-auto py-12 px-4">
+      <h1 className="text-3xl font-bold mb-6">Profil Stagiaire</h1>
 
-      {/* Onglets */}
-      <Tabs defaultValue={activeTab} className="space-y-6" onValueChange={(value: any) => setActiveTab(value)}>
-        <TabsList>
-          <TabsTrigger value="profile">Profil</TabsTrigger>
-          <TabsTrigger value="cv">CV</TabsTrigger>
-          <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="profile">
-          {stagiaire.bio || stagiaire.skills || stagiaire.languages || stagiaire.preferred_locations ? (
-            <AboutTab 
-              bio={stagiaire.bio || ""} 
-              skills={stagiaire.skills || []} 
-              languages={stagiaire.languages || []} 
-              preferredLocations={stagiaire.preferred_locations || []}
-            />
-          ) : (
+      {profileData ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
             <Card>
-              <CardContent className="pt-6">
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Aucune information de profil n'est disponible.
-                    {isOwner && " Cliquez sur 'Modifier le profil' pour ajouter des informations."}
-                  </AlertDescription>
-                </Alert>
+              <CardHeader>
+                <CardTitle>Informations personnelles</CardTitle>
+                <CardDescription>
+                  Consultez et modifiez vos informations personnelles.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <Avatar className="h-16 w-16">
+                    {profileData.avatar_url ? (
+                      <AvatarImage src={profileData.avatar_url} alt={profileData.name} />
+                    ) : (
+                      <AvatarFallback>{profileData.name?.charAt(0)}</AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div>
+                    <h2 className="text-lg font-semibold">{profileData.name}</h2>
+                    <p className="text-sm text-muted-foreground">{profileData.title}</p>
+                  </div>
+                </div>
+
+                <dl className="space-y-2">
+                  <div>
+                    <dt className="text-sm font-medium">Email</dt>
+                    <dd className="text-sm text-muted-foreground">{profileData.email}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium">Téléphone</dt>
+                    <dd className="text-sm text-muted-foreground">{profileData.phone || "Non spécifié"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium">Localisation</dt>
+                    <dd className="text-sm text-muted-foreground">{profileData.location}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium">Formation</dt>
+                    <dd className="text-sm text-muted-foreground">{profileData.education}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium">Disponibilité</dt>
+                    <dd className="text-sm text-muted-foreground">{profileData.disponibility}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium">Bio</dt>
+                    <dd className="text-sm text-muted-foreground">{profileData.bio}</dd>
+                  </div>
+                </dl>
+
+                <Button onClick={() => setIsEditing(true)}>
+                  Modifier le profil
+                </Button>
               </CardContent>
             </Card>
+          </div>
+
+          {isEditing && (
+            <div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Modifier le profil</CardTitle>
+                  <CardDescription>
+                    Modifiez vos informations personnelles.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <EditProfileForm
+                    initialData={profileData}
+                    onSubmit={handleProfileUpdate}
+                    onCancel={() => setIsEditing(false)}
+                    onAvatarUpload={handleAvatarUpload}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           )}
-        </TabsContent>
-
-        <TabsContent value="cv">
-          <CVTab 
-            isOwner={isOwner} 
-            cvUrl={stagiaire.cv_url} 
-            onUpload={handleCVUpload}
-          />
-        </TabsContent>
-
-        <TabsContent value="portfolio">
-          <Portfolio 
-            projects={(stagiaire.projects || []).map(project => ({
-              ...project,
-              technologies: project.technologies || []
-            }))}
-            isOwner={isOwner} 
-          />
-        </TabsContent>
-
-        <TabsContent value="recommendations">
-          {stagiaire.recommendations && stagiaire.recommendations.length > 0 ? (
-            <Recommendations 
-              recommendations={stagiaire.recommendations as Recommendation[]}
-              isOwner={isOwner}
-              stagiaireId={stagiaire.id}
-              isPremium={stagiaire.is_premium || false}
-            />
-          ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Aucune recommandation n'est disponible pour le moment.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {isEditing && (
-        <EditProfileForm
-          initialData={{
-            name: stagiaire.name,
-            title: stagiaire.title || "",
-            location: stagiaire.location || "",
-            bio: stagiaire.bio || "",
-            email: stagiaire.email,
-            phone: stagiaire.phone || "",
-            education: typeof stagiaire.education === 'string' ? stagiaire.education : "",
-            disponibility: stagiaire.disponibility || ""
-          }}
-          onSubmit={handleEditSubmit}
-          onCancel={() => setIsEditing(false)}
-        />
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <Loader2 className="animate-spin h-8 w-8 mx-auto text-gray-400 mb-2" />
+          <p className="text-gray-500">Chargement des informations du profil...</p>
+        </div>
       )}
     </div>
   );

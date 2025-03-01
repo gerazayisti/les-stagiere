@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,8 +19,9 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
-import { Loader2 } from "lucide-react";
+import { Loader2, Calendar, Info } from "lucide-react";
 import { toast } from "sonner";
+import { addMonths, format, parseISO } from "date-fns";
 
 export interface StageFormData {
   title: string;
@@ -33,6 +34,7 @@ export interface StageFormData {
   type: "temps_plein" | "temps_partiel" | "alternance" | "remote";
   duration: string;
   start_date: string;
+  end_date: string; // Ajout de la date de fin
   compensation: {
     amount: number;
     currency: string;
@@ -44,6 +46,7 @@ export interface StageFormData {
   deadline: string;
   is_featured: boolean;
   is_urgent: boolean;
+  status: "active" | "expired" | "draft";
 }
 
 interface AddStageFormProps {
@@ -66,6 +69,7 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
     type: "temps_plein",
     duration: "",
     start_date: "",
+    end_date: "", // Initialisation de la date de fin
     compensation: {
       amount: 0,
       currency: "EUR",
@@ -77,7 +81,32 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
     deadline: "",
     is_featured: false,
     is_urgent: false,
+    status: "active",
   });
+
+  // Calculer automatiquement la date de fin en fonction de la durée et de la date de début
+  useEffect(() => {
+    if (formData.start_date && formData.duration) {
+      try {
+        // Extracting the number of months from the duration string
+        const durationMatch = formData.duration.match(/(\d+)/);
+        if (durationMatch && durationMatch[1]) {
+          const months = parseInt(durationMatch[1], 10);
+          if (!isNaN(months)) {
+            const startDate = parseISO(formData.start_date);
+            const endDate = addMonths(startDate, months);
+            
+            setFormData(prev => ({
+              ...prev,
+              end_date: format(endDate, 'yyyy-MM-dd')
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors du calcul de la date de fin:", error);
+      }
+    }
+  }, [formData.start_date, formData.duration]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -138,18 +167,40 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
     }
   };
 
+  const validateForm = () => {
+    if (!formData.title.trim()) {
+      toast.error("Veuillez saisir un titre pour l'offre");
+      return false;
+    }
+    if (!formData.location.trim()) {
+      toast.error("Veuillez saisir une localisation");
+      return false;
+    }
+    if (!formData.start_date) {
+      toast.error("Veuillez sélectionner une date de début");
+      return false;
+    }
+    if (!formData.duration.trim()) {
+      toast.error("Veuillez saisir une durée");
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) return;
     
     try {
       setLoading(true);
       
-      // Prepare data for insertion
+      // Prepare data for insertion according to schema.sql
       const stageData = {
         entreprise_id: entrepriseId,
         title: formData.title,
         description: formData.description,
-        short_description: formData.short_description,
+        short_description: formData.short_description || formData.description.substring(0, 200),
         requirements: formData.requirements,
         responsibilities: formData.responsibilities,
         location: formData.location,
@@ -157,14 +208,17 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
         type: formData.type,
         duration: formData.duration,
         start_date: formData.start_date,
+        end_date: formData.end_date,
         compensation: formData.compensation,
         required_skills: formData.required_skills.filter(skill => skill.trim() !== ""),
         preferred_skills: formData.preferred_skills.filter(skill => skill.trim() !== ""),
         education_level: formData.education_level,
-        deadline: formData.deadline,
+        deadline: formData.deadline || null,
         is_featured: formData.is_featured,
         is_urgent: formData.is_urgent,
-        status: "active",
+        status: formData.status,
+        views_count: 0,
+        applications_count: 0,
         created_at: new Date().toISOString(),
       };
       
@@ -193,6 +247,7 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
         type: "temps_plein",
         duration: "",
         start_date: "",
+        end_date: "",
         compensation: {
           amount: 0,
           currency: "EUR",
@@ -204,6 +259,7 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
         deadline: "",
         is_featured: false,
         is_urgent: false,
+        status: "active",
       });
       
       if (onSuccess) {
@@ -349,7 +405,7 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
             {/* Durée et dates */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="duration">Durée *</Label>
+                <Label htmlFor="duration">Durée * (en mois)</Label>
                 <Input
                   id="duration"
                   name="duration"
@@ -358,6 +414,9 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
                   placeholder="Ex: 6 mois"
                   required
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Exemple: "6 mois" ou "3 mois"
+                </p>
               </div>
               
               <div>
@@ -373,6 +432,28 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
               </div>
               
               <div>
+                <Label htmlFor="end_date">Date de fin (calculée automatiquement)</Label>
+                <div className="relative">
+                  <Input
+                    id="end_date"
+                    name="end_date"
+                    type="date"
+                    value={formData.end_date}
+                    readOnly
+                    className="bg-muted"
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Calculée en fonction de la durée et date de début
+                </p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
                 <Label htmlFor="deadline">Date limite de candidature</Label>
                 <Input
                   id="deadline"
@@ -381,6 +462,23 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
                   value={formData.deadline}
                   onChange={handleInputChange}
                 />
+              </div>
+              
+              <div>
+                <Label>Statut de l'offre</Label>
+                <Select 
+                  value={formData.status} 
+                  onValueChange={(value: "active" | "expired" | "draft") => handleSelectChange("status", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="draft">Brouillon</SelectItem>
+                    <SelectItem value="expired">Expirée</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             
@@ -421,6 +519,7 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
                       <SelectItem value="EUR">EUR (€)</SelectItem>
                       <SelectItem value="USD">USD ($)</SelectItem>
                       <SelectItem value="CAD">CAD (C$)</SelectItem>
+                      <SelectItem value="XAF">XAF (FCFA)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

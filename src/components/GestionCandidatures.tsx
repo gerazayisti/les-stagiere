@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Card,
@@ -133,7 +132,6 @@ export function GestionCandidatures({
   const handleStatusChange = (newStatus: Candidature["status"]) => {
     if (selectedCandidature) {
       onUpdateStatus(selectedCandidature.id, newStatus);
-      // Update local state too
       setSelectedCandidature({
         ...selectedCandidature,
         status: newStatus,
@@ -157,34 +155,18 @@ export function GestionCandidatures({
     setFilter(value);
   };
 
-  const getStatusBadge = (status: Candidature["status"]) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case "en_attente":
-        return (
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Hourglass className="h-3 w-3" /> En attente
-          </Badge>
-        );
-      case "acceptee":
-        return (
-          <Badge variant="success" className="flex items-center gap-1 bg-green-500 text-white">
-            <CheckCircle2 className="h-3 w-3" /> Acceptée
-          </Badge>
-        );
-      case "refusee":
-        return (
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <XCircle className="h-3 w-3" /> Refusée
-          </Badge>
-        );
-      case "en_discussion":
-        return (
-          <Badge variant="default" className="flex items-center gap-1 bg-blue-500">
-            <MessageSquare className="h-3 w-3" /> En discussion
-          </Badge>
-        );
+      case 'en_attente':
+        return <Badge variant="outline">En attente</Badge>;
+      case 'acceptee':
+        return <Badge variant="default">Acceptée</Badge>;
+      case 'refusee':
+        return <Badge variant="destructive">Refusée</Badge>;
+      case 'en_discussion':
+        return <Badge variant="secondary">En discussion</Badge>;
       default:
-        return null;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
