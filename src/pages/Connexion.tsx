@@ -45,7 +45,7 @@ export default function Connexion() {
       } else if (user.role === 'stagiaire') {
         navigate(`/stagiaires/${user.id}`);
       } else {
-        navigate('/');
+        navigate('/complete-profile');
       }
       
       // Afficher un toast
@@ -55,15 +55,22 @@ export default function Connexion() {
     }
   }, [isAuthenticated, user, navigate, location.search]);
 
-  // Récupérer les éventuels messages d'erreur de la redirection
+  // Récupérer les éventuels messages d'erreur ou succès de la redirection
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const error = params.get('error');
+    const emailConfirmed = params.get('email_confirmed');
     
     if (error === 'session_expired') {
       setFormError("Votre session a expiré. Veuillez vous reconnecter.");
     } else if (error === 'auth_required') {
       setFormError("Vous devez être connecté pour accéder à cette page.");
+    }
+
+    if (emailConfirmed === 'true') {
+      toast.success("Email confirmé avec succès", {
+        description: "Vous pouvez maintenant vous connecter"
+      });
     }
   }, [location]);
 
@@ -89,11 +96,11 @@ export default function Connexion() {
         if (redirectPath) {
           navigate(redirectPath);
         } else if (user.user_metadata?.role === 'entreprise') {
-          navigate('/entreprises/' + user.id);
+          navigate(`/entreprises/${user.id}`);
         } else if (user.user_metadata?.role === 'stagiaire') {
-          navigate('/stagiaires/' + user.id);
+          navigate(`/stagiaires/${user.id}`);
         } else {
-          navigate('/');
+          navigate('/complete-profile');
         }
         
         setLoading(false);

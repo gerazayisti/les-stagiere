@@ -41,7 +41,7 @@ export function AboutTab({ bio, education, disponibility, isPremium = false }: A
       <Card>
         <CardContent className="p-6">
           <h3 className="text-xl font-semibold mb-4">Disponibilité</h3>
-          <Badge variant={disponibility === 'immediate' ? 'success' : 'outline'}>
+          <Badge variant={disponibility === 'immediate' ? 'default' : 'outline'}>
             {disponibility === 'immediate' ? 'Disponible immédiatement' : 'Disponible prochainement'}
           </Badge>
         </CardContent>

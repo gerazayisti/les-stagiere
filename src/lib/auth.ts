@@ -150,6 +150,11 @@ export const auth = {
         throw new Error("Toutes les informations sont requises");
       }
       
+      // Vérification de la complexité du mot de passe
+      if (password.length < 8) {
+        throw new Error("Le mot de passe doit contenir au moins 8 caractères");
+      }
+      
       // Inscription via Supabase
       const result = await supabase.auth.signUp({
         email,
@@ -160,6 +165,7 @@ export const auth = {
             name,
             avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
           },
+          emailRedirectTo: `${window.location.origin}/connexion?email_confirmed=true`
         },
       });
 
@@ -190,7 +196,7 @@ export const auth = {
         description: message
       });
       
-      throw error;
+      throw new Error(message);
     }
   },
 
@@ -231,7 +237,7 @@ export const auth = {
         description: message
       });
       
-      throw error;
+      throw new Error(message);
     }
   },
 
