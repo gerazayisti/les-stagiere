@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -6,7 +7,7 @@ import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AboutTab } from "@/components/profile/AboutTab";
 import { Button } from "@/components/ui/button";
-import { Chat, Heart, Edit, Flag, Share2, UserPlus, Mail } from "lucide-react";
+import { Edit, Flag, Share2, UserPlus, Mail, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -103,16 +104,19 @@ export default function ProfilStagiaire() {
 
   const isOwner = isAuthenticated && user?.id === stagiaire.id;
 
+  // Fixed header with children as buttons instead of passing them directly
   return (
     <div className="container mx-auto p-4">
       <ProfileHeader
         name={stagiaire.name}
         avatarUrl={stagiaire.avatar_url}
-        bio={stagiaire.bio}
+        bio={stagiaire.bio || ""}
         location={stagiaire.preferred_locations?.[0] || "N/A"}
-        website={stagiaire.website}
-        github={stagiaire.github}
-        linkedin={stagiaire.linkedin}
+        socials={{
+          website: stagiaire.website,
+          github: stagiaire.github,
+          linkedin: stagiaire.linkedin
+        }}
       >
         {isOwner ? (
           <>
@@ -149,17 +153,17 @@ export default function ProfilStagiaire() {
             bio={stagiaire.bio}
             education={stagiaire.education}
             disponibility={stagiaire.disponibility}
-            userId={stagiaire.id}
+            isPremium={stagiaire.is_premium}
           />
         </TabsContent>
         <TabsContent value="cv">
-          <CVTab cvUrl={stagiaire.cv_url} />
+          <CVTab />
         </TabsContent>
         <TabsContent value="portfolio">
-          <Portfolio projects={[]} isOwner={isOwner} userId={stagiaire.id} />
+          <Portfolio projects={[]} isOwner={isOwner} />
         </TabsContent>
         <TabsContent value="recommendations">
-          <Recommendations userId={stagiaire.id} />
+          <Recommendations />
         </TabsContent>
       </Tabs>
     </div>
