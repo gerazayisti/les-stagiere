@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export interface AboutTabProps {
   bio?: string;
   education?: string;
-  disponibility?: string;
+  disponibility?: "immediate" | "upcoming";
   isPremium?: boolean;
   userId?: string;
 }

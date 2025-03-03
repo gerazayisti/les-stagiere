@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 
@@ -208,10 +209,10 @@ export const auth = {
         throw new Error("Le mot de passe doit contenir au moins 8 caractères");
       }
       
-      // Suppression de la vérification d'email existant qui utilise admin API
-      // Cette API cause l'erreur "User not allowed"
+      // Suppression complète de la vérification d'email existant
+      // Laissons Supabase gérer cela directement
       
-      // Inscription via Supabase
+      // Inscription via Supabase avec des options plus simples
       const result = await supabase.auth.signUp({
         email,
         password,
@@ -221,16 +222,23 @@ export const auth = {
             name,
             avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
           },
+          // Simplifier l'URL de redirection
           emailRedirectTo: `${window.location.origin}/connexion?email_confirmed=true`
         },
       });
 
       if (result.error) {
         console.error("Erreur de création du compte:", result.error);
+        
+        // Gestion spécifique des erreurs Supabase
+        if (result.error.message.includes("already registered")) {
+          throw new Error("Cette adresse email est déjà utilisée");
+        }
+        
         throw result.error;
       }
 
-      // Si la création du compte a réussi mais que l'utilisateur n'est pas disponible (peut arriver)
+      // Si la création du compte a réussi mais que l'utilisateur n'est pas disponible
       if (!result.data.user) {
         toast.success("Inscription réussie", {
           description: "Vérifiez votre email pour confirmer votre compte"
@@ -238,13 +246,8 @@ export const auth = {
         return { data: result.data };
       }
       
-      // Synchroniser immédiatement les données utilisateur
-      try {
-        await syncUserData(result.data.user);
-      } catch (syncError) {
-        console.error("Erreur lors de la synchronisation des données:", syncError);
-        // On continue malgré l'erreur de synchronisation pour ne pas bloquer l'inscription
-      }
+      // Ne pas synchroniser les données ici, cela sera fait par le listener d'auth
+      // C'est une source potentielle d'erreurs
       
       toast.success("Inscription réussie", {
         description: "Vérifiez votre email pour confirmer votre compte"
@@ -256,14 +259,17 @@ export const auth = {
       
       let message = "Une erreur est survenue lors de l'inscription";
       
-      if (error.message.includes("User already registered")) {
+      // Gestion plus précise des erreurs
+      if (error.message?.includes("User already registered") || 
+          error.message?.includes("already registered") ||
+          error.code === "23505") {
         message = "Cette adresse email est déjà utilisée";
-      } else if (error.message.includes("Password should be")) {
+      } else if (error.message?.includes("Password should be")) {
         message = "Le mot de passe doit contenir au moins 6 caractères";
-      } else if (error.status === 500) {
+      } else if (error.status === 500 || error.code === "unexpected_failure") {
         message = "Erreur serveur. Veuillez réessayer ultérieurement.";
-      } else if (error.code === "23505") {
-        message = "Cette adresse email est déjà utilisée";
+      } else if (error.message) {
+        message = error.message;
       }
       
       toast.error("Erreur d'inscription", {

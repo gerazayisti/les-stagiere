@@ -1,13 +1,14 @@
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { Button } from "@/components/ui/button";
+import { Portfolio } from "@/components/profile/Portfolio";
+import { Recommendations } from "@/components/profile/Recommendations";
+import { InteractiveCV } from "@/components/profile/InteractiveCV";
 import { useAuth } from "@/hooks/useAuth";
 import { CVAnalyzer } from "@/components/CVAnalyzer";
 import { AvatarUpload } from "@/components/AvatarUpload";
-import { Portfolio } from "@/components/profile/Portfolio";
-import { Recommendations } from "@/components/profile/Recommendations";
 import { useToast } from "@/components/ui/use-toast";
 import { Lock, ChevronUp, Shield, Star, Award, Bot } from "lucide-react";
 
@@ -176,10 +177,7 @@ export default function ProfilEnrichi() {
         </TabsContent>
 
         <TabsContent value="portfolio" className="space-y-4">
-          <Portfolio
-            projects={[]}
-            isOwner={true}
-          />
+          <Portfolio projects={[]} isOwner={true} userId="demo-user-id" />
         </TabsContent>
 
         <TabsContent value="recommendations" className="space-y-4">

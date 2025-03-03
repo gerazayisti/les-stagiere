@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { auth, UserRole } from "@/lib/auth"
@@ -133,25 +132,33 @@ export default function Inscription() {
         password: "***" // Masquer le mot de passe dans les logs
       });
       
-      const result = await auth.signUp(formData)
-      
-      console.log("Inscription réussie:", result);
-      
-      toast.success("Inscription réussie !", {
-        description: "Veuillez vérifier votre email pour continuer."
-      })
-
-      // Rediriger vers la page de connexion après un court délai
-      setTimeout(() => {
-        navigate('/connexion')
-      }, 1500)
+      // Ajout d'un délai avant de tenter l'inscription pour éviter les erreurs de rate limiting
+      setTimeout(async () => {
+        try {
+          const result = await auth.signUp(formData);
+          
+          console.log("Inscription réussie:", result);
+          
+          toast.success("Inscription réussie !", {
+            description: "Veuillez vérifier votre email pour continuer."
+          });
+  
+          // Rediriger vers la page de connexion après un court délai
+          setTimeout(() => {
+            navigate('/connexion');
+          }, 1500);
+        } catch (error: any) {
+          console.error("Erreur lors de l'inscription:", error);
+          setFormError(error.message || "Erreur lors de l'inscription");
+          setLoading(false);
+        }
+      }, 500);
     } catch (error: any) {
-      console.error("Erreur lors de l'inscription:", error)
-      setFormError(error.message || "Erreur lors de l'inscription")
-    } finally {
-      setLoading(false)
+      console.error("Erreur lors de l'inscription:", error);
+      setFormError(error.message || "Erreur lors de l'inscription");
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

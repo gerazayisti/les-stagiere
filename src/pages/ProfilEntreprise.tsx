@@ -1,599 +1,300 @@
-
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  MapPin,
-  Building2,
-  Users,
-  Globe,
-  Mail,
-  Phone,
-  Briefcase,
-  Edit,
-  ImagePlus,
-  CalendarClock,
-  Clock,
-  Star,
-  User,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { GestionStages } from "@/components/GestionStages";
-import { GestionCandidatures } from "@/components/GestionCandidatures";
-import { EditEntrepriseForm } from "@/components/EditEntrepriseForm";
-import { useToast } from "@/hooks/use-toast";
-import { CompanyRecommendations } from "@/components/profile/CompanyRecommendations";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { 
+  Users, MapPin, Building2, Globe, Clock, BadgeCheck, 
+  Heart, Edit, Flag, Share2, Mail, Plus
+} from "lucide-react";
+import { 
+  Card, CardContent, CardDescription, 
+  CardFooter, CardHeader, CardTitle 
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
+import { CompanyRecommendations } from "@/components/profile/CompanyRecommendations";
 
-// Interfaces using string IDs
-interface Stage {
-  id: string;
-  titre: string;
-  description: string;
-  competences: string[];
-  lieu: string;
-  duree: string;
-  remuneration: string;
-  date_debut: string;
-  date_publication: string;
-}
-
-interface Candidat {
-  id: string;
-  nom: string;
-  email: string;
-  telephone: string;
-  cv: string;
-  lettre: string;
-  datePostulation: Date;
-  competences: string[];
-  experience: string;
-  formation: string;
-  photo: string;
-  disponibilite: string;
-  location?: string;
-  hasRecommendation?: boolean;
-}
-
-interface Candidature {
-  id: string;
-  candidat: Candidat;
-  stageId: string;
-  stageTitre: string;
-  status: "en_attente" | "acceptee" | "refusee" | "en_discussion";
-  datePostulation: Date;
-  noteInterne?: string;
-}
-
-interface CompanyData {
+interface EntrepriseData {
   id: string;
   name: string;
-  logo_url?: string;
-  description: string;
-  industry: string;
-  size: string;
-  location: string;
-  website?: string;
   email: string;
+  logo_url?: string;
+  industry?: string;
+  location?: string;
+  benefits?: string[];
+  description?: string;
+  size?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface InternData {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url?: string;
+  skills?: string[];
+  languages?: string[];
+  preferred_locations?: string[];
+  disponibility?: "immediate" | "upcoming";
+  experience_years?: number;
+  website?: string;
+  github?: string;
+  linkedin?: string;
+  cv_url?: string;
   phone?: string;
+  is_premium?: boolean;
+  last_active?: string;
+  created_at?: string;
 }
 
 export default function ProfilEntreprise() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("about");
-  const [isEditMode, setIsEditMode] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const [entreprise, setEntreprise] = useState<EntrepriseData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [company, setCompany] = useState<CompanyData | null>(null);
-  const [stages, setStages] = useState<Stage[]>([]);
-  const [candidatures, setCandidatures] = useState<Candidature[]>([]);
-  const { toast } = useToast();
-
-  const isOwner = user?.id === id;
+  const [interns, setInterns] = useState<InternData[]>([]);
 
   useEffect(() => {
-    let isMounted = true;
-    
-    const fetchData = async () => {
-      if (!id) return;
-      
+    if (!id) {
+      console.error("ID d'entreprise manquant");
+      toast.error("Impossible de charger le profil de l'entreprise");
+      setLoading(false);
+      return;
+    }
+
+    const fetchEntreprise = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        setError(null);
-        console.log("Fetching company data for ID:", id);
-        
         const { data, error } = await supabase
-          .from("entreprises")
-          .select("*")
-          .eq("id", id)
+          .from('entreprises')
+          .select('*')
+          .eq('id', id)
           .single();
 
         if (error) {
-          console.error("Error fetching company data:", error);
-          throw error;
+          console.error("Erreur lors de la récupération de l'entreprise:", error);
+          toast.error("Erreur lors du chargement du profil de l'entreprise");
+        } else {
+          setEntreprise(data);
         }
-
-        if (isMounted) {
-          console.log("Company data received:", data);
-          setCompany(data as CompanyData);
-          
-          // Only fetch these if the user is the owner
-          if (isOwner) {
-            await fetchStages();
-            await fetchCandidatures();
-          }
-        }
-      } catch (error: any) {
-        if (isMounted) {
-          console.error("Erreur lors du chargement des données:", error);
-          setError(error.message || "Impossible de charger les données de l'entreprise");
-          toast({
-            title: "Erreur",
-            description: "Impossible de charger les données de l'entreprise",
-            variant: "destructive",
-          });
-        }
+      } catch (error) {
+        console.error("Erreur inconnue lors de la récupération de l'entreprise:", error);
+        toast.error("Erreur inconnue lors du chargement du profil de l'entreprise");
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
-    fetchData();
-    
-    return () => {
-      isMounted = false;
+    const fetchInterns = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('stagiaires')
+          .select('*')
+          .limit(5);
+
+        if (error) {
+          console.error("Erreur lors de la récupération des stagiaires:", error);
+          toast.error("Erreur lors du chargement des stagiaires");
+        } else {
+          setInterns(data);
+        }
+      } catch (error) {
+        console.error("Erreur inconnue lors de la récupération des stagiaires:", error);
+        toast.error("Erreur inconnue lors du chargement des stagiaires");
+      }
     };
-  }, [id, isOwner, toast]);
 
-  const fetchStages = async () => {
-    if (!id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from("stages")
-        .select("*")
-        .eq("entreprise_id", id);
-
-      if (error) throw error;
-
-      // Sort by creation date if available, otherwise use an empty array
-      const sortedData = data 
-        ? [...data].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
-        : [];
-        
-      setStages(sortedData as Stage[]);
-    } catch (error) {
-      console.error("Erreur lors du chargement des stages:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les stages",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchCandidatures = async () => {
-    try {
-      // Simuler des données pour l'exemple
-      const mockCandidatures: Candidature[] = [
-        {
-          id: "1",
-          candidat: {
-            id: "101",
-            nom: "Jean Dupont",
-            email: "jean.dupont@example.com",
-            telephone: "0612345678",
-            cv: "/path/to/cv.pdf",
-            lettre: "Lettre de motivation...",
-            datePostulation: new Date("2023-05-10"),
-            competences: ["React", "TypeScript", "Node.js"],
-            experience: "2 ans",
-            formation: "Master en Informatique",
-            photo: "https://randomuser.me/api/portraits/men/1.jpg",
-            disponibilite: "Immédiate",
-            location: "Paris, France",
-          },
-          stageId: "201",
-          stageTitre: "Développeur Frontend React",
-          status: "en_attente",
-          datePostulation: new Date("2023-05-10"),
-        },
-        {
-          id: "2",
-          candidat: {
-            id: "102",
-            nom: "Marie Martin",
-            email: "marie.martin@example.com",
-            telephone: "0623456789",
-            cv: "/path/to/cv2.pdf",
-            lettre: "Lettre de motivation...",
-            datePostulation: new Date("2023-05-09"),
-            competences: ["UI/UX", "Figma", "Adobe XD"],
-            experience: "1 an",
-            formation: "Bachelor en Design",
-            photo: "https://randomuser.me/api/portraits/women/2.jpg",
-            disponibilite: "Dans 2 mois",
-            location: "Lyon, France",
-            hasRecommendation: true,
-          },
-          stageId: "202",
-          stageTitre: "Designer UI/UX",
-          status: "acceptee",
-          datePostulation: new Date("2023-05-09"),
-        },
-        {
-          id: "3",
-          candidat: {
-            id: "103",
-            nom: "Pierre Durand",
-            email: "pierre.durand@example.com",
-            telephone: "0634567890",
-            cv: "/path/to/cv3.pdf",
-            lettre: "Lettre de motivation...",
-            datePostulation: new Date("2023-05-08"),
-            competences: ["Python", "Data Analysis", "Machine Learning"],
-            experience: "3 ans",
-            formation: "Doctorat en Data Science",
-            photo: "https://randomuser.me/api/portraits/men/3.jpg",
-            disponibilite: "Immédiate",
-            location: "Toulouse, France",
-          },
-          stageId: "203",
-          stageTitre: "Data Scientist",
-          status: "en_discussion",
-          datePostulation: new Date("2023-05-08"),
-        },
-      ];
-
-      setCandidatures(mockCandidatures);
-    } catch (error) {
-      console.error("Erreur lors du chargement des candidatures:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les candidatures",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updateCandidatureStatus = (candidatureId: string, newStatus: Candidature["status"]) => {
-    setCandidatures((prev) =>
-      prev.map((candidature) =>
-        candidature.id === candidatureId
-          ? { ...candidature, status: newStatus }
-          : candidature
-      )
-    );
-
-    toast({
-      title: "Statut mis à jour",
-      description: "Le statut de la candidature a été mis à jour avec succès",
-    });
-    
-    // If status is "en_discussion", open a message thread with the candidate
-    const candidature = candidatures.find(c => c.id === candidatureId);
-    if (newStatus === "en_discussion" && candidature) {
-      // Navigate to messagerie with this candidate
-      toast({
-        title: "Discussion ouverte",
-        description: `Une conversation a été ouverte avec ${candidature.candidat.nom}`,
-      });
-      navigate('/messagerie');
-    }
-  };
-
-  const addRecommendation = (candidatId: string) => {
-    // Logique pour ajouter une recommandation
-    toast({
-      title: "Recommandation ajoutée",
-      description: "Vous avez recommandé ce candidat avec succès",
-    });
-  };
-
-  const handleUpdateCompany = async (data: Partial<CompanyData>) => {
-    if (!id) return;
-    
-    try {
-      setLoading(true);
-
-      const { error } = await supabase
-        .from("entreprises")
-        .update(data)
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setCompany((prev) => (prev ? { ...prev, ...data } : null));
-      toast({
-        title: "Succès",
-        description: "Profil mis à jour avec succès",
-      });
-      setIsEditMode(false);
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour du profil:", error);
-      toast({
-        title: "Erreur",
-        description:
-          "Impossible de mettre à jour le profil. Veuillez réessayer plus tard.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchEntreprise();
+    fetchInterns();
+  }, [id]);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="container mx-auto p-4">
+        <Skeleton className="h-12 w-full mb-4" />
+        <Skeleton className="h-4 w-3/4 mb-2" />
+        <Skeleton className="h-4 w-1/2 mb-4" />
+        <div className="grid grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (error) {
+  if (!entreprise) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto p-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Erreur</CardTitle>
-            <CardDescription>
-              {error}
-            </CardDescription>
-          </CardHeader>
           <CardContent>
-            <Button onClick={() => window.location.reload()}>
-              Réessayer
-            </Button>
+            <CardTitle>Entreprise non trouvée</CardTitle>
+            <CardDescription>
+              L'entreprise demandée n'existe pas ou a été supprimée.
+            </CardDescription>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Handle case where no company data is found
-  if (!company && !loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Profil non trouvé</CardTitle>
-            <CardDescription>
-              Le profil d'entreprise que vous recherchez n'existe pas ou vous n'avez pas les permissions nécessaires pour y accéder.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      {company && (
-        <>
-          <div className="flex flex-col md:flex-row gap-6 mb-8">
-            <div className="flex-shrink-0">
-              <Avatar className="w-24 h-24 md:w-32 md:h-32">
-                <AvatarImage src={company.logo_url} />
-                <AvatarFallback className="text-2xl">
-                  {company.name.charAt(0)}
-                </AvatarFallback>
+    <div className="container mx-auto p-4">
+      <Card className="mb-4">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={entreprise.logo_url} alt={entreprise.name} />
+                <AvatarFallback>{entreprise.name.substring(0, 2)}</AvatarFallback>
               </Avatar>
-            </div>
-            <div className="flex-grow">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h1 className="text-3xl font-bold">{company.name}</h1>
-                  <p className="text-xl text-muted-foreground">
-                    {company.industry}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-4 mt-2">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      <span>{company.location}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Users className="w-4 h-4" />
-                      <span>{company.size}</span>
-                    </div>
-                    {company.website && (
-                      <div className="flex items-center gap-1 text-primary">
-                        <Globe className="w-4 h-4" />
-                        <a
-                          href={
-                            company.website.startsWith("http")
-                              ? company.website
-                              : `https://${company.website}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:underline"
-                        >
-                          Site web
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {isOwner && (
-                  <Button
-                    onClick={() => setIsEditMode(true)}
-                    className="md:flex items-center gap-2 hidden"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Modifier
-                  </Button>
-                )}
+              <div>
+                <CardTitle className="text-lg font-semibold">{entreprise.name}</CardTitle>
+                <CardDescription className="text-gray-500">
+                  {entreprise.industry} - {entreprise.location}
+                </CardDescription>
               </div>
-              {isOwner && (
-                <Button
-                  onClick={() => setIsEditMode(true)}
-                  className="mt-4 w-full md:hidden flex items-center justify-center gap-2"
-                >
-                  <Edit className="w-4 h-4" />
+            </div>
+            <div>
+              {isAuthenticated && user?.role === 'stagiaire' && (
+                <Button variant="outline" size="sm">
+                  <Heart className="h-4 w-4 mr-2" />
+                  Suivre
+                </Button>
+              )}
+              {isAuthenticated && user?.id === entreprise.id && (
+                <Button variant="secondary" size="sm" onClick={() => navigate(`/entreprises/${entreprise.id}/edit`)}>
+                  <Edit className="h-4 w-4 mr-2" />
                   Modifier
                 </Button>
               )}
             </div>
           </div>
-
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="space-y-6"
-          >
-            <TabsList className="grid w-full grid-cols-3 md:grid-cols-5">
-              <TabsTrigger value="about">À propos</TabsTrigger>
-              {isOwner && (
-                <>
-                  <TabsTrigger value="stages">Offres de stages</TabsTrigger>
-                  <TabsTrigger value="candidatures">Candidatures</TabsTrigger>
-                  <TabsTrigger value="recommandations">
-                    Recommandations
-                  </TabsTrigger>
-                </>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-md font-semibold mb-2">À propos de nous</h3>
+              <p className="text-sm text-gray-700">{entreprise.description || "Aucune description disponible."}</p>
+            </div>
+            <div>
+              <h3 className="text-md font-semibold mb-2">Informations</h3>
+              <div className="flex items-center text-sm text-gray-700 mb-1">
+                <Building2 className="h-4 w-4 mr-2" />
+                Secteur: {entreprise.industry || "Non spécifié"}
+              </div>
+              <div className="flex items-center text-sm text-gray-700 mb-1">
+                <MapPin className="h-4 w-4 mr-2" />
+                Localisation: {entreprise.location || "Non spécifiée"}
+              </div>
+              <div className="flex items-center text-sm text-gray-700 mb-1">
+                <Users className="h-4 w-4 mr-2" />
+                Taille: {entreprise.size || "Non spécifiée"}
+              </div>
+              <div className="flex items-center text-sm text-gray-700 mb-1">
+                <Globe className="h-4 w-4 mr-2" />
+                Site web:{" "}
+                <a href={entreprise.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  {entreprise.website || "Non spécifié"}
+                </a>
+              </div>
+              <div className="flex items-center text-sm text-gray-700 mb-1">
+                <Clock className="h-4 w-4 mr-2" />
+                Membre depuis: {new Date(entreprise.created_at || '').toLocaleDateString()}
+              </div>
+              {entreprise.benefits && entreprise.benefits.length > 0 && (
+                <div className="flex items-center text-sm text-gray-700 mb-1">
+                  <BadgeCheck className="h-4 w-4 mr-2" />
+                  Avantages: {entreprise.benefits.join(', ') || "Non spécifiés"}
+                </div>
               )}
-              <TabsTrigger value="contact">Contact</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="about">
-              <Card>
-                <CardHeader>
-                  <CardTitle>À propos de {company.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="prose max-w-none">
-                    <p>{company.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {isOwner && (
-              <TabsContent value="stages">
-                <GestionStages enterpriseId={id || ""} />
-              </TabsContent>
-            )}
-
-            {isOwner && (
-              <TabsContent value="candidatures">
-                <GestionCandidatures
-                  candidatures={candidatures}
-                  onUpdateStatus={updateCandidatureStatus}
-                  onAddRecommendation={addRecommendation}
-                />
-              </TabsContent>
-            )}
-
-            {isOwner && (
-              <TabsContent value="recommandations">
-                <CompanyRecommendations
-                  companyId={id || ""}
-                  companyName={company.name}
-                  companyLogo={company.logo_url || ""}
-                  interns={[
-                    {
-                      id: "101",
-                      name: "Jean Dupont",
-                      hasRecommendation: false,
-                    },
-                    {
-                      id: "102",
-                      name: "Marie Martin",
-                      hasRecommendation: true,
-                    },
-                    {
-                      id: "103",
-                      name: "Pierre Durand",
-                      hasRecommendation: false,
-                    },
-                  ]}
-                />
-              </TabsContent>
-            )}
-
-            <TabsContent value="contact">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Coordonnées</CardTitle>
-                  <CardDescription>
-                    Comment contacter {company.name}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5 text-primary" />
-                    <a
-                      href={`mailto:${company.email}`}
-                      className="text-primary hover:underline"
-                    >
-                      {company.email}
-                    </a>
-                  </div>
-                  {company.phone && (
-                    <div className="flex items-center gap-3">
-                      <Phone className="w-5 h-5 text-primary" />
-                      <a
-                        href={`tel:${company.phone}`}
-                        className="text-primary hover:underline"
-                      >
-                        {company.phone}
-                      </a>
-                    </div>
-                  )}
-                  {company.website && (
-                    <div className="flex items-center gap-3">
-                      <Globe className="w-5 h-5 text-primary" />
-                      <a
-                        href={
-                          company.website.startsWith("http")
-                            ? company.website
-                            : `https://${company.website}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        {company.website}
-                      </a>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-5 h-5 text-primary" />
-                    <span>{company.location}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
-
-      {isEditMode && company && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 overflow-y-auto p-4">
-          <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <EditEntrepriseForm
-              entreprise={company}
-              onSubmit={handleUpdateCompany}
-              onCancel={() => setIsEditMode(false)}
-              isLoading={loading}
-            />
+            </div>
           </div>
-        </div>
-      )}
+        </CardContent>
+        <CardFooter className="flex justify-between items-center">
+          <div className="text-sm text-gray-500">
+            Mis à jour le: {new Date(entreprise.updated_at || '').toLocaleDateString()}
+          </div>
+          <div className="space-x-2">
+            <Button variant="ghost" size="sm">
+              <Heart className="h-4 w-4 mr-2" />
+              J'aime
+            </Button>
+            <Button variant="ghost" size="sm">
+              <Flag className="h-4 w-4 mr-2" />
+              Signaler
+            </Button>
+            <Button variant="ghost" size="sm">
+              <Share2 className="h-4 w-4 mr-2" />
+              Partager
+            </Button>
+            <Button variant="ghost" size="sm">
+              <Mail className="h-4 w-4 mr-2" />
+              Contacter
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
+
+      <Tabs defaultValue="recommandations" className="w-full">
+        <TabsList>
+          <TabsTrigger value="recommandations">Recommandations</TabsTrigger>
+          <TabsTrigger value="offres">Offres de stage</TabsTrigger>
+          {isAuthenticated && user?.id === entreprise.id && (
+            <TabsTrigger value="ajouter">
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter une offre
+            </TabsTrigger>
+          )}
+        </TabsList>
+        <TabsContent value="recommandations">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recommandations</CardTitle>
+              <CardDescription>Ce que les autres disent de cette entreprise.</CardDescription>
+            </CardHeader>
+            <CardContent className="pl-2">
+              <CompanyRecommendations
+                companyId={entreprise.id}
+                companyName={entreprise.name}
+                companyLogo={entreprise.logo_url || ""}
+                interns={interns}
+                userId={user?.id || ""}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="offres">
+          <Card>
+            <CardHeader>
+              <CardTitle>Offres de stage</CardTitle>
+              <CardDescription>Les offres de stage proposées par cette entreprise.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p>Liste des offres de stage à venir...</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        {isAuthenticated && user?.id === entreprise.id && (
+          <TabsContent value="ajouter">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ajouter une offre de stage</CardTitle>
+                <CardDescription>Créez une nouvelle offre de stage pour attirer les meilleurs talents.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p>Formulaire d'ajout d'offre de stage à venir...</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
