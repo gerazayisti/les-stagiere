@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 
@@ -26,6 +25,13 @@ async function syncUserData(authUser: any) {
   console.log("Synchronisation des données utilisateur:", authUser.id);
   
   try {
+    // Vérifier si l'utilisateur existe déjà dans la table users
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', authUser.id)
+      .single();
+
     // Insérer/mettre à jour dans la table users
     const { error: userError } = await supabase
       .from('users')
@@ -46,44 +52,91 @@ async function syncUserData(authUser: any) {
 
     // Si c'est un stagiaire, synchroniser avec la table stagiaires
     if (authUser.user_metadata?.role === 'stagiaire') {
-      const { error: stagiaireError } = await supabase
+      // Vérifier si le stagiaire existe déjà
+      const { data: existingStagiaire } = await supabase
         .from('stagiaires')
-        .upsert({
-          id: authUser.id,
-          name: authUser.user_metadata?.name || authUser.email.split('@')[0],
-          email: authUser.email,
-          avatar_url: authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.user_metadata?.name || authUser.email.split('@')[0])}&background=random`,
-          skills: [],
-          languages: [],
-          preferred_locations: [],
-          last_active: new Date().toISOString(),
-        }, { onConflict: 'id' });
+        .select('id')
+        .eq('id', authUser.id)
+        .single();
 
-      if (stagiaireError) {
-        console.error("Erreur lors de la mise à jour de la table stagiaires:", stagiaireError);
-        throw stagiaireError;
+      if (!existingStagiaire) {
+        const { error: stagiaireError } = await supabase
+          .from('stagiaires')
+          .insert({
+            id: authUser.id,
+            name: authUser.user_metadata?.name || authUser.email.split('@')[0],
+            email: authUser.email,
+            avatar_url: authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.user_metadata?.name || authUser.email.split('@')[0])}&background=random`,
+            skills: [],
+            languages: [],
+            preferred_locations: [],
+            last_active: new Date().toISOString(),
+          });
+
+        if (stagiaireError) {
+          console.error("Erreur lors de l'insertion dans la table stagiaires:", stagiaireError);
+          throw stagiaireError;
+        }
+      } else {
+        // Update only if exists
+        const { error: stagiaireUpdateError } = await supabase
+          .from('stagiaires')
+          .update({
+            name: authUser.user_metadata?.name || existingStagiaire.name,
+            email: authUser.email,
+            last_active: new Date().toISOString(),
+          })
+          .eq('id', authUser.id);
+
+        if (stagiaireUpdateError) {
+          console.error("Erreur lors de la mise à jour de la table stagiaires:", stagiaireUpdateError);
+          throw stagiaireUpdateError;
+        }
       }
     }
 
     // Si c'est une entreprise, synchroniser avec la table entreprises
     if (authUser.user_metadata?.role === 'entreprise') {
-      const { error: entrepriseError } = await supabase
+      // Vérifier si l'entreprise existe déjà
+      const { data: existingEntreprise } = await supabase
         .from('entreprises')
-        .upsert({
-          id: authUser.id,
-          name: authUser.user_metadata?.name || authUser.email.split('@')[0],
-          email: authUser.email,
-          logo_url: authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.user_metadata?.name || authUser.email.split('@')[0])}&background=random`,
-          industry: authUser.user_metadata?.industry || '',
-          location: authUser.user_metadata?.location || '',
-          benefits: [],
-          description: '',
-          size: '',
-        }, { onConflict: 'id' });
+        .select('id')
+        .eq('id', authUser.id)
+        .single();
 
-      if (entrepriseError) {
-        console.error("Erreur lors de la mise à jour de la table entreprises:", entrepriseError);
-        throw entrepriseError;
+      if (!existingEntreprise) {
+        const { error: entrepriseError } = await supabase
+          .from('entreprises')
+          .insert({
+            id: authUser.id,
+            name: authUser.user_metadata?.name || authUser.email.split('@')[0],
+            email: authUser.email,
+            logo_url: authUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.user_metadata?.name || authUser.email.split('@')[0])}&background=random`,
+            industry: authUser.user_metadata?.industry || '',
+            location: authUser.user_metadata?.location || '',
+            benefits: [],
+            description: '',
+            size: '',
+          });
+
+        if (entrepriseError) {
+          console.error("Erreur lors de l'insertion dans la table entreprises:", entrepriseError);
+          throw entrepriseError;
+        }
+      } else {
+        // Update only if exists
+        const { error: entrepriseUpdateError } = await supabase
+          .from('entreprises')
+          .update({
+            name: authUser.user_metadata?.name || existingEntreprise.name,
+            email: authUser.email,
+          })
+          .eq('id', authUser.id);
+
+        if (entrepriseUpdateError) {
+          console.error("Erreur lors de la mise à jour de la table entreprises:", entrepriseUpdateError);
+          throw entrepriseUpdateError;
+        }
       }
     }
     
@@ -155,6 +208,21 @@ export const auth = {
         throw new Error("Le mot de passe doit contenir au moins 8 caractères");
       }
       
+      // Vérifions d'abord si l'email existe déjà
+      const { data: userData, error: checkError } = await supabase.auth.admin
+        .listUsers({
+          filter: {
+            email: email
+          }
+        });
+
+      if (checkError) {
+        console.warn("Impossible de vérifier si l'email existe déjà:", checkError);
+        // On continue quand même, Supabase gérera le cas d'email dupliqué
+      } else if (userData && userData.length > 0) {
+        throw new Error("Cette adresse email est déjà utilisée");
+      }
+      
       // Inscription via Supabase
       const result = await supabase.auth.signUp({
         email,
@@ -169,11 +237,25 @@ export const auth = {
         },
       });
 
-      if (result.error) throw result.error;
+      if (result.error) {
+        console.error("Erreur de création du compte:", result.error);
+        throw result.error;
+      }
+
+      // Si la création du compte a réussi mais que l'utilisateur n'est pas disponible (peut arriver)
+      if (!result.data.user) {
+        toast.success("Inscription réussie", {
+          description: "Vérifiez votre email pour confirmer votre compte"
+        });
+        return { data: result.data };
+      }
       
       // Synchroniser immédiatement les données utilisateur
-      if (result.data.user) {
+      try {
         await syncUserData(result.data.user);
+      } catch (syncError) {
+        console.error("Erreur lors de la synchronisation des données:", syncError);
+        // On continue malgré l'erreur de synchronisation pour ne pas bloquer l'inscription
       }
       
       toast.success("Inscription réussie", {
@@ -190,6 +272,10 @@ export const auth = {
         message = "Cette adresse email est déjà utilisée";
       } else if (error.message.includes("Password should be")) {
         message = "Le mot de passe doit contenir au moins 6 caractères";
+      } else if (error.status === 500) {
+        message = "Erreur serveur. Veuillez réessayer ultérieurement.";
+      } else if (error.code === "23505") {
+        message = "Cette adresse email est déjà utilisée";
       }
       
       toast.error("Erreur d'inscription", {

@@ -7,9 +7,10 @@ export interface AboutTabProps {
   education?: string;
   disponibility?: string;
   isPremium?: boolean;
+  userId?: string;
 }
 
-export function AboutTab({ bio, education, disponibility, isPremium = false }: AboutTabProps) {
+export function AboutTab({ bio, education, disponibility, isPremium = false, userId }: AboutTabProps) {
   return (
     <div className="space-y-6">
       <Card>
