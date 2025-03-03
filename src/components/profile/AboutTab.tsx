@@ -10,7 +10,7 @@ export interface AboutTabProps {
   userId?: string;
 }
 
-export function AboutTab({ bio, education, disponibility, isPremium = false, userId }: AboutTabProps) {
+export function AboutTab({ bio, education, disponibility = "upcoming", isPremium = false, userId }: AboutTabProps) {
   return (
     <div className="space-y-6">
       <Card>

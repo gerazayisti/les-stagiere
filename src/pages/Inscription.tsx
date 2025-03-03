@@ -104,14 +104,30 @@ export default function Inscription() {
     setLoading(true)
     setFormError(null)
 
-    // Validation supplémentaire
-    if (formData.password.length < 8) {
-      setFormError("Le mot de passe doit contenir au moins 8 caractères");
-      setLoading(false);
-      return;
-    }
-
     try {
+      // Validation de l'email
+      if (!formData.email.includes('@') || !formData.email.includes('.')) {
+        setFormError("Veuillez entrer une adresse email valide");
+        setLoading(false);
+        return;
+      }
+
+      // Validation du mot de passe
+      if (formData.password.length < 8) {
+        setFormError("Le mot de passe doit contenir au moins 8 caractères");
+        setLoading(false);
+        return;
+      }
+
+      // Validation du nom
+      if (formData.name.trim().length < 2) {
+        setFormError(formData.role === 'entreprise' 
+          ? "Le nom de l'entreprise est trop court" 
+          : "Votre nom est trop court");
+        setLoading(false);
+        return;
+      }
+      
       console.log("Tentative d'inscription avec les données:", {
         ...formData,
         password: "***" // Masquer le mot de passe dans les logs

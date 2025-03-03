@@ -28,7 +28,7 @@ async function syncUserData(authUser: any) {
     // Vérifier si l'utilisateur existe déjà dans la table users
     const { data: existingUser } = await supabase
       .from('users')
-      .select('id')
+      .select('id, name')
       .eq('id', authUser.id)
       .single();
 
@@ -55,7 +55,7 @@ async function syncUserData(authUser: any) {
       // Vérifier si le stagiaire existe déjà
       const { data: existingStagiaire } = await supabase
         .from('stagiaires')
-        .select('id')
+        .select('id, name')
         .eq('id', authUser.id)
         .single();
 
@@ -100,7 +100,7 @@ async function syncUserData(authUser: any) {
       // Vérifier si l'entreprise existe déjà
       const { data: existingEntreprise } = await supabase
         .from('entreprises')
-        .select('id')
+        .select('id, name')
         .eq('id', authUser.id)
         .single();
 
@@ -208,20 +208,8 @@ export const auth = {
         throw new Error("Le mot de passe doit contenir au moins 8 caractères");
       }
       
-      // Vérifions d'abord si l'email existe déjà
-      const { data: userData, error: checkError } = await supabase.auth.admin
-        .listUsers({
-          filter: {
-            email: email
-          }
-        });
-
-      if (checkError) {
-        console.warn("Impossible de vérifier si l'email existe déjà:", checkError);
-        // On continue quand même, Supabase gérera le cas d'email dupliqué
-      } else if (userData && userData.length > 0) {
-        throw new Error("Cette adresse email est déjà utilisée");
-      }
+      // Suppression de la vérification d'email existant qui utilise admin API
+      // Cette API cause l'erreur "User not allowed"
       
       // Inscription via Supabase
       const result = await supabase.auth.signUp({
