@@ -4,6 +4,7 @@ import { ArrowRight, Users2, Building2, TrendingUp, Briefcase, Search, UserPlus 
 import { TargetAudience } from "@/components/TargetAudience";
 import { ServiceCard } from "@/components/ServiceCard";
 import CategoryCard from "@/components/CategoryCard";
+import { PartnersList } from "@/components/PartnersList";
 
 // Animations
 const slideUp = {
@@ -274,6 +275,11 @@ const Index = () => {
             </Link>
           </motion.div>
         </div>
+      </section>
+
+      {/* Partners Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-muted/50">
+        <PartnersList />
       </section>
 
       {/* Call-to-Action Section */}
