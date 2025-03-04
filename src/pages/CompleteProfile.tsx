@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function CompleteProfile() {
   const navigate = useNavigate();
@@ -134,60 +135,62 @@ export default function CompleteProfile() {
           )}
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Nom */}
-          <div>
-            <Label htmlFor="name">Nom{userRole === 'entreprise' ? " de l'entreprise" : " complet"}</Label>
-            <Input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              placeholder={userRole === 'entreprise' ? "Nom de votre entreprise" : "Votre nom complet"}
-              required
-            />
-          </div>
-
-          {/* Bio ou Description */}
-          {userRole === 'stagiaire' ? (
+        <ScrollArea className="max-h-[70vh]">
+          <form onSubmit={handleSubmit} className="space-y-6 pr-4">
+            {/* Nom */}
             <div>
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                name="bio"
-                value={formData.bio}
+              <Label htmlFor="name">Nom{userRole === 'entreprise' ? " de l'entreprise" : " complet"}</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
                 onChange={handleInputChange}
-                placeholder="Décrivez votre parcours et vos objectifs professionnels..."
-                className="h-32"
+                placeholder={userRole === 'entreprise' ? "Nom de votre entreprise" : "Votre nom complet"}
                 required
               />
             </div>
-          ) : (
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Décrivez votre entreprise, ses activités et sa mission..."
-                className="h-32"
-                required
-              />
-            </div>
-          )}
 
-          <Button type="submit" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Enregistrement...
-              </>
+            {/* Bio ou Description */}
+            {userRole === 'stagiaire' ? (
+              <div>
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleInputChange}
+                  placeholder="Décrivez votre parcours et vos objectifs professionnels..."
+                  className="h-32"
+                  required
+                />
+              </div>
             ) : (
-              'Enregistrer'
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  placeholder="Décrivez votre entreprise, ses activités et sa mission..."
+                  className="h-32"
+                  required
+                />
+              </div>
             )}
-          </Button>
-        </form>
+
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                'Enregistrer'
+              )}
+            </Button>
+          </form>
+        </ScrollArea>
       </Card>
     </div>
   );
