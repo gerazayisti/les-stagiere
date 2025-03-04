@@ -7,13 +7,14 @@ import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AboutTab } from "@/components/profile/AboutTab";
 import { Button } from "@/components/ui/button";
-import { Edit, Flag, Share2, UserPlus, Mail, Heart } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { Edit, Share2, Mail, Heart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import { CVTab } from "@/components/profile/CVTab";
 import { Portfolio } from "@/components/profile/Portfolio";
 import { Recommendations } from "@/components/profile/Recommendations";
+import { EditStagiaireDialog } from "@/components/profile/EditStagiaireDialog";
+import { EditSkillsDialog } from "@/components/profile/EditSkillsDialog";
 
 // Fix the missing 'id' property in ExtendedStagiaireData
 interface ExtendedStagiaireData {
@@ -44,6 +45,11 @@ export default function ProfilStagiaire() {
   const { user, isAuthenticated } = useAuth();
   const [stagiaire, setStagiaire] = useState<ExtendedStagiaireData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  const refreshProfile = () => {
+    setRefreshCounter(prev => prev + 1);
+  };
 
   useEffect(() => {
     if (!id) {
@@ -77,7 +83,7 @@ export default function ProfilStagiaire() {
     };
 
     fetchStagiaire();
-  }, [id]);
+  }, [id, refreshCounter]);
 
   if (loading) {
     return (
@@ -104,42 +110,77 @@ export default function ProfilStagiaire() {
 
   const isOwner = isAuthenticated && user?.id === stagiaire.id;
 
-  // Fixed header with children as buttons instead of passing them directly
   return (
     <div className="container mx-auto p-4">
-      <ProfileHeader
-        name={stagiaire.name}
-        avatarUrl={stagiaire.avatar_url}
-        bio={stagiaire.bio || ""}
-        location={stagiaire.preferred_locations?.[0] || "N/A"}
-        socials={{
-          website: stagiaire.website,
-          github: stagiaire.github,
-          linkedin: stagiaire.linkedin
-        }}
-      >
-        {isOwner ? (
-          <>
-            <Button variant="outline" size="icon" onClick={() => navigate('/complete-profile')}>
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon">
-              <Share2 className="h-4 w-4" />
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="outline" size="sm">
-              <Mail className="h-4 w-4 mr-2" />
-              Contacter
-            </Button>
-            <Button variant="outline" size="sm">
-              <Heart className="h-4 w-4 mr-2" />
-              Suivre
-            </Button>
-          </>
-        )}
-      </ProfileHeader>
+      <div className="flex justify-between items-start mb-6">
+        <ProfileHeader
+          name={stagiaire.name}
+          avatarUrl={stagiaire.avatar_url}
+          bio={stagiaire.bio || ""}
+          location={stagiaire.preferred_locations?.[0] || "N/A"}
+          socials={{
+            website: stagiaire.website,
+            github: stagiaire.github,
+            linkedin: stagiaire.linkedin
+          }}
+        />
+        <div className="flex flex-col sm:flex-row gap-2 mt-2">
+          {isOwner ? (
+            <>
+              <EditStagiaireDialog 
+                stagiaireId={stagiaire.id}
+                initialData={{
+                  name: stagiaire.name,
+                  bio: stagiaire.bio || "",
+                  education: stagiaire.education || "",
+                  phone: stagiaire.phone || "",
+                  website: stagiaire.website || "",
+                  github: stagiaire.github || "",
+                  linkedin: stagiaire.linkedin || ""
+                }}
+                onSuccess={refreshProfile}
+              />
+              <Button variant="outline" size="icon">
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm">
+                <Mail className="h-4 w-4 mr-2" />
+                Contacter
+              </Button>
+              <Button variant="outline" size="sm">
+                <Heart className="h-4 w-4 mr-2" />
+                Suivre
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium">Compétences</h3>
+          {isOwner && (
+            <EditSkillsDialog
+              stagiaireId={stagiaire.id}
+              initialSkills={stagiaire.skills || []}
+              skillType="skills"
+              title="Modifier les compétences"
+              onSuccess={refreshProfile}
+            />
+          )}
+        </div>
+      </div>
+
+      {stagiaire.is_premium && (
+        <div className="mb-4">
+          <div className="inline-flex items-center bg-yellow-100 text-yellow-800 rounded-full px-3 py-1 text-xs font-medium">
+            Premium
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue="a-propos" className="w-full mt-4">
         <TabsList>
@@ -157,13 +198,18 @@ export default function ProfilStagiaire() {
           />
         </TabsContent>
         <TabsContent value="cv">
-          <CVTab />
+          <CVTab userId={stagiaire.id} isPremium={stagiaire.is_premium} />
         </TabsContent>
         <TabsContent value="portfolio">
-          <Portfolio projects={[]} isOwner={isOwner} />
+          <Portfolio projects={[]} isOwner={isOwner} userId={stagiaire.id} />
         </TabsContent>
         <TabsContent value="recommendations">
-          <Recommendations />
+          <Recommendations 
+            recommendations={[]} 
+            isOwner={isOwner} 
+            stagiaireId={stagiaire.id} 
+            isPremium={stagiaire.is_premium}
+          />
         </TabsContent>
       </Tabs>
     </div>
