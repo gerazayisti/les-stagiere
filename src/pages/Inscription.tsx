@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { auth, UserRole } from "@/lib/auth"
@@ -132,6 +133,7 @@ export default function Inscription() {
         password: "***" // Masquer le mot de passe dans les logs
       });
       
+      // Utilisation de try/catch pour mieux gérer les erreurs
       try {
         const result = await auth.signUp(formData);
         console.log("Inscription réussie:", result);
@@ -145,12 +147,12 @@ export default function Inscription() {
           navigate('/connexion');
         }, 1500);
       } catch (error: any) {
-        console.error("Erreur lors de l'inscription:", error);
+        console.error("Erreur spécifique lors de l'inscription:", error);
         setFormError(error.message || "Erreur lors de l'inscription");
       }
     } catch (error: any) {
-      console.error("Erreur lors de l'inscription:", error);
-      setFormError(error.message || "Erreur lors de l'inscription");
+      console.error("Erreur générale lors de l'inscription:", error);
+      setFormError(error.message || "Erreur inattendue lors de l'inscription");
     } finally {
       setLoading(false);
     }

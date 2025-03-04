@@ -1,7 +1,11 @@
 
 -- Politiques de sécurité RLS pour Supabase
 
--- Politique pour la table users
+-- Politique pour la table users - Permettre à tous les utilisateurs de s'inscrire
+CREATE POLICY "Enable insert for all users" ON users
+    FOR INSERT 
+    WITH CHECK (true);
+
 CREATE POLICY "Users can view their own profile" ON users
     FOR SELECT TO authenticated
     USING (auth.uid() = id);
@@ -10,14 +14,31 @@ CREATE POLICY "Users can update their own profile" ON users
     FOR UPDATE TO authenticated
     USING (auth.uid() = id);
 
-CREATE POLICY "Users can insert their own profile" ON users
-    FOR INSERT TO authenticated
-    WITH CHECK (auth.uid() = id);
-
--- Assurez-vous que les utilisateurs nouvellement inscrits peuvent être insérés dans la table
-CREATE POLICY "Auth service can insert new users" ON users
+-- Permettre à tous les utilisateurs de s'inscrire en tant que stagiaire
+CREATE POLICY "Enable insert for all users as stagiaire" ON stagiaires
     FOR INSERT 
     WITH CHECK (true);
+
+CREATE POLICY "Stagiaires can be viewed by anyone" ON stagiaires
+    FOR SELECT 
+    USING (true);
+
+CREATE POLICY "Stagiaires can update their own profile" ON stagiaires
+    FOR UPDATE TO authenticated
+    USING (auth.uid() = id);
+
+-- Permettre à tous les utilisateurs de s'inscrire en tant qu'entreprise
+CREATE POLICY "Enable insert for all users as entreprise" ON entreprises
+    FOR INSERT 
+    WITH CHECK (true);
+
+CREATE POLICY "Entreprises can be viewed by anyone" ON entreprises
+    FOR SELECT 
+    USING (true);
+
+CREATE POLICY "Entreprises can update their own profile" ON entreprises
+    FOR UPDATE TO authenticated
+    USING (auth.uid() = id);
 
 -- Politique pour la table stages
 CREATE POLICY "Stages are viewable by everyone" ON stages
@@ -46,7 +67,6 @@ CREATE POLICY "Entreprises can view candidatures for their stages" ON candidatur
     ));
 
 -- Politique pour la table contact_messages
--- Mise à jour de la politique pour inclure recipient_email
 CREATE POLICY "Admin can view all contact messages" ON contact_messages
     FOR SELECT TO authenticated
     USING (auth.uid() IN (
@@ -57,8 +77,7 @@ CREATE POLICY "Users can create contact messages" ON contact_messages
     FOR INSERT 
     WITH CHECK (true);
 
--- Ajouté: Politique pour les utilisateurs anonymes (non authentifiés) 
--- pour pouvoir insérer des messages de contact
+-- Politique pour les utilisateurs anonymes (non authentifiés) 
 CREATE POLICY "Anonymous users can create contact messages" ON contact_messages
     FOR INSERT 
     WITH CHECK (true);
@@ -95,28 +114,3 @@ CREATE POLICY "Recipients can mark messages as read" ON messages
         OLD.from_user_id = NEW.from_user_id AND
         OLD.to_user_id = NEW.to_user_id
     );
-
--- Politiques pour stagiaires et entreprises
-CREATE POLICY "Stagiaires can be viewed by anyone" ON stagiaires
-    FOR SELECT 
-    USING (true);
-
-CREATE POLICY "Stagiaires can update their own profile" ON stagiaires
-    FOR UPDATE TO authenticated
-    USING (auth.uid() = id);
-
-CREATE POLICY "Stagiaires can insert their own profile" ON stagiaires
-    FOR INSERT TO authenticated
-    WITH CHECK (auth.uid() = id);
-
-CREATE POLICY "Entreprises can be viewed by anyone" ON entreprises
-    FOR SELECT 
-    USING (true);
-
-CREATE POLICY "Entreprises can update their own profile" ON entreprises
-    FOR UPDATE TO authenticated
-    USING (auth.uid() = id);
-
-CREATE POLICY "Entreprises can insert their own profile" ON entreprises
-    FOR INSERT TO authenticated
-    WITH CHECK (auth.uid() = id);

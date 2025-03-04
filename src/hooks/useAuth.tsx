@@ -22,12 +22,10 @@ export function useAuth() {
   const formatUserData = useCallback((supabaseUser: any): User | null => {
     if (!supabaseUser) return null;
     
-    const role = supabaseUser.user_metadata?.role;
-    
     return {
       id: supabaseUser.id,
       email: supabaseUser.email!,
-      role: role,
+      role: supabaseUser.user_metadata?.role || 'stagiaire',
       email_confirmed_at: supabaseUser.email_confirmed_at,
       user_metadata: supabaseUser.user_metadata
     };
@@ -55,19 +53,13 @@ export function useAuth() {
       }
     } catch (error) {
       console.error('Erreur lors de la vérification de l\'utilisateur:', error);
-      toast("Impossible de vérifier votre session", {
-        description: "Une erreur est survenue lors de la vérification de votre session",
-        position: "top-center"
+      toast.error("Impossible de vérifier votre session", {
+        description: "Une erreur est survenue lors de la vérification de votre session"
       });
     } finally {
       setLoading(false);
     }
   }, [formatUserData]);
-
-  // Actualiser les infos utilisateur
-  const refreshUser = useCallback(async () => {
-    await checkUser();
-  }, [checkUser]);
 
   // Effet pour initialiser l'état d'authentification
   useEffect(() => {
@@ -75,10 +67,10 @@ export function useAuth() {
     checkUser();
 
     // Écouter les changements d'auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log("Auth state changed:", _event, session?.user);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session?.user);
       
-      if (_event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT') {
         console.log("Utilisateur déconnecté, nettoyage de l'état...");
         setUser(null);
         setUserRole(null);
@@ -97,25 +89,18 @@ export function useAuth() {
     };
   }, [formatUserData, checkUser]);
 
-  // Fonction de déconnexion améliorée
+  // Fonction de déconnexion
   const signOut = async () => {
-    console.log("Tentative de déconnexion...");
-    
     try {
       setLoading(true);
       
-      // Effectuer la déconnexion en utilisant directement Supabase
       const { error } = await supabase.auth.signOut();
       
       if (error) throw error;
       
-      // Nettoyer l'état local manuellement pour être sûr
       setUser(null);
       setUserRole(null);
       
-      console.log("Déconnexion réussie dans useAuth");
-      
-      // Naviguer vers l'accueil
       navigate('/');
       
       toast.success("Vous avez été déconnecté avec succès");
@@ -123,9 +108,7 @@ export function useAuth() {
       return true;
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
-      toast.error("Impossible de vous déconnecter", {
-        description: "Une erreur est survenue lors de la déconnexion",
-      });
+      toast.error("Impossible de vous déconnecter");
       throw error;
     } finally {
       setLoading(false);
@@ -138,7 +121,6 @@ export function useAuth() {
     loading,
     signOut,
     isAuthenticated: !!user,
-    isEmailVerified: !!user?.email_confirmed_at,
-    refreshUser
+    isEmailVerified: !!user?.email_confirmed_at
   };
 }
