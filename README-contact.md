@@ -15,9 +15,9 @@ La table `contact_messages` dans Supabase doit avoir la structure suivante :
 CREATE TABLE contact_messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
-  sender_email TEXT NOT NULL,
+  email TEXT NOT NULL,
   subject TEXT NOT NULL,
-  message_text TEXT NOT NULL,
+  message TEXT NOT NULL,
   recipient_email TEXT NOT NULL,
   status TEXT DEFAULT 'non_lu',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
