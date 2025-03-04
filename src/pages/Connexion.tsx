@@ -85,7 +85,9 @@ export default function Connexion() {
       console.log("Utilisateur connecté:", user);
       
       // Rafraîchir les données utilisateur dans le contexte d'authentification
-      await refreshUser();
+      if (refreshUser) {
+        await refreshUser();
+      }
       
       // Vérifier s'il y a un chemin de redirection
       const redirectPath = getRedirectPath();

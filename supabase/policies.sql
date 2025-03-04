@@ -1,7 +1,10 @@
 
 -- Politiques de sécurité RLS pour Supabase
 
--- Politique pour la table users - Permettre à tous les utilisateurs de s'inscrire
+-- Politique pour la table auth.users (système d'authentification Supabase)
+-- Cette configuration est automatique, on ne touche pas à auth.users directement
+
+-- Politique pour la table users (notre table publique)
 CREATE POLICY "Enable insert for all users" ON users
     FOR INSERT 
     WITH CHECK (true);
@@ -14,7 +17,7 @@ CREATE POLICY "Users can update their own profile" ON users
     FOR UPDATE TO authenticated
     USING (auth.uid() = id);
 
--- Permettre à tous les utilisateurs de s'inscrire en tant que stagiaire
+-- Politique pour la table stagiaires
 CREATE POLICY "Enable insert for all users as stagiaire" ON stagiaires
     FOR INSERT 
     WITH CHECK (true);
@@ -27,7 +30,7 @@ CREATE POLICY "Stagiaires can update their own profile" ON stagiaires
     FOR UPDATE TO authenticated
     USING (auth.uid() = id);
 
--- Permettre à tous les utilisateurs de s'inscrire en tant qu'entreprise
+-- Politique pour la table entreprises
 CREATE POLICY "Enable insert for all users as entreprise" ON entreprises
     FOR INSERT 
     WITH CHECK (true);
@@ -42,7 +45,7 @@ CREATE POLICY "Entreprises can update their own profile" ON entreprises
 
 -- Politique pour la table stages
 CREATE POLICY "Stages are viewable by everyone" ON stages
-    FOR SELECT TO authenticated
+    FOR SELECT 
     USING (true);
 
 CREATE POLICY "Entreprises can create stages" ON stages
@@ -66,19 +69,16 @@ CREATE POLICY "Entreprises can view candidatures for their stages" ON candidatur
         SELECT id FROM stages WHERE entreprise_id = auth.uid()
     ));
 
+CREATE POLICY "Stagiaires can create candidatures" ON candidatures
+    FOR INSERT TO authenticated
+    WITH CHECK (stagiaire_id = auth.uid());
+
 -- Politique pour la table contact_messages
-CREATE POLICY "Admin can view all contact messages" ON contact_messages
-    FOR SELECT TO authenticated
-    USING (auth.uid() IN (
-        SELECT id FROM users WHERE role = 'admin'
-    ));
+CREATE POLICY "Anyone can view contact messages" ON contact_messages
+    FOR SELECT 
+    USING (true);
 
-CREATE POLICY "Users can create contact messages" ON contact_messages
-    FOR INSERT 
-    WITH CHECK (true);
-
--- Politique pour les utilisateurs anonymes (non authentifiés) 
-CREATE POLICY "Anonymous users can create contact messages" ON contact_messages
+CREATE POLICY "Anyone can create contact messages" ON contact_messages
     FOR INSERT 
     WITH CHECK (true);
 

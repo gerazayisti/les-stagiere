@@ -60,6 +60,11 @@ export function useAuth() {
       setLoading(false);
     }
   }, [formatUserData]);
+  
+  // Méthode pour rafraîchir manuellement les données utilisateur
+  const refreshUser = useCallback(async () => {
+    return checkUser();
+  }, [checkUser]);
 
   // Effet pour initialiser l'état d'authentification
   useEffect(() => {
@@ -120,6 +125,7 @@ export function useAuth() {
     userRole,
     loading,
     signOut,
+    refreshUser,
     isAuthenticated: !!user,
     isEmailVerified: !!user?.email_confirmed_at
   };

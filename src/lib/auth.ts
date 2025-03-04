@@ -16,37 +16,42 @@ interface SignInData {
   password: string;
 }
 
-// Fonction simplifiée pour créer une entrée dans la table users de Supabase
-async function createPublicUser(user: any, role: string, name: string) {
-  if (!user) return false;
+// Fonction pour créer les données utilisateur dans les tables publiques
+export async function createUserProfile(userData: { 
+  id: string, 
+  email: string, 
+  role: UserRole, 
+  name: string 
+}) {
+  const { id, email, role, name } = userData;
   
   try {
-    console.log(`Création d'un utilisateur public pour ${user.id} avec le rôle ${role}`);
+    console.log(`Création du profil utilisateur pour ${id} avec le rôle ${role}`);
     
-    // Création dans la table users (principale)
+    // 1. Créer l'entrée dans la table users (principale)
     const { error: userError } = await supabase
       .from('users')
       .insert({
-        id: user.id,
-        email: user.email,
-        role: role,
+        id,
+        email,
+        role,
+        name,
         is_active: true,
-        name: name
       });
 
     if (userError) {
       console.error("Erreur lors de la création dans la table users:", userError);
-      return false;
+      return { success: false, error: userError };
     }
     
-    // Création dans la table spécifique au rôle
+    // 2. Selon le rôle, créer l'entrée spécifique
     if (role === 'stagiaire') {
       const { error: stagiaireError } = await supabase
         .from('stagiaires')
         .insert({
-          id: user.id,
-          name: name,
-          email: user.email,
+          id,
+          name,
+          email,
           avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
           skills: [],
           languages: [],
@@ -55,14 +60,16 @@ async function createPublicUser(user: any, role: string, name: string) {
 
       if (stagiaireError) {
         console.error("Erreur lors de la création du stagiaire:", stagiaireError);
+        return { success: false, error: stagiaireError };
       }
-    } else if (role === 'entreprise') {
+    } 
+    else if (role === 'entreprise') {
       const { error: entrepriseError } = await supabase
         .from('entreprises')
         .insert({
-          id: user.id,
-          name: name,
-          email: user.email,
+          id,
+          name,
+          email,
           logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
           industry: '',
           location: '',
@@ -71,24 +78,24 @@ async function createPublicUser(user: any, role: string, name: string) {
 
       if (entrepriseError) {
         console.error("Erreur lors de la création de l'entreprise:", entrepriseError);
+        return { success: false, error: entrepriseError };
       }
     }
     
-    return true;
+    return { success: true };
   } catch (error) {
-    console.error('Erreur lors de la création de l\'utilisateur public:', error);
-    return false;
+    console.error('Erreur lors de la création du profil utilisateur:', error);
+    return { success: false, error };
   }
 }
 
 export const auth = {
+  // Inscription d'un nouvel utilisateur
   async signUp(data: SignUpData) {
     const { email, password, role, name } = data;
     
     try {
-      console.log("Tentative d'inscription simplifiée...");
-      
-      // 1. Vérification des données
+      // 1. Validation des données
       if (!email || !password || !role || !name) {
         throw new Error("Toutes les informations sont requises");
       }
@@ -102,10 +109,7 @@ export const auth = {
         email,
         password,
         options: {
-          data: {
-            role,
-            name
-          },
+          data: { role, name },
           emailRedirectTo: `${window.location.origin}/connexion?email_confirmed=true`
         },
       });
@@ -120,12 +124,18 @@ export const auth = {
         throw signUpError;
       }
 
-      // 3. Créer l'utilisateur dans les tables publiques
+      // 3. Si l'utilisateur est créé avec succès dans Auth, enregistrer ses informations dans les tables publiques
       if (authData?.user) {
-        const publicUserCreated = await createPublicUser(authData.user, role, name);
+        const userProfileResult = await createUserProfile({
+          id: authData.user.id,
+          email: authData.user.email || email,
+          role,
+          name
+        });
         
-        if (!publicUserCreated) {
+        if (!userProfileResult.success) {
           console.warn("L'utilisateur a été créé dans auth mais pas dans les tables publiques");
+          // Ne pas interrompre le processus, l'utilisateur pourra compléter son profil plus tard
         }
       }
       
@@ -157,18 +167,15 @@ export const auth = {
     }
   },
 
+  // Connexion d'un utilisateur existant
   async signIn({ email, password }: SignInData) {
     try {
-      console.log("Tentative de connexion...");
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
-      
-      console.log("Connexion réussie:", data.user);
       
       toast.success("Connexion réussie", {
         description: `Bienvenue, ${data.user.user_metadata?.name || data.user.email}`
@@ -194,14 +201,12 @@ export const auth = {
     }
   },
 
+  // Déconnexion
   async signOut() {
     try {
-      console.log("Tentative de déconnexion...");
       const { error } = await supabase.auth.signOut();
       
       if (error) throw error;
-      
-      console.log("Déconnexion réussie");
       
       return true;
     } catch (error) {
@@ -210,6 +215,7 @@ export const auth = {
     }
   },
 
+  // Récupération de l'utilisateur actuel
   async getCurrentUser() {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -226,7 +232,7 @@ export const auth = {
     }
   },
 
-  // Fonction pour réinitialiser le mot de passe
+  // Réinitialisation du mot de passe
   async resetPassword(email: string) {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -251,7 +257,7 @@ export const auth = {
     }
   },
   
-  // Fonction pour mettre à jour le mot de passe
+  // Mise à jour du mot de passe
   async updatePassword(newPassword: string) {
     try {
       const { error } = await supabase.auth.updateUser({
@@ -276,7 +282,7 @@ export const auth = {
     }
   },
 
-  // Fonction pour mettre à jour le profil utilisateur
+  // Mise à jour du profil utilisateur
   async updateProfile(userData: any) {
     try {
       const { data: authData, error: updateError } = await supabase.auth.updateUser({
