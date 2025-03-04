@@ -48,13 +48,13 @@ export default function Contact() {
     try {
       // Enregistrer le message dans la base de données
       const { error } = await supabase
-        .from('messages')
+        .from('contact_messages') // Utiliser la table contact_messages au lieu de messages
         .insert({
           name: data.name,
-          email: data.email,
+          sender_email: data.email, // Utiliser sender_email au lieu de email
           subject: data.subject,
-          message: data.message,
-          forwarded_to: "gerazayisti@gmail.com",
+          message_text: data.message, // Utiliser message_text au lieu de message
+          recipient_email: "gerazayisti@gmail.com",
           status: "non_lu"
         });
 
