@@ -14,6 +14,11 @@ CREATE POLICY "Users can insert their own profile" ON users
     FOR INSERT TO authenticated
     WITH CHECK (auth.uid() = id);
 
+-- Assurez-vous que les utilisateurs nouvellement inscrits peuvent être insérés dans la table
+CREATE POLICY "Auth service can insert new users" ON users
+    FOR INSERT 
+    WITH CHECK (true);
+
 -- Politique pour la table stages
 CREATE POLICY "Stages are viewable by everyone" ON stages
     FOR SELECT TO authenticated
@@ -90,3 +95,28 @@ CREATE POLICY "Recipients can mark messages as read" ON messages
         OLD.from_user_id = NEW.from_user_id AND
         OLD.to_user_id = NEW.to_user_id
     );
+
+-- Politiques pour stagiaires et entreprises
+CREATE POLICY "Stagiaires can be viewed by anyone" ON stagiaires
+    FOR SELECT 
+    USING (true);
+
+CREATE POLICY "Stagiaires can update their own profile" ON stagiaires
+    FOR UPDATE TO authenticated
+    USING (auth.uid() = id);
+
+CREATE POLICY "Stagiaires can insert their own profile" ON stagiaires
+    FOR INSERT TO authenticated
+    WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Entreprises can be viewed by anyone" ON entreprises
+    FOR SELECT 
+    USING (true);
+
+CREATE POLICY "Entreprises can update their own profile" ON entreprises
+    FOR UPDATE TO authenticated
+    USING (auth.uid() = id);
+
+CREATE POLICY "Entreprises can insert their own profile" ON entreprises
+    FOR INSERT TO authenticated
+    WITH CHECK (auth.uid() = id);

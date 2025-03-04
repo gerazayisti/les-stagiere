@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 
@@ -74,9 +73,9 @@ async function syncUserData(authUser: any) {
             last_active: new Date().toISOString(),
           });
 
-        if (stagiaireError) {
+        if (stagiaireError && !stagiaireError.message.includes('duplicate key')) {
           console.error("Erreur lors de l'insertion dans la table stagiaires:", stagiaireError);
-          throw stagiaireError;
+          console.warn("Échec de l'insertion dans la table stagiaires, mais l'utilisateur a été créé");
         }
       } else {
         // Update only if exists
@@ -91,7 +90,6 @@ async function syncUserData(authUser: any) {
 
         if (stagiaireUpdateError) {
           console.error("Erreur lors de la mise à jour de la table stagiaires:", stagiaireUpdateError);
-          throw stagiaireUpdateError;
         }
       }
     }
@@ -120,9 +118,9 @@ async function syncUserData(authUser: any) {
             size: '',
           });
 
-        if (entrepriseError) {
+        if (entrepriseError && !entrepriseError.message.includes('duplicate key')) {
           console.error("Erreur lors de l'insertion dans la table entreprises:", entrepriseError);
-          throw entrepriseError;
+          console.warn("Échec de l'insertion dans la table entreprises, mais l'utilisateur a été créé");
         }
       } else {
         // Update only if exists
@@ -136,15 +134,15 @@ async function syncUserData(authUser: any) {
 
         if (entrepriseUpdateError) {
           console.error("Erreur lors de la mise à jour de la table entreprises:", entrepriseUpdateError);
-          throw entrepriseUpdateError;
         }
       }
     }
     
     console.log("Synchronisation terminée avec succès");
+    return true;
   } catch (error) {
     console.error('Erreur lors de la synchronisation des données:', error);
-    throw error;
+    return false;
   }
 }
 
@@ -155,7 +153,11 @@ export const initAuthListener = () => {
     console.log("Auth state change:", event);
     
     if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-      await syncUserData(session?.user);
+      try {
+        await syncUserData(session?.user);
+      } catch (error) {
+        console.error("Erreur lors de la synchronisation après événement auth:", error);
+      }
     }
   });
   
@@ -209,11 +211,8 @@ export const auth = {
         throw new Error("Le mot de passe doit contenir au moins 8 caractères");
       }
       
-      // Suppression complète de la vérification d'email existant
-      // Laissons Supabase gérer cela directement
-      
-      // Inscription via Supabase avec des options plus simples
-      const result = await supabase.auth.signUp({
+      // Inscription via Supabase avec options simplifiées
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -222,38 +221,27 @@ export const auth = {
             name,
             avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
           },
-          // Simplifier l'URL de redirection
           emailRedirectTo: `${window.location.origin}/connexion?email_confirmed=true`
         },
       });
 
-      if (result.error) {
-        console.error("Erreur de création du compte:", result.error);
+      if (signUpError) {
+        console.error("Erreur de création du compte:", signUpError);
         
         // Gestion spécifique des erreurs Supabase
-        if (result.error.message.includes("already registered")) {
+        if (signUpError.message.includes("already registered")) {
           throw new Error("Cette adresse email est déjà utilisée");
         }
         
-        throw result.error;
+        throw signUpError;
       }
 
-      // Si la création du compte a réussi mais que l'utilisateur n'est pas disponible
-      if (!result.data.user) {
-        toast.success("Inscription réussie", {
-          description: "Vérifiez votre email pour confirmer votre compte"
-        });
-        return { data: result.data };
-      }
-      
-      // Ne pas synchroniser les données ici, cela sera fait par le listener d'auth
-      // C'est une source potentielle d'erreurs
-      
+      // Si la création du compte a réussi
       toast.success("Inscription réussie", {
         description: "Vérifiez votre email pour confirmer votre compte"
       });
       
-      return { data: result.data };
+      return { data: signUpData };
     } catch (error: any) {
       console.error("Erreur d'inscription:", error);
       
