@@ -46,19 +46,23 @@ export default function Contact() {
   const onSubmit = async (data: ContactFormValues) => {
     setSending(true);
     try {
+      console.log("Envoi du message:", data);
+      
       // Enregistrer le message dans la base de données
       const { error } = await supabase
         .from('contact_messages')
         .insert({
           name: data.name,
-          email: data.email, // Utiliser email au lieu de sender_email
+          email: data.email,
           subject: data.subject,
-          message: data.message, // Utiliser message au lieu de message_text
-          recipient_email: "gerazayisti@gmail.com",
+          message: data.message,
           status: "non_lu"
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erreur détaillée:", error);
+        throw error;
+      }
 
       // Afficher un message de succès
       sonnerToast.success("Message envoyé", {

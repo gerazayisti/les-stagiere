@@ -41,6 +41,7 @@ CREATE POLICY "Entreprises can view candidatures for their stages" ON candidatur
     ));
 
 -- Politique pour la table contact_messages
+-- Mise à jour de la politique pour inclure recipient_email
 CREATE POLICY "Admin can view all contact messages" ON contact_messages
     FOR SELECT TO authenticated
     USING (auth.uid() IN (
@@ -48,7 +49,13 @@ CREATE POLICY "Admin can view all contact messages" ON contact_messages
     ));
 
 CREATE POLICY "Users can create contact messages" ON contact_messages
-    FOR INSERT TO authenticated
+    FOR INSERT 
+    WITH CHECK (true);
+
+-- Ajouté: Politique pour les utilisateurs anonymes (non authentifiés) 
+-- pour pouvoir insérer des messages de contact
+CREATE POLICY "Anonymous users can create contact messages" ON contact_messages
+    FOR INSERT 
     WITH CHECK (true);
 
 -- Politique pour la table uploads

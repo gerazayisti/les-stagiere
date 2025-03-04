@@ -18,23 +18,16 @@ CREATE TABLE contact_messages (
   email TEXT NOT NULL,
   subject TEXT NOT NULL,
   message TEXT NOT NULL,
-  recipient_email TEXT NOT NULL,
   status TEXT DEFAULT 'non_lu',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ```
 
+Si la table n'existe pas encore dans votre base de données Supabase, vous pouvez la créer en utilisant le code SQL ci-dessus depuis l'interface SQL de Supabase.
+
 ## Comment modifier l'adresse email de destination
 
-Pour modifier l'adresse email de destination des messages du formulaire de contact :
-
-1. Ouvrez le fichier `src/pages/Contact.tsx`
-2. Recherchez la ligne contenant `recipient_email: "gerazayisti@gmail.com"`
-3. Remplacez `gerazayisti@gmail.com` par la nouvelle adresse email de destination
-
-```javascript
-recipient_email: "nouvelle-adresse@example.com"
-```
+Si vous souhaitez modifier l'adresse email de destination des messages du formulaire de contact, modifiez le fichier `src/pages/Contact.tsx`. Puisque nous n'utilisons plus de champ `recipient_email` dans la table, cette adresse sera celle utilisée pour configurer les notifications par email via des triggers Supabase.
 
 ## Configuration de l'envoi d'emails automatiques (optionnel)
 
@@ -72,3 +65,4 @@ Si vous rencontrez des erreurs lors de l'envoi de messages :
 2. Assurez-vous que la table `contact_messages` existe dans votre base de données Supabase
 3. Vérifiez que les noms de colonnes dans le code correspondent exactement aux noms de colonnes dans la table Supabase
 4. Confirmez que vos règles de sécurité (RLS) permettent les insertions dans la table `contact_messages`
+5. Vous pouvez également créer une nouvelle table en utilisant le SQL fourni plus haut si la table existante pose problème
