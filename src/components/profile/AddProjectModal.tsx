@@ -1,76 +1,80 @@
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Project } from "@/types/project";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Project } from "@/types/project";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-export interface AddProjectModalProps {
+interface AddProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (project: Omit<Project, "id">) => void;
-  initialData?: Project;
+  onSave: (project: Omit<Project, "id">) => void;
+  initialData?: Partial<Project>;
 }
 
-export function AddProjectModal({ isOpen, onClose, onSubmit, initialData }: AddProjectModalProps) {
-  const [project, setProject] = useState<Omit<Project, "id">>({
+export default function AddProjectModal({ isOpen, onClose, onSave, initialData }: AddProjectModalProps) {
+  const [formData, setFormData] = useState<Omit<Project, "id">>({
     title: initialData?.title || "",
     description: initialData?.description || "",
-    imageUrl: initialData?.imageUrl || "",
+    image_url: initialData?.image_url || "",
+    github_url: initialData?.github_url || "",
+    live_url: initialData?.live_url || "",
     technologies: initialData?.technologies || [],
-    link: initialData?.link || "",
-    year: initialData?.year || new Date().getFullYear(),
+    created_at: initialData?.created_at || new Date().toISOString(),
   });
 
-  const [techInput, setTechInput] = useState("");
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setProject({ ...project, [name]: value });
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
   };
 
-  const handleAddTech = () => {
-    if (techInput.trim() !== "" && !project.technologies.includes(techInput.trim())) {
-      setProject({
-        ...project,
-        technologies: [...project.technologies, techInput.trim()],
-      });
-      setTechInput("");
-    }
-  };
-
-  const handleRemoveTech = (tech: string) => {
-    setProject({
-      ...project,
-      technologies: project.technologies.filter((t) => t !== tech),
+  const handleTechnologiesChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const technologies = e.target.value
+      .split(",")
+      .map((tech) => tech.trim())
+      .filter((tech) => tech !== "");
+    setFormData({
+      ...formData,
+      technologies,
     });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(project);
+    onSave(formData);
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>
-            {initialData ? "Modifier le projet" : "Ajouter un nouveau projet"}
+            {initialData?.id ? "Modifier un projet" : "Ajouter un nouveau projet"}
           </DialogTitle>
+          <DialogDescription>
+            Partagez vos projets pour mettre en valeur vos compétences.
+          </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh] px-1">
+
+        <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="title">Titre du projet</Label>
               <Input
                 id="title"
                 name="title"
-                value={project.title}
+                value={formData.title}
                 onChange={handleChange}
                 required
               />
@@ -81,90 +85,68 @@ export function AddProjectModal({ isOpen, onClose, onSubmit, initialData }: AddP
               <Textarea
                 id="description"
                 name="description"
-                value={project.description}
+                value={formData.description}
                 onChange={handleChange}
+                rows={4}
                 required
-                className="min-h-[100px]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="imageUrl">URL de l'image</Label>
+              <Label htmlFor="image_url">URL de l'image</Label>
               <Input
-                id="imageUrl"
-                name="imageUrl"
-                value={project.imageUrl}
+                id="image_url"
+                name="image_url"
+                value={formData.image_url}
                 onChange={handleChange}
                 placeholder="https://example.com/image.jpg"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="link">Lien du projet</Label>
+              <Label htmlFor="github_url">Lien GitHub</Label>
               <Input
-                id="link"
-                name="link"
-                value={project.link}
+                id="github_url"
+                name="github_url"
+                value={formData.github_url}
                 onChange={handleChange}
-                placeholder="https://example.com/project"
+                placeholder="https://github.com/username/repo"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="year">Année</Label>
+              <Label htmlFor="live_url">Lien du site</Label>
               <Input
-                id="year"
-                name="year"
-                type="number"
-                value={project.year}
+                id="live_url"
+                name="live_url"
+                value={formData.live_url}
                 onChange={handleChange}
-                required
-                min={2000}
-                max={new Date().getFullYear()}
+                placeholder="https://myproject.com"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tech">Technologies</Label>
-              <div className="flex space-x-2">
-                <Input
-                  id="tech"
-                  value={techInput}
-                  onChange={(e) => setTechInput(e.target.value)}
-                  placeholder="React, Node.js, etc."
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTech())}
-                />
-                <Button type="button" onClick={handleAddTech} variant="outline">
-                  Ajouter
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {project.technologies.map((tech) => (
-                  <div
-                    key={tech}
-                    className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full flex items-center"
-                  >
-                    <span>{tech}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTech(tech)}
-                      className="ml-2 text-secondary-foreground/70 hover:text-secondary-foreground"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <Label htmlFor="technologies">Technologies utilisées</Label>
+              <Input
+                id="technologies"
+                name="technologies"
+                value={formData.technologies.join(", ")}
+                onChange={handleTechnologiesChange}
+                placeholder="React, Node.js, MongoDB"
+              />
+              <p className="text-xs text-muted-foreground">
+                Séparez les technologies par des virgules
+              </p>
             </div>
 
-            <DialogFooter className="pt-4">
+            <div className="pt-4 flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={onClose}>
                 Annuler
               </Button>
               <Button type="submit">
-                {initialData ? "Mettre à jour" : "Ajouter"}
+                {initialData?.id ? "Mettre à jour" : "Ajouter"}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </ScrollArea>
       </DialogContent>

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import { auth, UserRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -272,9 +272,9 @@ export default function Inscription() {
               </div>
 
               <div className="flex items-center justify-end">
-                <a href="/connexion" className="text-sm text-primary hover:underline">
+                <Link to="/connexion" className="text-sm text-primary hover:underline">
                   Déjà un compte ? Se connecter
-                </a>
+                </Link>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>

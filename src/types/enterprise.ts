@@ -2,13 +2,21 @@
 export interface EntrepriseData {
   id: string;
   name: string;
-  email: string;
   logo_url?: string;
+  cover_url?: string;
   description?: string;
   industry?: string;
+  size?: string;
+  founded_year?: number;
   location?: string;
-  benefits?: string[];
+  phone?: string;
+  email?: string;
   website?: string;
+  social_media?: {
+    linkedin?: string;
+    twitter?: string;
+    facebook?: string;
+  };
   created_at?: string;
 }
 
@@ -17,8 +25,10 @@ export interface Intern {
   name: string;
   avatar_url?: string;
   position?: string;
-  period?: string;
-  hasRecommendation: boolean;
+  start_date?: string;
+  end_date?: string;
+  description?: string;
+  hasRecommendation?: boolean;
 }
 
 export interface InternData {
@@ -26,6 +36,8 @@ export interface InternData {
   name: string;
   avatar_url?: string;
   position?: string;
-  period?: string;
-  hasRecommendation: boolean;
+  start_date?: string;
+  end_date?: string;
+  description?: string;
+  hasRecommendation?: boolean;
 }

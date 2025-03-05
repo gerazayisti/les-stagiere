@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,12 +168,12 @@ export default function Connexion() {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="password">Mot de passe</Label>
-                <a
-                  href="/mot-de-passe-oublie"
+                <Link
+                  to="/mot-de-passe-oublie"
                   className="text-sm text-primary hover:underline"
                 >
                   Oublié ?
-                </a>
+                </Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -219,20 +219,20 @@ export default function Connexion() {
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-sm text-center">
             <span className="text-muted-foreground">Vous n'avez pas de compte ? </span>
-            <a href="/inscription" className="text-primary hover:underline font-medium">
+            <Link to="/inscription" className="text-primary hover:underline font-medium">
               Créer un compte
-            </a>
+            </Link>
           </div>
           
           <div className="text-xs text-center text-muted-foreground">
             En vous connectant, vous acceptez nos{" "}
-            <a href="/conditions" className="hover:underline">
+            <Link to="/conditions" className="hover:underline">
               Conditions d'utilisation
-            </a>{" "}
+            </Link>{" "}
             et notre{" "}
-            <a href="/confidentialite" className="hover:underline">
+            <Link to="/confidentialite" className="hover:underline">
               Politique de confidentialité
-            </a>
+            </Link>
             .
           </div>
         </CardFooter>
