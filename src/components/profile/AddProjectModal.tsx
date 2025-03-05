@@ -1,227 +1,172 @@
+
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Project } from "@/types/project";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-export interface Project {
-  id: string;
-  title: string;
-  description: string;
-  domain: string;
-  technologies: string[];
-  imageUrl?: string;
-  projectUrl?: string;
-  githubUrl?: string;
-  startDate: string;
-  endDate: string;
-  status: "completed" | "in_progress" | "planned";
-}
-
-interface AddProjectModalProps {
+export interface AddProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (project: Omit<Project, "id">) => void;
+  initialData?: Project;
 }
 
-const DOMAINS = [
-  "Développement Web",
-  "Développement Mobile",
-  "Intelligence Artificielle",
-  "Science des Données",
-  "Cybersécurité",
-  "DevOps",
-  "Design UI/UX",
-  "Marketing Digital",
-  "Gestion de Projet",
-  "Commerce",
-  "Finance",
-  "Ressources Humaines",
-  "Communication",
-  "Santé",
-  "Éducation",
-  "Agriculture",
-  "Environnement",
-  "Autre"
-];
+export function AddProjectModal({ isOpen, onClose, onSubmit, initialData }: AddProjectModalProps) {
+  const [project, setProject] = useState<Omit<Project, "id">>({
+    title: initialData?.title || "",
+    description: initialData?.description || "",
+    imageUrl: initialData?.imageUrl || "",
+    technologies: initialData?.technologies || [],
+    link: initialData?.link || "",
+    year: initialData?.year || new Date().getFullYear(),
+  });
 
-export function AddProjectModal({ isOpen, onClose, onSubmit }: AddProjectModalProps) {
-  const [technologies, setTechnologies] = useState<string>("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [techInput, setTechInput] = useState("");
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setProject({ ...project, [name]: value });
+  };
+
+  const handleAddTech = () => {
+    if (techInput.trim() !== "" && !project.technologies.includes(techInput.trim())) {
+      setProject({
+        ...project,
+        technologies: [...project.technologies, techInput.trim()],
+      });
+      setTechInput("");
+    }
+  };
+
+  const handleRemoveTech = (tech: string) => {
+    setProject({
+      ...project,
+      technologies: project.technologies.filter((t) => t !== tech),
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const project = {
-      title: formData.get("title") as string,
-      description: formData.get("description") as string,
-      domain: formData.get("domain") as string,
-      technologies: technologies.split(",").map(tech => tech.trim()),
-      projectUrl: formData.get("projectUrl") as string,
-      githubUrl: formData.get("githubUrl") as string,
-      startDate: formData.get("startDate") as string,
-      endDate: formData.get("endDate") as string,
-      status: formData.get("status") as "completed" | "in_progress" | "planned",
-      imageUrl: imageFile ? URL.createObjectURL(imageFile) : undefined,
-    };
-
     onSubmit(project);
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Ajouter un nouveau projet</DialogTitle>
-          <DialogDescription>
-            Ajoutez les détails de votre projet pour enrichir votre portfolio
-          </DialogDescription>
+          <DialogTitle>
+            {initialData ? "Modifier le projet" : "Ajouter un nouveau projet"}
+          </DialogTitle>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Titre du projet *</Label>
+        <ScrollArea className="max-h-[70vh] px-1">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Titre du projet</Label>
               <Input
                 id="title"
                 name="title"
-                placeholder="Mon super projet"
+                value={project.title}
+                onChange={handleChange}
                 required
               />
             </div>
 
-            <div>
-              <Label htmlFor="domain">Domaine *</Label>
-              <Select name="domain" required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un domaine" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DOMAINS.map((domain) => (
-                    <SelectItem key={domain} value={domain}>
-                      {domain}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 name="description"
-                placeholder="Décrivez votre projet, ses objectifs et ses résultats..."
-                className="h-32"
+                value={project.description}
+                onChange={handleChange}
                 required
+                className="min-h-[100px]"
               />
             </div>
 
-            <div>
-              <Label htmlFor="technologies">Technologies utilisées *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">URL de l'image</Label>
               <Input
-                id="technologies"
-                value={technologies}
-                onChange={(e) => setTechnologies(e.target.value)}
-                placeholder="React, Node.js, MongoDB (séparées par des virgules)"
+                id="imageUrl"
+                name="imageUrl"
+                value={project.imageUrl}
+                onChange={handleChange}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="link">Lien du projet</Label>
+              <Input
+                id="link"
+                name="link"
+                value={project.link}
+                onChange={handleChange}
+                placeholder="https://example.com/project"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="year">Année</Label>
+              <Input
+                id="year"
+                name="year"
+                type="number"
+                value={project.year}
+                onChange={handleChange}
                 required
+                min={2000}
+                max={new Date().getFullYear()}
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startDate">Date de début *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="tech">Technologies</Label>
+              <div className="flex space-x-2">
                 <Input
-                  id="startDate"
-                  name="startDate"
-                  type="date"
-                  required
+                  id="tech"
+                  value={techInput}
+                  onChange={(e) => setTechInput(e.target.value)}
+                  placeholder="React, Node.js, etc."
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTech())}
                 />
+                <Button type="button" onClick={handleAddTech} variant="outline">
+                  Ajouter
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="endDate">Date de fin</Label>
-                <Input
-                  id="endDate"
-                  name="endDate"
-                  type="date"
-                />
+              <div className="flex flex-wrap gap-2 mt-2">
+                {project.technologies.map((tech) => (
+                  <div
+                    key={tech}
+                    className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full flex items-center"
+                  >
+                    <span>{tech}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTech(tech)}
+                      className="ml-2 text-secondary-foreground/70 hover:text-secondary-foreground"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="status">Statut *</Label>
-              <Select name="status" required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez le statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="completed">Terminé</SelectItem>
-                  <SelectItem value="in_progress">En cours</SelectItem>
-                  <SelectItem value="planned">Planifié</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="projectUrl">URL du projet</Label>
-              <Input
-                id="projectUrl"
-                name="projectUrl"
-                type="url"
-                placeholder="https://monprojet.com"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="githubUrl">URL GitHub</Label>
-              <Input
-                id="githubUrl"
-                name="githubUrl"
-                type="url"
-                placeholder="https://github.com/username/project"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="image">Image du projet</Label>
-              <Input
-                id="image"
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) setImageFile(file);
-                }}
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                Format recommandé : PNG, JPG (max 2MB)
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button type="submit">Ajouter le projet</Button>
-          </div>
-        </form>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Annuler
+              </Button>
+              <Button type="submit">
+                {initialData ? "Mettre à jour" : "Ajouter"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

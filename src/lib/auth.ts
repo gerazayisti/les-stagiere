@@ -73,7 +73,8 @@ export async function createUserProfile(userData: {
           logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
           industry: '',
           location: '',
-          benefits: []
+          benefits: [],
+          website: '' // Added missing website field
         });
 
       if (entrepriseError) {
@@ -104,6 +105,13 @@ export const auth = {
         throw new Error("Le mot de passe doit contenir au moins 8 caractères");
       }
       
+      console.log("Tentative d'inscription avec les données:", {
+        email,
+        role,
+        name,
+        password: "********" // Masquer le mot de passe
+      });
+      
       // 2. Inscription via Supabase Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
@@ -124,6 +132,8 @@ export const auth = {
         throw signUpError;
       }
 
+      console.log("Résultat de l'inscription:", authData);
+
       // 3. Si l'utilisateur est créé avec succès dans Auth, enregistrer ses informations dans les tables publiques
       if (authData?.user) {
         const userProfileResult = await createUserProfile({
@@ -134,7 +144,7 @@ export const auth = {
         });
         
         if (!userProfileResult.success) {
-          console.warn("L'utilisateur a été créé dans auth mais pas dans les tables publiques");
+          console.warn("L'utilisateur a été créé dans auth mais pas dans les tables publiques", userProfileResult.error);
           // Ne pas interrompre le processus, l'utilisateur pourra compléter son profil plus tard
         }
       }
@@ -301,6 +311,52 @@ export const auth = {
         description: "Impossible de mettre à jour le profil"
       });
       
+      throw error;
+    }
+  },
+  
+  // Upload avatar
+  async uploadAvatar(file: File, userId: string) {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `avatars/${userId}-${Date.now()}.${fileExt}`;
+
+      // Upload the file to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: publicURL } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath);
+
+      return publicURL.publicUrl;
+    } catch (error) {
+      console.error("Erreur lors de l'upload de l'avatar:", error);
+      throw error;
+    }
+  },
+  
+  // Delete avatar
+  async deleteAvatar(avatarUrl: string) {
+    try {
+      // Extract file path from the URL
+      const urlParts = avatarUrl.split('/');
+      const filePath = urlParts.slice(urlParts.indexOf('profiles') + 1).join('/');
+      
+      // Delete the file from Supabase Storage
+      const { error } = await supabase.storage
+        .from('profiles')
+        .remove([filePath]);
+
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error("Erreur lors de la suppression de l'avatar:", error);
       throw error;
     }
   }

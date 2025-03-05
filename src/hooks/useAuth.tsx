@@ -22,6 +22,8 @@ export function useAuth() {
   const formatUserData = useCallback((supabaseUser: any): User | null => {
     if (!supabaseUser) return null;
     
+    console.log("Formatage de l'utilisateur:", supabaseUser);
+    
     return {
       id: supabaseUser.id,
       email: supabaseUser.email!,
