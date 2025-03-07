@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, ExternalLink, Github, Image as ImageIcon, Edit, Trash } from "lucide-react";
-import { AddProjectModal } from "./AddProjectModal";
+import AddProjectModal from "./AddProjectModal";
 
 interface Project {
   id?: string;

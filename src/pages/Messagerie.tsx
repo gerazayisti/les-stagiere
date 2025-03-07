@@ -4,6 +4,9 @@ import { ConversationList } from "@/components/chat/ConversationList";
 import { ChatArea } from "@/components/chat/ChatArea";
 import { MessageSquare, MessageCircle, Search, Users } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { useRealtimeMessages } from "@/hooks/useRealtime";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 // Simulated recipient data
 const recipients = {
@@ -22,6 +25,16 @@ const recipients = {
     avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=company3",
     status: "online" as const,
   },
+  "4": {
+    name: "CodeLab Technologies",
+    avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=company4",
+    status: "online" as const,
+  },
+  "5": {
+    name: "Global Solutions",
+    avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=company5",
+    status: "offline" as const,
+  },
 };
 
 export default function Messagerie() {
@@ -29,6 +42,7 @@ export default function Messagerie() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>();
   const [hasMessages, setHasMessages] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   // Check if there's a conversationId in the URL parameters
   useEffect(() => {
@@ -40,20 +54,32 @@ export default function Messagerie() {
     // Simulate loading
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 800);
+    }, 600);
     
     return () => clearTimeout(timer);
   }, [searchParams]);
 
+  // Subscribe to realtime messages if user is logged in
+  useRealtimeMessages(user?.id || "", (event) => {
+    if (event.eventType === "INSERT") {
+      toast.info("Nouveau message reçu");
+    }
+  });
+
   return (
     <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-4">Messagerie</h1>
+      <p className="text-muted-foreground mb-6">
+        Communiquez avec des entreprises et d'autres stagiaires. Les conversations récentes apparaissent ici.
+      </p>
+      
       <div className="bg-background border rounded-lg shadow-sm overflow-hidden">
         {loading ? (
-          <div className="flex justify-center items-center h-[calc(100vh-8rem)]">
+          <div className="flex justify-center items-center h-[calc(100vh-16rem)]">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="flex h-[calc(100vh-8rem)]">
+          <div className="flex h-[calc(100vh-16rem)]">
             <ConversationList
               onSelectConversation={setSelectedConversationId}
               selectedConversationId={selectedConversationId}

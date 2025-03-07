@@ -1,9 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { Search, UserRound } from "lucide-react";
+import { Search, UserRound, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 interface Conversation {
   id: string;
@@ -70,6 +71,32 @@ export function ConversationList({
         isRead: true,
       },
     },
+    {
+      id: "4",
+      recipient: {
+        name: "CodeLab Technologies",
+        avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=company4",
+        status: "online",
+      },
+      lastMessage: {
+        text: "Nous avons analysé votre CV et souhaitons en discuter avec vous",
+        time: "Mar",
+        isRead: true,
+      },
+    },
+    {
+      id: "5",
+      recipient: {
+        name: "Global Solutions",
+        avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=company5",
+        status: "offline",
+      },
+      lastMessage: {
+        text: "Félicitations! Votre candidature a été acceptée.",
+        time: "Aujourd'hui",
+        isRead: false,
+      },
+    },
   ]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,7 +114,7 @@ export function ConversationList({
   return (
     <div className="w-80 border-r flex flex-col">
       <div className="p-4 border-b">
-        <div className="relative">
+        <div className="relative mb-2">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Rechercher..."
@@ -96,6 +123,9 @@ export function ConversationList({
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        <Button variant="outline" size="sm" className="w-full flex items-center gap-1">
+          <Plus className="h-4 w-4" /> Nouvelle conversation
+        </Button>
       </div>
 
       <ScrollArea className="flex-1">

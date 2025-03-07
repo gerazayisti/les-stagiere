@@ -2,42 +2,29 @@
 export interface EntrepriseData {
   id: string;
   name: string;
+  bio?: string;
   logo_url?: string;
-  cover_url?: string;
-  description?: string;
+  address?: string;
   industry?: string;
   size?: string;
-  founded_year?: number;
-  location?: string;
+  founded?: string;
   phone?: string;
   email?: string;
-  website?: string;
-  social_media?: {
-    linkedin?: string;
-    twitter?: string;
-    facebook?: string;
-  };
-  created_at?: string;
-}
-
-export interface Intern {
-  id: string;
-  name: string;
-  avatar_url?: string;
-  position?: string;
-  start_date?: string;
-  end_date?: string;
-  description?: string;
-  hasRecommendation?: boolean;
+  website?: string; // Added this property
 }
 
 export interface InternData {
   id: string;
   name: string;
   avatar_url?: string;
+  status: "active" | "completed" | "pending";
   position?: string;
+  department?: string;
   start_date?: string;
   end_date?: string;
-  description?: string;
   hasRecommendation?: boolean;
+}
+
+export interface Intern extends InternData {
+  hasRecommendation: boolean;
 }

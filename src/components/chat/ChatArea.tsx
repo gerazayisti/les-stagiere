@@ -1,9 +1,17 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Paperclip, Send, Image as ImageIcon, File } from "lucide-react";
+import { Paperclip, Send, Image as ImageIcon, File, MoreHorizontal } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 interface Message {
   id: string;
@@ -48,6 +56,36 @@ export function ChatArea({ conversationId, recipient }: ChatAreaProps) {
       content: "Merci beaucoup ! J'ai hâte d'en discuter avec vous.",
       time: "14:35",
       type: "text",
+    },
+    {
+      id: "4",
+      sender: "other",
+      content: "Êtes-vous disponible pour un entretien en ligne la semaine prochaine ?",
+      time: "14:40",
+      type: "text",
+    },
+    {
+      id: "5",
+      sender: "user",
+      content: "Oui, je suis disponible lundi ou mardi après-midi. Qu'est-ce qui vous convient le mieux ?",
+      time: "14:45",
+      type: "text",
+    },
+    {
+      id: "6",
+      sender: "other",
+      content: "Parfait ! Disons mardi à 14h. Je vous envoie une invitation par email.",
+      time: "15:00",
+      type: "text",
+    },
+    {
+      id: "7",
+      sender: "other",
+      content: "Voici mon CV mis à jour avec mes dernières expériences",
+      time: "15:05",
+      type: "file",
+      fileUrl: "#",
+      fileName: "cv_updated.pdf",
     },
   ]);
 
@@ -136,66 +174,81 @@ export function ChatArea({ conversationId, recipient }: ChatAreaProps) {
           </div>
           <div>
             <h3 className="font-semibold">{recipient.name}</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {recipient.status === "online" ? "En ligne" : "Hors ligne"}
             </p>
           </div>
         </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreHorizontal className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>Voir le profil</DropdownMenuItem>
+            <DropdownMenuItem>Archiver la conversation</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive">Supprimer la conversation</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${
-              message.sender === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-4">
+          {messages.map((message) => (
             <div
-              className={`max-w-[70%] ${
-                message.sender === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted"
-              } rounded-lg p-3`}
+              key={message.id}
+              className={`flex ${
+                message.sender === "user" ? "justify-end" : "justify-start"
+              }`}
             >
-              {message.type === "text" ? (
-                <p>{message.content}</p>
-              ) : message.type === "file" ? (
-                <a
-                  href={message.fileUrl}
-                  className="flex items-center gap-2 hover:underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <File className="h-4 w-4" />
-                  {message.fileName}
-                </a>
-              ) : (
-                <a
-                  href={message.fileUrl}
-                  className="flex items-center gap-2 hover:underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ImageIcon className="h-4 w-4" />
-                  {message.fileName}
-                </a>
-              )}
               <div
-                className={`text-xs mt-1 ${
+                className={`max-w-[70%] ${
                   message.sender === "user"
-                    ? "text-primary-foreground/80"
-                    : "text-muted-foreground"
-                }`}
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted"
+                } rounded-lg p-3`}
               >
-                {message.time}
+                {message.type === "text" ? (
+                  <p>{message.content}</p>
+                ) : message.type === "file" ? (
+                  <a
+                    href={message.fileUrl}
+                    className="flex items-center gap-2 hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <File className="h-4 w-4" />
+                    {message.fileName}
+                  </a>
+                ) : (
+                  <a
+                    href={message.fileUrl}
+                    className="flex items-center gap-2 hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                    {message.fileName}
+                  </a>
+                )}
+                <div
+                  className={`text-xs mt-1 ${
+                    message.sender === "user"
+                      ? "text-primary-foreground/80"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {message.time}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
 
       {/* Input Area */}
       <div className="p-4 border-t">
