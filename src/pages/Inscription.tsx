@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { auth, UserRole } from "@/lib/auth"
@@ -40,23 +39,19 @@ export default function Inscription() {
     role: "stagiaire" as UserRole,
   })
 
-  // Récupérer le paramètre de redirection s'il existe
   const getRedirectPath = () => {
     const params = new URLSearchParams(location.search);
     return params.get('redirect') || null;
   };
 
-  // Rediriger si déjà connecté
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Vérifier s'il y a un chemin de redirection
       const redirectPath = getRedirectPath();
       if (redirectPath) {
         navigate(redirectPath);
         return;
       }
 
-      // Sinon, rediriger selon le rôle
       if (user.role === 'entreprise') {
         navigate(`/entreprises/${user.id}`);
       } else if (user.role === 'stagiaire') {
@@ -65,7 +60,6 @@ export default function Inscription() {
         navigate('/complete-profile');
       }
       
-      // Afficher un toast
       toast.info("Vous êtes déjà connecté", {
         description: "Redirection en cours..."
       });
@@ -89,12 +83,10 @@ export default function Inscription() {
       [name]: value
     });
     
-    // Vérifier la force du mot de passe si le champ modifié est le mot de passe
     if (name === 'password') {
       setPasswordStrength(checkPasswordStrength(value));
     }
     
-    // Effacer l'erreur quand l'utilisateur commence à taper
     if (formError) {
       setFormError(null);
     }
@@ -106,21 +98,18 @@ export default function Inscription() {
     setFormError(null)
 
     try {
-      // Validation de l'email
       if (!formData.email.includes('@') || !formData.email.includes('.')) {
         setFormError("Veuillez entrer une adresse email valide");
         setLoading(false);
         return;
       }
 
-      // Validation du mot de passe
       if (formData.password.length < 8) {
         setFormError("Le mot de passe doit contenir au moins 8 caractères");
         setLoading(false);
         return;
       }
 
-      // Validation du nom
       if (formData.name.trim().length < 2) {
         setFormError(formData.role === 'entreprise' 
           ? "Le nom de l'entreprise est trop court" 
@@ -131,21 +120,20 @@ export default function Inscription() {
       
       console.log("Tentative d'inscription avec les données:", {
         ...formData,
-        password: "***" // Masquer le mot de passe dans les logs
+        password: "***"
       });
       
-      // Inscription
-      await auth.signUp(formData);
+      const result = await auth.signUp(formData);
       
-      // Afficher un message de succès
-      toast.success("Inscription réussie !", {
-        description: "Veuillez vérifier votre email pour continuer."
-      });
+      if (result.success) {
+        toast.success("Inscription réussie !", {
+          description: "Veuillez vérifier votre email pour continuer."
+        });
 
-      // Rediriger vers la page de connexion après un court délai
-      setTimeout(() => {
-        navigate('/connexion');
-      }, 1500);
+        setTimeout(() => {
+          navigate('/connexion');
+        }, 1500);
+      }
       
     } catch (error: any) {
       console.error("Erreur lors de l'inscription:", error);
