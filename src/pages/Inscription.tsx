@@ -32,6 +32,7 @@ export default function Inscription() {
   const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -124,6 +125,10 @@ export default function Inscription() {
       });
       
       try {
+        if (retryCount > 0) {
+          await new Promise(resolve => setTimeout(resolve, retryCount * 300));
+        }
+
         const result = await auth.signUp(formData);
         
         if (result.success) {
@@ -137,6 +142,23 @@ export default function Inscription() {
         }
       } catch (error: any) {
         console.error("Erreur lors de l'inscription:", error);
+        
+        if (error.message?.includes("Erreur serveur")) {
+          setRetryCount(prev => prev + 1);
+          
+          if (retryCount < 2) {
+            toast.error("Problème de connexion", {
+              description: "Nouvelle tentative en cours..."
+            });
+            
+            setLoading(false);
+            setTimeout(() => {
+              handleSubmit(e);
+            }, 1000);
+            return;
+          }
+        }
+        
         if (error.message) {
           setFormError(error.message);
         } else {

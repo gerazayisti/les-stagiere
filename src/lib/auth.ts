@@ -134,29 +134,36 @@ export const auth = {
 
       console.log("Résultat de l'inscription:", authData);
 
-      // 3. Si l'utilisateur est créé avec succès dans Auth, essayer de créer le profil
+      // 3. Si l'utilisateur est créé avec succès dans Auth, créer immédiatement le profil
       if (authData?.user) {
         try {
-          // Attendre un court délai pour s'assurer que l'utilisateur est bien créé dans auth
-          // avant de créer le profil dans les tables publiques
-          setTimeout(async () => {
-            const userProfileResult = await createUserProfile({
-              id: authData.user.id,
-              email: authData.user.email || email,
-              role,
-              name
-            });
-            
-            if (!userProfileResult.success) {
-              console.warn("L'utilisateur a été créé dans auth mais pas dans les tables publiques", userProfileResult.error);
-              // Ne pas interrompre le processus, l'utilisateur pourra compléter son profil plus tard
-            } else {
-              console.log("Profil utilisateur créé avec succès dans les tables publiques");
+          // Créer immédiatement le profil utilisateur, sans setTimeout
+          const userProfileResult = await createUserProfile({
+            id: authData.user.id,
+            email: authData.user.email || email,
+            role,
+            name
+          });
+          
+          if (!userProfileResult.success) {
+            console.error("L'utilisateur a été créé dans auth mais pas dans les tables publiques", userProfileResult.error);
+            // Si l'erreur est critique, on peut l'escalader
+            if (userProfileResult.error && 'code' in userProfileResult.error && userProfileResult.error.code === '23505') {
+              throw new Error("Ce profil existe déjà dans notre base de données");
             }
-          }, 500);
-        } catch (profileError) {
+          } else {
+            console.log("Profil utilisateur créé avec succès dans les tables publiques");
+          }
+        } catch (profileError: any) {
           console.error("Erreur lors de la création du profil:", profileError);
-          // Ne pas interrompre le processus d'inscription pour une erreur de profil
+          
+          // Si l'erreur est liée à une contrainte d'unicité (email déjà utilisé), on le signale
+          if (profileError && 'code' in profileError && profileError.code === '23505') {
+            throw new Error("Ce profil existe déjà dans notre base de données");
+          }
+          
+          // Pour les autres erreurs, on continue le processus car l'utilisateur est créé dans auth
+          // Il pourra compléter son profil plus tard
         }
       }
       
