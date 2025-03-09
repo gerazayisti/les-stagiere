@@ -74,7 +74,7 @@ export async function createUserProfile(userData: {
           industry: '',
           location: '',
           benefits: [],
-          website: '' // Added missing website field
+          website: ''
         });
 
       if (entrepriseError) {
@@ -134,18 +134,29 @@ export const auth = {
 
       console.log("Résultat de l'inscription:", authData);
 
-      // 3. Si l'utilisateur est créé avec succès dans Auth, enregistrer ses informations dans les tables publiques
+      // 3. Si l'utilisateur est créé avec succès dans Auth, essayer de créer le profil
       if (authData?.user) {
-        const userProfileResult = await createUserProfile({
-          id: authData.user.id,
-          email: authData.user.email || email,
-          role,
-          name
-        });
-        
-        if (!userProfileResult.success) {
-          console.warn("L'utilisateur a été créé dans auth mais pas dans les tables publiques", userProfileResult.error);
-          // Ne pas interrompre le processus, l'utilisateur pourra compléter son profil plus tard
+        try {
+          // Attendre un court délai pour s'assurer que l'utilisateur est bien créé dans auth
+          // avant de créer le profil dans les tables publiques
+          setTimeout(async () => {
+            const userProfileResult = await createUserProfile({
+              id: authData.user.id,
+              email: authData.user.email || email,
+              role,
+              name
+            });
+            
+            if (!userProfileResult.success) {
+              console.warn("L'utilisateur a été créé dans auth mais pas dans les tables publiques", userProfileResult.error);
+              // Ne pas interrompre le processus, l'utilisateur pourra compléter son profil plus tard
+            } else {
+              console.log("Profil utilisateur créé avec succès dans les tables publiques");
+            }
+          }, 500);
+        } catch (profileError) {
+          console.error("Erreur lors de la création du profil:", profileError);
+          // Ne pas interrompre le processus d'inscription pour une erreur de profil
         }
       }
       

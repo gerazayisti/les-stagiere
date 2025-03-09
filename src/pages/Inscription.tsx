@@ -123,20 +123,29 @@ export default function Inscription() {
         password: "***"
       });
       
-      const result = await auth.signUp(formData);
-      
-      if (result.success) {
-        toast.success("Inscription réussie !", {
-          description: "Veuillez vérifier votre email pour continuer."
-        });
+      try {
+        const result = await auth.signUp(formData);
+        
+        if (result.success) {
+          toast.success("Inscription réussie !", {
+            description: "Veuillez vérifier votre email pour continuer."
+          });
 
-        setTimeout(() => {
-          navigate('/connexion');
-        }, 1500);
+          setTimeout(() => {
+            navigate('/connexion');
+          }, 1500);
+        }
+      } catch (error: any) {
+        console.error("Erreur lors de l'inscription:", error);
+        if (error.message) {
+          setFormError(error.message);
+        } else {
+          setFormError("Une erreur est survenue lors de l'inscription");
+        }
       }
       
     } catch (error: any) {
-      console.error("Erreur lors de l'inscription:", error);
+      console.error("Erreur lors de la soumission du formulaire:", error);
       setFormError(error.message || "Erreur lors de l'inscription");
     } finally {
       setLoading(false);
