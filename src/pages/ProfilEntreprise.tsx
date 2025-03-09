@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -17,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { CompanyRecommendations } from "@/components/profile/CompanyRecommendations";
+import { InternshipOffersList } from "@/components/profile/InternshipOffersList";
+import { AddInternshipOfferForm } from "@/components/profile/AddInternshipOfferForm";
 
 interface EntrepriseData {
   id: string;
@@ -28,6 +31,7 @@ interface EntrepriseData {
   benefits?: string[];
   description?: string;
   size?: string;
+  website?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -50,6 +54,7 @@ interface InternData {
   is_premium?: boolean;
   last_active?: string;
   created_at?: string;
+  hasRecommendation: boolean;
 }
 
 export default function ProfilEntreprise() {
@@ -277,7 +282,7 @@ export default function ProfilEntreprise() {
               <CardDescription>Les offres de stage proposées par cette entreprise.</CardDescription>
             </CardHeader>
             <CardContent>
-              <p>Liste des offres de stage à venir...</p>
+              <InternshipOffersList companyId={entreprise.id} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -289,7 +294,14 @@ export default function ProfilEntreprise() {
                 <CardDescription>Créez une nouvelle offre de stage pour attirer les meilleurs talents.</CardDescription>
               </CardHeader>
               <CardContent>
-                <p>Formulaire d'ajout d'offre de stage à venir...</p>
+                <AddInternshipOfferForm 
+                  companyId={entreprise.id}
+                  onSuccess={() => {
+                    // Switch to the "offres" tab after successful creation
+                    const offresTab = document.querySelector('[data-value="offres"]') as HTMLButtonElement;
+                    if (offresTab) offresTab.click();
+                  }}
+                />
               </CardContent>
             </Card>
           </TabsContent>
