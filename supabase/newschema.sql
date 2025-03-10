@@ -1,5 +1,4 @@
 
-
 -- Schema pour Les Stagiaires
 -- Généré le 26/02/2025
 
@@ -133,33 +132,11 @@ CREATE TABLE contact_messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Enable RLS on tables
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stagiaires ENABLE ROW LEVEL SECURITY;
-ALTER TABLE entreprises ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stages ENABLE ROW LEVEL SECURITY;
-
--- Create indexes
+-- Create indexes for better performance
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_stages_entreprise ON stages(entreprise_id);
 CREATE INDEX idx_stages_status ON stages(status);
 CREATE INDEX idx_candidatures_stage ON candidatures(stage_id);
 CREATE INDEX idx_candidatures_stagiaire ON candidatures(stagiaire_id);
 CREATE INDEX stages_search_idx ON stages USING gin(search_vector);
-
--- Set up RLS policies
-CREATE POLICY "Enable insert for registration" ON users FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable select for own user" ON users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Enable update for own user" ON users FOR UPDATE USING (auth.uid() = id);
-
-CREATE POLICY "Enable insert for stagiaires" ON stagiaires FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable select for stagiaires" ON stagiaires FOR SELECT USING (true);
-CREATE POLICY "Enable update for own stagiaire" ON stagiaires FOR UPDATE USING (auth.uid() = id);
-
-CREATE POLICY "Enable insert for entreprises" ON entreprises FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable select for entreprises" ON entreprises FOR SELECT USING (true);
-CREATE POLICY "Enable update for own entreprise" ON entreprises FOR UPDATE USING (auth.uid() = id);
-
-CREATE POLICY "Anyone can view contact messages" ON contact_messages FOR SELECT USING (true);
-CREATE POLICY "Anyone can create contact messages" ON contact_messages FOR INSERT WITH CHECK (true);
 
