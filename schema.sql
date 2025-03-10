@@ -506,22 +506,6 @@ CREATE INDEX idx_newsletter_email ON newsletter_subscriptions(email);
 ALTER TABLE stages ADD COLUMN search_vector tsvector;
 CREATE INDEX stages_search_idx ON stages USING gin(search_vector);
 
-CREATE OR REPLACE FUNCTION stages_search_trigger() RETURNS trigger AS $$
-begin
-  new.search_vector :=
-    setweight(to_tsvector('french', coalesce(new.title,'')), 'A') ||
-    setweight(to_tsvector('french', coalesce(new.short_description,'')), 'B') ||
-    setweight(to_tsvector('french', coalesce(new.description,'')), 'C');
-  return new;
-end
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER stages_search_update
-  BEFORE INSERT OR UPDATE
-  ON stages
-  FOR EACH ROW
-  EXECUTE FUNCTION stages_search_trigger();
-
 -- Permissions
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stagiaires ENABLE ROW LEVEL SECURITY;
