@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -11,20 +11,27 @@ export default function EmailConfirmation() {
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [progress, setProgress] = useState<number>(0);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleEmailConfirmation = async () => {
       try {
+        // Check both hash and query parameters to be more resilient
         const hash = window.location.hash;
-        if (!hash) {
-          throw new Error('No confirmation token found');
+        const searchParams = new URLSearchParams(location.search);
+        const queryToken = searchParams.get('access_token');
+        
+        // First try to get token from hash (Supabase default format)
+        let accessToken = hash.split('&').find(param => param.startsWith('#access_token='))?.split('=')[1];
+        
+        // If not found in hash, try query parameter
+        if (!accessToken && queryToken) {
+          accessToken = queryToken;
         }
-
-        // Extract access_token from URL hash
-        const accessToken = hash.split('&').find(param => param.startsWith('#access_token='))?.split('=')[1];
         
         if (!accessToken) {
-          throw new Error('No access token found');
+          console.error('No access token found in URL:', { hash, search: location.search });
+          throw new Error('Lien de confirmation invalide. Veuillez réessayer ou contacter le support.');
         }
 
         setStatus('processing');
@@ -34,16 +41,17 @@ export default function EmailConfirmation() {
         const { data: { user }, error: sessionError } = await supabase.auth.getUser(accessToken);
 
         if (sessionError || !user) {
-          throw sessionError || new Error('User not found');
+          console.error('User session error:', sessionError);
+          throw sessionError || new Error('Utilisateur non trouvé');
         }
         
         setProgress(30);
         
-        // Get role from user metadata
+        // Extract user metadata
         const role = user.user_metadata?.role;
         const name = user.user_metadata?.name || 'Utilisateur';
         
-        // Create basic user record first (lightweight operation)
+        // Create basic user record first
         const { error: userError } = await supabase
           .from('users')
           .upsert({
@@ -60,10 +68,10 @@ export default function EmailConfirmation() {
         
         setProgress(50);
         
-        // Prepare redirection
+        // Prepare redirection path with fallback options
         let redirectPath = '/';
         
-        // Exécuter les deux créations de profil en parallèle pour gagner du temps
+        // Execute profile creations in parallel for better performance
         if (role === 'entreprise') {
           const { error: enterpriseError } = await supabase
             .from('entreprises')
@@ -105,6 +113,8 @@ export default function EmailConfirmation() {
             
           if (stagiaireError) {
             console.error("Error creating intern profile:", stagiaireError);
+            // Try to get specifics of the error
+            console.error("Error details:", stagiaireError.details, stagiaireError.hint, stagiaireError.message);
           }
             
           redirectPath = `/stagiaires/${user.id}`;
@@ -117,7 +127,7 @@ export default function EmailConfirmation() {
         setStatus('success');
         toast.success('Email confirmé avec succès');
         
-        // Mettre en cache l'utilisateur pour accélérer le chargement
+        // Cache user info for faster loading
         localStorage.setItem(`cachedUserProfile_${user.id}`, JSON.stringify({
           user: {
             id: user.id,
@@ -128,6 +138,19 @@ export default function EmailConfirmation() {
             user_metadata: user.user_metadata
           },
           timestamp: Date.now()
+        }));
+        
+        // Cache navigation state too for immediate UI feedback
+        localStorage.setItem('navigation_state', JSON.stringify({ 
+          user: {
+            id: user.id,
+            email: user.email,
+            role: role || 'stagiaire',
+            name: name, 
+            email_confirmed_at: user.email_confirmed_at,
+            user_metadata: user.user_metadata
+          }, 
+          userRole: role || 'stagiaire' 
         }));
         
         setProgress(100);
@@ -151,7 +174,7 @@ export default function EmailConfirmation() {
     };
 
     handleEmailConfirmation();
-  }, [navigate]);
+  }, [navigate, location]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

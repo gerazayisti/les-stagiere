@@ -3,7 +3,18 @@
 
 [auth]
 site_url = "https://les-stagiere.vercel.app"
-additional_redirect_urls = ["https://les-stagiere.vercel.app", "https://les-stagiere.vercel.app/email-confirmation"]
+additional_redirect_urls = [
+  "https://les-stagiere.vercel.app", 
+  "https://les-stagiere.vercel.app/email-confirmation",
+  "https://les-stagiere.vercel.app/email-confirmation?type=signup",
+  "https://les-stagiere.vercel.app/email-confirmation?type=recovery",
+  "http://localhost:5173",
+  "http://localhost:5173/email-confirmation",
+  "http://localhost:5173/email-confirmation?type=signup",
+  "http://localhost:5173/email-confirmation?type=recovery",
+  "http://localhost:3000",
+  "http://localhost:3000/email-confirmation"
+]
 jwt_expiry = 3600
 enable_signup = true
 

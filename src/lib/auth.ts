@@ -4,10 +4,8 @@ import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError, Use
 
 export type UserRole = 'stagiaire' | 'entreprise' | 'admin';
 
-// Fonction simplifiée pour vérifier si un email existe déjà
 async function checkEmailExists(email: string): Promise<boolean> {
   try {
-    // Utiliser directement la méthode de Supabase pour vérifier l'email
     const { data } = await supabase
       .from('users')
       .select('email')
@@ -17,12 +15,10 @@ async function checkEmailExists(email: string): Promise<boolean> {
     return !!data;
   } catch (error) {
     console.error(`Erreur lors de la vérification de l'email:`, error);
-    // Return false instead of throwing, to allow the signup flow to continue
     return false;
   }
 }
 
-// Fonction pour créer les données utilisateur dans les tables publiques
 export async function createUserProfile(userData: { 
   id: string, 
   email: string, 
@@ -34,7 +30,6 @@ export async function createUserProfile(userData: {
   try {
     console.log("Création du profil pour:", userData);
     
-    // 1. Créer d'abord dans la table users
     const { error: userError } = await supabase
       .from('users')
       .upsert({
@@ -50,7 +45,6 @@ export async function createUserProfile(userData: {
       throw userError;
     }
     
-    // 2. Créer le profil spécifique selon le rôle
     if (role === 'stagiaire') {
       const { error: stagiaireError } = await supabase
         .from('stagiaires')
@@ -102,17 +96,14 @@ export async function createUserProfile(userData: {
 }
 
 export const auth = {
-  // Vérifier si un email existe déjà
   async checkEmailExists(email: string): Promise<boolean> {
     return checkEmailExists(email);
   },
 
-  // Inscription d'un nouvel utilisateur - VERSION AMÉLIORÉE AVEC GESTION D'ERREURS RÉSEAU
   async signUp(data: SignUpData): Promise<AuthResponse> {
     const { email, password, role, name } = data;
     
     try {
-      // 1. Validation des données
       if (!email || !password || !role || !name) {
         return {
           success: false,
@@ -123,7 +114,6 @@ export const auth = {
         };
       }
       
-      // 2. Vérifier si l'email existe déjà
       try {
         const emailExists = await checkEmailExists(email);
         if (emailExists) {
@@ -138,7 +128,6 @@ export const auth = {
         }
       } catch (emailCheckError) {
         console.warn("Erreur lors de la vérification d'email:", emailCheckError);
-        // Continuez même si la vérification échoue
       }
       
       console.log("Tentative d'inscription avec email/password:", {
@@ -146,11 +135,11 @@ export const auth = {
         password: "********"
       });
       
-      // 3. Inscription via Supabase Auth avec gestion des erreurs réseau
       try {
-        // Get the current domain for redirect URL
         const origin = window.location.origin;
-        const redirectUrl = `${origin}/email-confirmation`;
+        const redirectUrl = origin.includes('localhost') 
+          ? `${origin}/email-confirmation` 
+          : `${origin}/email-confirmation?type=signup`;
         
         console.log("Using redirect URL:", redirectUrl);
         
@@ -162,7 +151,6 @@ export const auth = {
               name,
               role
             },
-            // Use the dynamically generated redirect URL
             emailRedirectTo: redirectUrl
           }
         });
@@ -181,7 +169,6 @@ export const auth = {
             };
           }
           
-          // Afficher le message d'erreur exact pour un meilleur débogage
           return {
             success: false,
             error: {
@@ -194,10 +181,15 @@ export const auth = {
 
         if (authData?.user) {
           try {
-            // Créer le profil utilisateur immédiatement, sans attendre la confirmation d'email
-            // Avec des champs plus complets pour éviter des erreurs de contrainte
+            await supabase.from('users').upsert({
+              id: authData.user.id,
+              email: email,
+              role: role,
+              name: name,
+              is_active: true
+            }, { onConflict: 'id' });
+            
             if (role === 'stagiaire') {
-              // Ensure we create a complete stagiaire profile
               await supabase.from('stagiaires').upsert({
                 id: authData.user.id,
                 name,
@@ -213,28 +205,30 @@ export const auth = {
                 is_premium: false,
                 disponibility: "upcoming"
               }, { onConflict: 'id' });
-            } else {
-              const profileResult = await createUserProfile({
+            } else if (role === 'entreprise') {
+              await supabase.from('entreprises').upsert({
                 id: authData.user.id,
-                email: authData.user.email || email,
-                role,
-                name
-              });
-              
-              if (!profileResult.success) {
-                console.error("Erreur lors de la création du profil après inscription:", profileResult.error);
-              }
+                name,
+                email: email,
+                logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
+                is_verified: false,
+                description: `${name} est une entreprise qui recherche des stagiaires.`,
+                created_at: new Date().toISOString(),
+                industry: '',
+                location: '',
+                website: ''
+              }, { onConflict: 'id' });
             }
             
-            // Stocker les informations utilisateur temporairement
             localStorage.setItem(`userProfile_${authData.user.id}`, JSON.stringify({
               id: authData.user.id,
               email: authData.user.email,
               role,
               name
             }));
-          } catch (profileError) {
+          } catch (profileError: any) {
             console.error("Erreur lors de la création du profil:", profileError);
+            console.error("Détails:", profileError.details, profileError.hint);
           }
           
           toast.success("Inscription réussie", {
@@ -255,7 +249,6 @@ export const auth = {
       } catch (signUpError: any) {
         console.error("Exception lors de l'inscription:", signUpError);
         
-        // Gestion spécifique des erreurs de connexion réseau
         if (signUpError.message === "Failed to fetch" || 
             signUpError.name === "TypeError" || 
             signUpError.message?.includes("network") ||
@@ -283,7 +276,6 @@ export const auth = {
     } catch (error: any) {
       console.error("Erreur d'inscription (générale):", error);
       
-      // Gestion des erreurs réseau générales
       if (error.message === "Failed to fetch" || 
           error.name === "TypeError" || 
           error.message?.includes("network") ||
@@ -323,7 +315,6 @@ export const auth = {
     }
   },
 
-  // Connexion d'un utilisateur existant
   async signIn({ email, password }: SignInData) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -338,7 +329,6 @@ export const auth = {
         throw error;
       }
       
-      // Vérifier si le profil existe, sinon le créer à partir des données stockées
       if (data.user) {
         const { data: userData, error: userError } = await supabase
           .from('users')
@@ -347,7 +337,6 @@ export const auth = {
           .maybeSingle();
           
         if (!userData && !userError) {
-          // Le profil n'existe pas encore, vérifier s'il y a des données stockées
           const storedProfileData = localStorage.getItem(`userProfile_${data.user.id}`);
           
           if (storedProfileData) {
@@ -380,10 +369,8 @@ export const auth = {
     }
   },
 
-  // Renvoyer l'email de confirmation
   async resendConfirmationEmail(email: string) {
     try {
-      // Get the current domain for redirect URL
       const origin = window.location.origin;
       const redirectUrl = `${origin}/email-confirmation`;
       
@@ -413,7 +400,6 @@ export const auth = {
     }
   },
 
-  // Déconnexion
   async signOut() {
     try {
       const { error } = await supabase.auth.signOut();
@@ -427,7 +413,6 @@ export const auth = {
     }
   },
 
-  // Récupération de l'utilisateur actuel
   async getCurrentUser() {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -444,7 +429,6 @@ export const auth = {
     }
   },
 
-  // Réinitialisation du mot de passe
   async resetPassword(email: string) {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -469,7 +453,6 @@ export const auth = {
     }
   },
   
-  // Mise à jour du mot de passe
   async updatePassword(newPassword: string) {
     try {
       const { error } = await supabase.auth.updateUser({
@@ -494,7 +477,6 @@ export const auth = {
     }
   },
 
-  // Mise à jour du profil utilisateur
   async updateProfile(userData: any) {
     try {
       const { data: authData, error: updateError } = await supabase.auth.updateUser({
@@ -517,20 +499,17 @@ export const auth = {
     }
   },
   
-  // Upload avatar
   async uploadAvatar(file: File, userId: string) {
     try {
       const fileExt = file.name.split('.').pop();
       const filePath = `avatars/${userId}-${Date.now()}.${fileExt}`;
 
-      // Upload the file to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // Get the public URL
       const { data: publicURL } = supabase.storage
         .from('profiles')
         .getPublicUrl(filePath);
@@ -542,14 +521,11 @@ export const auth = {
     }
   },
   
-  // Delete avatar
   async deleteAvatar(avatarUrl: string) {
     try {
-      // Extract file path from the URL
       const urlParts = avatarUrl.split('/');
       const filePath = urlParts.slice(urlParts.indexOf('profiles') + 1).join('/');
       
-      // Delete the file from Supabase Storage
       const { error } = await supabase.storage
         .from('profiles')
         .remove([filePath]);
@@ -563,7 +539,6 @@ export const auth = {
     }
   },
 
-  // Création du profil après confirmation de l'email
   async createProfileAfterConfirmation(userId: string): Promise<AuthResponse> {
     try {
       const storedProfileData = localStorage.getItem(`userProfile_${userId}`);
@@ -580,7 +555,6 @@ export const auth = {
       
       const profileData = JSON.parse(storedProfileData);
       
-      // Créer les profils utilisateur
       const result = await createUserProfile({
         id: userId,
         email: profileData.email,
@@ -589,21 +563,5 @@ export const auth = {
       });
       
       if (result.success) {
-        // Supprimer les données temporaires
-        localStorage.removeItem(`userProfile_${userId}`);
-      }
-      
-      return result;
-    } catch (error: any) {
-      console.error('Erreur lors de la création du profil:', error);
-      return {
-        success: false,
-        error: {
-          message: error.message || "Erreur lors de la création du profil",
-          status: error.code === '23505' ? 409 : 500,
-          isRetryable: true
-        }
-      };
-    }
-  },
-};
+        localStorage
+
