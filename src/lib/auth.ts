@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError, User } from '@/types/auth';
@@ -563,5 +564,20 @@ export const auth = {
       });
       
       if (result.success) {
-        localStorage
-
+        localStorage.removeItem(`userProfile_${userId}`);
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error('Erreur lors de la création du profil après confirmation:', error);
+      return {
+        success: false,
+        error: {
+          message: error.message || "Erreur lors de la création du profil",
+          status: 500,
+          isRetryable: true
+        }
+      };
+    }
+  }
+};

@@ -20,6 +20,14 @@ export default function EmailConfirmation() {
         const hash = window.location.hash;
         const searchParams = new URLSearchParams(location.search);
         const queryToken = searchParams.get('access_token');
+        const type = searchParams.get('type') || '';
+        
+        console.log("Email confirmation - URL details:", { 
+          hash, 
+          search: location.search,
+          pathname: location.pathname,
+          type
+        });
         
         // First try to get token from hash (Supabase default format)
         let accessToken = hash.split('&').find(param => param.startsWith('#access_token='))?.split('=')[1];
@@ -48,8 +56,16 @@ export default function EmailConfirmation() {
         setProgress(30);
         
         // Extract user metadata
-        const role = user.user_metadata?.role;
+        const role = user.user_metadata?.role || 'stagiaire';
         const name = user.user_metadata?.name || 'Utilisateur';
+        
+        console.log("User data retrieved:", { 
+          id: user.id, 
+          email: user.email,
+          role, 
+          name,
+          metadata: user.user_metadata
+        });
         
         // Create basic user record first
         const { error: userError } = await supabase
@@ -57,7 +73,7 @@ export default function EmailConfirmation() {
           .upsert({
             id: user.id,
             email: user.email,
-            role: role || 'stagiaire',
+            role: role,
             name: name,
             is_active: true
           }, { onConflict: 'id' });
@@ -123,6 +139,7 @@ export default function EmailConfirmation() {
           redirectPath = '/complete-profile';
         }
 
+        console.log("Will redirect to:", redirectPath);
         setProgress(90);
         setStatus('success');
         toast.success('Email confirmé avec succès');
@@ -132,7 +149,7 @@ export default function EmailConfirmation() {
           user: {
             id: user.id,
             email: user.email,
-            role: role || 'stagiaire',
+            role: role,
             name: name, 
             email_confirmed_at: user.email_confirmed_at,
             user_metadata: user.user_metadata
@@ -140,24 +157,24 @@ export default function EmailConfirmation() {
           timestamp: Date.now()
         }));
         
-        // Cache navigation state too for immediate UI feedback
+        // Cache navigation state too for immediate UI feedback - IMPORTANT FOR SPEEDING UP PAGE LOADS
         localStorage.setItem('navigation_state', JSON.stringify({ 
           user: {
             id: user.id,
             email: user.email,
-            role: role || 'stagiaire',
+            role: role,
             name: name, 
             email_confirmed_at: user.email_confirmed_at,
             user_metadata: user.user_metadata
           }, 
-          userRole: role || 'stagiaire' 
+          userRole: role
         }));
         
         setProgress(100);
         
         // Set a short timeout to ensure toast is seen
         setTimeout(() => {
-          navigate(redirectPath);
+          navigate(redirectPath, { replace: true });
         }, 800);
       } catch (error: any) {
         console.error('Erreur lors de la confirmation de l\'email:', error);
@@ -166,7 +183,7 @@ export default function EmailConfirmation() {
         
         // Short timeout to ensure error is seen
         setTimeout(() => {
-          navigate('/connexion?error=confirmation_failed');
+          navigate('/connexion?error=confirmation_failed', { replace: true });
         }, 1500);
       } finally {
         setLoading(false);
