@@ -7,17 +7,12 @@ export type UserRole = 'stagiaire' | 'entreprise' | 'admin';
 // Fonction pour vérifier si un profil existe déjà
 async function checkProfileExists(id: string, table: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from(table)
       .select('id')
       .eq('id', id)
       .maybeSingle();
       
-    if (error) {
-      console.error(`Erreur lors de la vérification de l'existence dans ${table}:`, error);
-      return false;
-    }
-    
     return !!data;
   } catch (error) {
     console.error(`Exception lors de la vérification dans ${table}:`, error);
@@ -35,119 +30,60 @@ export async function createUserProfile(userData: {
   const { id, email, role, name } = userData;
   
   try {
-    console.log(`Création du profil utilisateur pour ${id} avec le rôle ${role}`);
+    // 1. Créer d'abord dans la table users
+    const { error: userError } = await supabase
+      .from('users')
+      .upsert({
+        id,
+        email,
+        role,
+        name,
+        is_active: true,
+      });
+
+    if (userError) throw userError;
     
-    // Vérifier d'abord si l'utilisateur existe déjà dans la table users
-    const userExists = await checkProfileExists(id, 'users');
-    
-    if (userExists) {
-      console.log("L'utilisateur existe déjà dans la table users");
-      // Si l'utilisateur existe dans users, vérifions s'il existe dans sa table spécifique
-      const specificTableExists = await checkProfileExists(id, role === 'stagiaire' ? 'stagiaires' : 'entreprises');
-      
-      if (specificTableExists) {
-        console.log(`Le profil existe déjà dans la table ${role === 'stagiaire' ? 'stagiaires' : 'entreprises'}`);
-        return { success: true };
-      }
-    }
-    
-    // Créer l'entrée dans la table users si elle n'existe pas encore
-    if (!userExists) {
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
+    // 2. Créer le profil spécifique selon le rôle
+    if (role === 'stagiaire') {
+      const { error: stagiaireError } = await supabase
+        .from('stagiaires')
+        .upsert({
           id,
-          email,
-          role,
           name,
-          is_active: true,
+          email,
+          avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+          skills: [],
+          languages: [],
+          preferred_locations: []
         });
 
-      if (userError) {
-        console.error("Erreur lors de la création dans la table users:", userError);
-        return { 
-          success: false, 
-          error: {
-            message: "Erreur lors de la création du profil utilisateur",
-            code: userError.code,
-            status: userError.code === '23505' ? 409 : 500,
-            isRetryable: userError.code !== '23505'
-          }
-        };
-      }
-    }
-    
-    // Créer l'entrée spécifique selon le rôle
-    if (role === 'stagiaire') {
-      const stagiaireExists = await checkProfileExists(id, 'stagiaires');
-      
-      if (!stagiaireExists) {
-        const { error: stagiaireError } = await supabase
-          .from('stagiaires')
-          .insert({
-            id,
-            name,
-            email,
-            avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-            skills: [],
-            languages: [],
-            preferred_locations: []
-          });
-
-        if (stagiaireError) {
-          console.error("Erreur lors de la création du stagiaire:", stagiaireError);
-          return { 
-            success: false, 
-            error: {
-              message: "Erreur lors de la création du profil stagiaire",
-              code: stagiaireError.code,
-              status: stagiaireError.code === '23505' ? 409 : 500,
-              isRetryable: stagiaireError.code !== '23505'
-            }
-          };
-        }
-      }
+      if (stagiaireError) throw stagiaireError;
     } 
     else if (role === 'entreprise') {
-      const entrepriseExists = await checkProfileExists(id, 'entreprises');
-      
-      if (!entrepriseExists) {
-        const { error: entrepriseError } = await supabase
-          .from('entreprises')
-          .insert({
-            id,
-            name,
-            email,
-            logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-            industry: '',
-            location: '',
-            benefits: [],
-            website: ''
-          });
+      const { error: entrepriseError } = await supabase
+        .from('entreprises')
+        .upsert({
+          id,
+          name,
+          email,
+          logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+          industry: '',
+          location: '',
+          benefits: [],
+          website: ''
+        });
 
-        if (entrepriseError) {
-          console.error("Erreur lors de la création de l'entreprise:", entrepriseError);
-          return { 
-            success: false, 
-            error: {
-              message: "Erreur lors de la création du profil entreprise",
-              code: entrepriseError.code,
-              status: entrepriseError.code === '23505' ? 409 : 500,
-              isRetryable: entrepriseError.code !== '23505'
-            }
-          };
-        }
-      }
+      if (entrepriseError) throw entrepriseError;
     }
     
     return { success: true };
   } catch (error: any) {
-    console.error('Erreur lors de la création du profil utilisateur:', error);
+    console.error('Erreur lors de la création du profil:', error);
     return { 
       success: false, 
       error: {
-        message: "Erreur interne lors de la création du profil",
-        status: 500,
+        message: error.message || "Erreur lors de la création du profil",
+        status: error.code === '23505' ? 409 : 500,
         isRetryable: true
       }
     };
@@ -530,4 +466,3 @@ export const auth = {
     }
   }
 };
-
