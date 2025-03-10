@@ -1,4 +1,5 @@
 
+
 -- Schema pour Les Stagiaires
 -- Généré le 26/02/2025
 
@@ -154,3 +155,4 @@ CREATE INDEX idx_stages_status ON stages(status);
 CREATE INDEX idx_candidatures_stage ON candidatures(stage_id);
 CREATE INDEX idx_candidatures_stagiaire ON candidatures(stagiaire_id);
 CREATE INDEX stages_search_idx ON stages USING gin(search_vector);
+
