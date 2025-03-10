@@ -33,23 +33,35 @@ const NotFound = () => {
           location.pathname.includes("/email-confirmation") || 
           location.search.includes("type=recovery") || 
           location.search.includes("type=signup") ||
-          location.hash.includes("access_token=");
+          location.hash.includes("access_token=") ||
+          location.hash.includes("error=") ||
+          location.pathname === "/";  // Add homepage to auth check
         
         if (isAuthRelated) {
-          console.log("This appears to be an auth-related redirect that failed");
+          console.log("This appears to be an auth-related redirect that failed or homepage issue");
           
-          // If it's an email confirmation with a hash but wrongly routed
-          if (location.hash.includes("access_token=") && !location.pathname.includes("/email-confirmation")) {
-            console.log("Redirecting to proper email confirmation path");
+          // IMPROVED: If access token is in hash but URL is incorrect, fix the path
+          if (location.hash.includes("access_token=")) {
+            console.log("Found access token in hash, redirecting to proper email confirmation path");
             
-            // Extract the hash and query params
-            const fullPath = `/email-confirmation${location.search}${location.hash}`;
-            navigate(fullPath, { replace: true });
-            return;
+            // For homepage 404 with hash token, redirect to email confirmation
+            if (location.pathname === "/" || location.pathname === "") {
+              navigate("/email-confirmation" + location.search + location.hash, { replace: true });
+              return;
+            }
+            
+            // For other paths, ensure proper format for email confirmation
+            if (!location.pathname.includes("/email-confirmation")) {
+              const fullPath = `/email-confirmation${location.search}${location.hash}`;
+              navigate(fullPath, { replace: true });
+              return;
+            }
           }
           
           // Attempt to get session - this can help with email confirmation redirects
-          const { data } = await supabase.auth.getSession();
+          const { data, error } = await supabase.auth.getSession();
+          console.log("Current session check:", data?.session ? "Has session" : "No session", error ? `Error: ${error.message}` : "No error");
+          
           if (data.session?.user) {
             // User is authenticated, redirect based on role
             const role = data.session.user.user_metadata?.role || 'stagiaire';
@@ -67,6 +79,12 @@ const NotFound = () => {
               userRole: role
             }));
             
+            // Set timestamp for cache to facilitate fresh checking
+            localStorage.setItem('nav_state_timestamp', Date.now().toString());
+            
+            // Clear any stale error state
+            sessionStorage.removeItem('auth_error');
+            
             if (role === 'entreprise') {
               toast.success("Authentification réussie");
               navigate(`/entreprises/${data.session.user.id}`, { replace: true });
@@ -80,6 +98,10 @@ const NotFound = () => {
               navigate('/complete-profile', { replace: true });
               return;
             }
+          } else if (location.pathname === "/") {
+            // If we're on homepage with no session, redirect to proper index page
+            navigate('/', { replace: true, state: { noRedirect: true } });
+            return;
           } else if (location.pathname.includes("/email-confirmation")) {
             // If we're on email confirmation page but no session, redirect to the proper page
             // The email confirmation component will handle the token extraction
@@ -95,7 +117,10 @@ const NotFound = () => {
       }
     };
 
-    if (!redirectAttempted) {
+    // Only attempt redirect if:
+    // 1. We haven't tried already in this render cycle
+    // 2. We don't have a noRedirect state flag
+    if (!redirectAttempted && !location.state?.noRedirect) {
       checkAndRedirect();
     }
   }, [location, navigate, redirectAttempted]);

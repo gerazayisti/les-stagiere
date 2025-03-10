@@ -30,7 +30,14 @@ export default function EmailConfirmation() {
         });
         
         // First try to get token from hash (Supabase default format)
-        let accessToken = hash.split('&').find(param => param.startsWith('#access_token='))?.split('=')[1];
+        let accessToken = '';
+        if (hash) {
+          // Handle full hash format "#access_token=xxx&refresh_token=xxx"
+          const match = hash.match(/access_token=([^&]*)/);
+          if (match && match[1]) {
+            accessToken = match[1];
+          }
+        }
         
         // If not found in hash, try query parameter
         if (!accessToken && queryToken) {
@@ -39,6 +46,19 @@ export default function EmailConfirmation() {
         
         if (!accessToken) {
           console.error('No access token found in URL:', { hash, search: location.search });
+          
+          // Check for error message in hash
+          const errorMatch = hash.match(/error=([^&]*)/);
+          const errorMsgMatch = hash.match(/error_description=([^&]*)/);
+          
+          if (errorMatch && errorMatch[1]) {
+            const errorDescription = errorMsgMatch && errorMsgMatch[1] 
+              ? decodeURIComponent(errorMsgMatch[1])
+              : 'Erreur lors de la confirmation';
+              
+            throw new Error(`${decodeURIComponent(errorMatch[1])}: ${errorDescription}`);
+          }
+          
           throw new Error('Lien de confirmation invalide. Veuillez réessayer ou contacter le support.');
         }
 
@@ -98,7 +118,11 @@ export default function EmailConfirmation() {
               logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
               is_verified: false,
               description: `${name} est une entreprise qui recherche des stagiaires.`,
-              created_at: new Date().toISOString()
+              created_at: new Date().toISOString(),
+              // Add more required fields to prevent null constraints
+              industry: '',
+              location: '',
+              website: ''
             }, { onConflict: 'id' });
             
           if (enterpriseError) {
@@ -170,6 +194,9 @@ export default function EmailConfirmation() {
           userRole: role
         }));
         
+        // Add timestamp for cache checking
+        localStorage.setItem('nav_state_timestamp', Date.now().toString());
+        
         setProgress(100);
         
         // Set a short timeout to ensure toast is seen
@@ -179,7 +206,13 @@ export default function EmailConfirmation() {
       } catch (error: any) {
         console.error('Erreur lors de la confirmation de l\'email:', error);
         setStatus('error');
-        toast.error('Erreur lors de la confirmation de l\'email');
+        toast.error(error.message || 'Erreur lors de la confirmation de l\'email');
+        
+        // Store error in session storage
+        sessionStorage.setItem('auth_error', JSON.stringify({
+          message: error.message || 'Erreur lors de la confirmation de l\'email',
+          timestamp: Date.now()
+        }));
         
         // Short timeout to ensure error is seen
         setTimeout(() => {

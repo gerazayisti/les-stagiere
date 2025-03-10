@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Menu, X, LogOut, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-const ThemeToggle = lazy(() => import("./ThemeToggle"));
+// Fix: Specify default export in the import type
+const ThemeToggle = lazy(() => import("./ThemeToggle").then(module => ({ default: module.default })));
 
 export default function Navigation() {
   const navigate = useNavigate();
