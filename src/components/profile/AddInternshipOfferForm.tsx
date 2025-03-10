@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -28,6 +29,9 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { ListSkills } from '../ListSkills';
 
+type StageType = 'temps_plein' | 'temps_partiel' | 'alternance' | 'remote';
+type StageStatus = 'draft' | 'active' | 'expired';
+
 type Stage = Database['public']['Tables']['stages']['Row'];
 
 interface AddInternshipOfferFormProps {
@@ -50,7 +54,7 @@ export default function AddInternshipOfferForm({
   const [responsibilities, setResponsibilities] = useState(initialData?.responsibilities || "");
   const [location, setLocation] = useState(initialData?.location || "");
   const [remotePolicy, setRemotePolicy] = useState(initialData?.remote_policy || "");
-  const [type, setType] = useState(initialData?.type || "temps_plein");
+  const [type, setType] = useState<StageType>(initialData?.type as StageType || "temps_plein");
   const [duration, setDuration] = useState(initialData?.duration || "");
   const [startDate, setStartDate] = useState<Date | undefined>(initialData?.start_date ? new Date(initialData.start_date) : undefined);
   const [compensationAmount, setCompensationAmount] = useState(initialData?.compensation?.amount || 0);
@@ -61,7 +65,7 @@ export default function AddInternshipOfferForm({
   const [requiredSkills, setRequiredSkills] = useState<[string, ...string[]]>(initialData?.required_skills ? (initialData.required_skills as [string, ...string[]]) : emptySkillsArray);
   const [preferredSkills, setPreferredSkills] = useState<[string, ...string[]]>(initialData?.preferred_skills ? (initialData.preferred_skills as [string, ...string[]]) : emptySkillsArray);
   const [educationLevel, setEducationLevel] = useState(initialData?.education_level || "");
-  const [status, setStatus] = useState(initialData?.status || "draft");
+  const [status, setStatus] = useState<StageStatus>(initialData?.status as StageStatus || "draft");
   const [deadline, setDeadline] = useState<Date | undefined>(initialData?.deadline ? new Date(initialData.deadline) : undefined);
   const [isFeatured, setIsFeatured] = useState(initialData?.is_featured || false);
   const [isUrgent, setIsUrgent] = useState(initialData?.is_urgent || false);
@@ -124,7 +128,7 @@ export default function AddInternshipOfferForm({
     setLoading(true);
 
     try {
-      const stageData: Stage = {
+      const stageData: Partial<Stage> = {
         id: initialData?.id || '',
         title,
         description,
@@ -132,7 +136,7 @@ export default function AddInternshipOfferForm({
         requirements,
         responsibilities,
         location,
-        remote_policy,
+        remote_policy: remotePolicy,
         type,
         duration,
         start_date: startDate ? format(startDate, 'yyyy-MM-dd') : '',
@@ -141,9 +145,9 @@ export default function AddInternshipOfferForm({
           currency: compensationCurrency,
           period: compensationPeriod,
         },
-        required_skills,
+        required_skills: requiredSkills,
         preferred_skills: preferredSkills,
-        education_level,
+        education_level: educationLevel,
         entreprise_id: '', // This should be populated from context or props
         status,
         created_at: initialData?.created_at || new Date().toISOString(),
@@ -153,10 +157,9 @@ export default function AddInternshipOfferForm({
         is_urgent: isUrgent,
         views_count: initialData?.views_count || 0,
         applications_count: initialData?.applications_count || 0,
-        search_vector: initialData?.search_vector || null
       };
 
-      onSave(stageData);
+      onSave(stageData as Stage);
       onClose();
       toast.success("Stage ajouté avec succès!");
     } catch (error) {
@@ -247,7 +250,10 @@ export default function AddInternshipOfferForm({
               </div>
               <div>
                 <Label htmlFor="type">Type de stage</Label>
-                <Select value={type} onValueChange={setType}>
+                <Select 
+                  value={type} 
+                  onValueChange={(value: StageType) => setType(value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionnez le type" />
                   </SelectTrigger>
@@ -380,7 +386,10 @@ export default function AddInternshipOfferForm({
               </div>
               <div>
                 <Label htmlFor="status">Statut</Label>
-                <Select value={status} onValueChange={setStatus}>
+                <Select 
+                  value={status} 
+                  onValueChange={(value: StageStatus) => setStatus(value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionnez le statut" />
                   </SelectTrigger>

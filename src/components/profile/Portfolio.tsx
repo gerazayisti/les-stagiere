@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from "@/components/ui/button"
@@ -39,6 +40,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from 'sonner';
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Define the Project interface
 interface Project {
@@ -103,7 +105,7 @@ const projectSchema = z.object({
   is_featured: z.boolean(),
   created_at: z.date(),
   updated_at: z.date(),
-})
+});
 
 interface AddProjectModalProps {
   isOpen: boolean;
@@ -135,7 +137,7 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onSa
       created_at: initialData?.created_at || new Date(),
       updated_at: initialData?.updated_at || new Date(),
     },
-  })
+  });
 
   function onSubmit(values: z.infer<typeof projectSchema>) {
     onSave(values);
@@ -207,38 +209,12 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onSa
             />
             <FormField
               control={form.control}
-              name="technologies"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Technologies</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Technologies" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="image_url"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Image URL</FormLabel>
                   <FormControl>
                     <Input placeholder="Image URL" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="gallery_urls"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Gallery URLs</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Gallery URLs" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -312,46 +288,6 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onSa
             />
             <FormField
               control={form.control}
-              name="end_date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>End Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-[240px] pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date()
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="status"
               render={({ field }) => (
                 <FormItem>
@@ -365,25 +301,17 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onSa
             />
             <FormField
               control={form.control}
-              name="highlights"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Highlights</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Highlights" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="team_size"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Team Size</FormLabel>
                   <FormControl>
-                    <Input placeholder="Team Size" {...field} />
+                    <Input 
+                      type="number" 
+                      placeholder="Team Size" 
+                      value={field.value}
+                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -406,92 +334,19 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onSa
               control={form.control}
               name="is_featured"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Is Featured</FormLabel>
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
-                    <Input type="checkbox" {...field} />
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="created_at"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Created At</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-[240px] pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date()
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="updated_at"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Updated At</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-[240px] pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date()
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Featured Project</FormLabel>
+                    <FormDescription>
+                      This project will be highlighted in your portfolio
+                    </FormDescription>
+                  </div>
                 </FormItem>
               )}
             />
@@ -585,7 +440,7 @@ export default function Portfolio() {
       toast.success("Project updated successfully!");
     } else {
       // Implement add logic here
-      const newProject: Project = { id: uuidv4(), ...projectData } as Project;
+      const newProject: Project = { id: uuidv4(), ...projectData };
       setProjects([...projects, newProject]);
       toast.success("Project added successfully!");
     }
@@ -632,7 +487,6 @@ export default function Portfolio() {
           initialData={selectedProject}
         />
       )}
-      
     </div>
   );
 }
