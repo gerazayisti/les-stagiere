@@ -1,10 +1,6 @@
-
 import React from "react";
 import ReactDOM from "react-dom/client";
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import { Toaster } from "./components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
@@ -31,6 +27,7 @@ import ProfilEnrichi from "./pages/ProfilEnrichi";
 import Settings from "./pages/Settings";
 import Messagerie from "./pages/Messagerie";
 import Admin from "./pages/Admin";
+import EmailConfirmation from "./pages/EmailConfirmation";
 
 // Create a router
 const router = createBrowserRouter([
@@ -110,6 +107,10 @@ const router = createBrowserRouter([
       {
         path: "admin",
         element: <Admin />,
+      },
+      {
+        path: "email-confirmation",
+        element: <EmailConfirmation />,
       },
     ],
   },

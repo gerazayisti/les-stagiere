@@ -1,4 +1,3 @@
-
 import { UserRole } from "@/lib/auth";
 
 export interface AuthError {
@@ -33,7 +32,12 @@ export interface User {
   role: UserRole;
   name: string;
   email_confirmed_at?: string;
-  user_metadata?: any;
+  user_metadata?: {
+    website?: string;
+    github?: string;
+    linkedin?: string;
+    [key: string]: any;
+  };
 }
 
 export interface SupabaseAuthError {

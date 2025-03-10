@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -73,8 +72,6 @@ export function useAuth() {
         throw error;
       }
 
-      console.log("Current session:", session);
-
       if (session?.user) {
         const formattedUser = await formatUserData(session.user);
         setUser(formattedUser);
@@ -85,9 +82,8 @@ export function useAuth() {
       }
     } catch (error) {
       console.error('Erreur lors de la vérification de l\'utilisateur:', error);
-      toast.error("Impossible de vérifier votre session", {
-        description: "Une erreur est survenue lors de la vérification de votre session"
-      });
+      setUser(null);
+      setUserRole(null);
     } finally {
       setLoading(false);
     }
@@ -124,7 +120,7 @@ export function useAuth() {
       console.log("Nettoyage du listener d'authentification");
       subscription.unsubscribe();
     };
-  }, [formatUserData, checkUser]);
+  }, [checkUser, formatUserData]);
 
   // Fonction de déconnexion
   const signOut = async () => {
