@@ -157,7 +157,8 @@ export const auth = {
               name,
               role
             },
-            emailRedirectTo: `${window.location.origin}/email-confirmation`
+            // Utilisez une URL de redirection absolue vers Vercel
+            emailRedirectTo: `https://les-stagiere.vercel.app/email-confirmation`
           }
         });
 
@@ -361,7 +362,7 @@ export const auth = {
         type: 'signup',
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/email-confirmation`
+          emailRedirectTo: `https://les-stagiere.vercel.app/email-confirmation`
         }
       });
       
