@@ -31,4 +31,3 @@ CREATE POLICY "Anyone can view contact messages" ON contact_messages
 CREATE POLICY "Anyone can create contact messages" ON contact_messages
     FOR INSERT 
     WITH CHECK (true);
-
