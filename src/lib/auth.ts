@@ -24,27 +24,32 @@ async function checkProfileExists(id: string, table: string): Promise<boolean> {
 // Fonction pour vérifier si un email existe déjà
 async function checkEmailExists(email: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.auth.admin.listUsers({
-      filter: { email },
-    });
-    
-    // Si nous pouvons accéder à cette API et qu'elle renvoie des utilisateurs, l'email existe
-    if (!error && data && data.users && data.users.length > 0) {
-      return true;
-    }
-    
-    // Si nous n'avons pas accès à l'API admin, essayons une autre approche
-    // (cette approche est moins fiable mais peut aider)
-    const { error: signInError } = await supabase.auth.signInWithOtp({
+    // Méthode 1: Essayez de faire un signup sans créer d'utilisateur
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: false,
       }
     });
     
-    // Si l'erreur indique que l'utilisateur n'existe pas
-    return !signInError || !signInError.message.includes("user not found");
+    // Si nous recevons "user not found", l'email n'existe pas
+    if (error && error.message.includes("user not found")) {
+      return false;
+    }
     
+    // Méthode 2: Vérifiez si l'email existe dans la table users
+    const { data } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .maybeSingle();
+    
+    if (data) {
+      return true;
+    }
+    
+    // Par défaut, considérez que l'email n'existe pas si nous n'avons pas de preuve du contraire
+    return false;
   } catch (error) {
     console.error("Erreur lors de la vérification de l'email:", error);
     return false; // En cas d'erreur, supposons que l'email n'existe pas
@@ -138,7 +143,7 @@ export const auth = {
     return checkEmailExists(email);
   },
 
-  // Inscription d'un nouvel utilisateur - VERSION ULTRA SIMPLIFIÉE
+  // Inscription d'un nouvel utilisateur - VERSION MINIMALISTE
   async signUp(data: SignUpData): Promise<AuthResponse> {
     const { email, password, role, name } = data;
     
@@ -154,34 +159,41 @@ export const auth = {
         };
       }
       
-      // 2. Vérifier si l'email existe déjà (pour éviter les erreurs)
-      const emailExists = await checkEmailExists(email);
-      if (emailExists) {
-        return {
-          success: false,
-          error: {
-            message: "Cette adresse email est déjà utilisée",
-            status: 409,
-            isRetryable: false
-          }
-        };
+      // 2. Vérifier si l'email existe déjà (pour une meilleure UX)
+      try {
+        const emailExists = await checkEmailExists(email);
+        if (emailExists) {
+          return {
+            success: false,
+            error: {
+              message: "Cette adresse email est déjà utilisée",
+              status: 409,
+              isRetryable: false
+            }
+          };
+        }
+      } catch (emailCheckError) {
+        console.warn("Erreur lors de la vérification d'email:", emailCheckError);
+        // Continuez même si la vérification échoue
       }
       
-      console.log("Tentative d'inscription avec email/password uniquement:", {
+      console.log("Tentative d'inscription avec email/password:", {
         email,
         password: "********"
       });
       
-      // 3. Inscription MINIMALE via Supabase Auth - STRICTEMENT email et password SEULEMENT
+      // 3. Inscription via Supabase Auth - UNIQUEMENT email et password
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
-        password
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/email-confirmation`
+        }
       });
 
       if (signUpError) {
         console.error("Erreur lors de l'inscription:", signUpError);
         
-        // Vérifier le type d'erreur spécifique
         if (signUpError.message?.includes("already registered")) {
           return {
             success: false,

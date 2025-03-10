@@ -71,7 +71,7 @@ export default function Inscription() {
     }
   }, [isAuthenticated, user, navigate, location.search]);
 
-  // Effet pour vérifier si l'email est disponible
+  // Effet pour vérifier si l'email est disponible - avec gestion des échecs gracieuse
   useEffect(() => {
     const checkEmail = async () => {
       if (formData.email && formData.email.includes('@') && formData.email.includes('.')) {
@@ -81,9 +81,16 @@ export default function Inscription() {
         try {
           // Attendre un peu pour éviter trop de requêtes pendant la frappe
           const timeoutId = setTimeout(async () => {
-            const exists = await auth.checkEmailExists(formData.email);
-            setEmailAvailable(!exists);
-            setCheckingEmail(false);
+            try {
+              const exists = await auth.checkEmailExists(formData.email);
+              setEmailAvailable(!exists);
+            } catch (error) {
+              console.warn("Vérification d'email échouée:", error);
+              // On ne montre pas d'erreur à l'utilisateur, on laisse juste le champ neutre
+              setEmailAvailable(null);
+            } finally {
+              setCheckingEmail(false);
+            }
           }, 800);
           
           return () => clearTimeout(timeoutId);
@@ -147,12 +154,6 @@ export default function Inscription() {
         setFormError(formData.role === 'entreprise' 
           ? "Le nom de l'entreprise est trop court" 
           : "Votre nom est trop court");
-        setLoading(false);
-        return;
-      }
-      
-      if (emailAvailable === false) {
-        setFormError("Cette adresse email est déjà utilisée");
         setLoading(false);
         return;
       }
