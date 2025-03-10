@@ -33,16 +33,74 @@ export default function EmailConfirmation() {
           throw sessionError || new Error('User not found');
         }
 
-        // Create or update profile in the database
-        await auth.createProfileAfterConfirmation(user.id);
-
-        // Redirect based on user role
+        console.log("User from token:", user);
+        
+        // Create profile based on user role
         const role = user.user_metadata?.role;
+        console.log("Role from metadata:", role);
+        
         if (role === 'entreprise') {
+          // Create entreprise profile
+          const { error: insertError } = await supabase
+            .from('entreprises')
+            .upsert({
+              id: user.id,
+              name: user.user_metadata?.name || 'Entreprise',
+              email: user.email,
+              logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.name || 'E')}&background=random`,
+              is_verified: false,
+              created_at: new Date().toISOString()
+            });
+            
+          if (insertError) {
+            console.error("Error creating entreprise profile:", insertError);
+            throw insertError;
+          }
+          
+          // Also create a basic user record
+          await supabase
+            .from('users')
+            .upsert({
+              id: user.id,
+              email: user.email,
+              role: 'entreprise',
+              name: user.user_metadata?.name || 'Entreprise',
+              is_active: true
+            });
+            
           navigate(`/entreprises/${user.id}`);
         } else if (role === 'stagiaire') {
+          // Create stagiaire profile
+          const { error: insertError } = await supabase
+            .from('stagiaires')
+            .upsert({
+              id: user.id,
+              name: user.user_metadata?.name || 'Stagiaire',
+              email: user.email,
+              avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.name || 'S')}&background=random`,
+              is_verified: false,
+              created_at: new Date().toISOString()
+            });
+            
+          if (insertError) {
+            console.error("Error creating stagiaire profile:", insertError);
+            throw insertError;
+          }
+          
+          // Also create a basic user record
+          await supabase
+            .from('users')
+            .upsert({
+              id: user.id,
+              email: user.email,
+              role: 'stagiaire',
+              name: user.user_metadata?.name || 'Stagiaire',
+              is_active: true
+            });
+            
           navigate(`/stagiaires/${user.id}`);
         } else {
+          // Unknown role, redirect to complete profile
           navigate('/complete-profile');
         }
 

@@ -12,6 +12,7 @@ import { Plus } from 'lucide-react';
 import { InternshipOffersList } from '@/components/profile/InternshipOffersList';
 import { CompanyRecommendations } from '@/components/profile/CompanyRecommendations';
 import { supabase } from '@/lib/supabase';
+import { Loader2 } from 'lucide-react';
 
 export default function ProfilEntreprise() {
   const { id } = useParams<{ id: string }>();
@@ -27,13 +28,48 @@ export default function ProfilEntreprise() {
       try {
         if (!id) return;
         
+        console.log("Fetching entreprise with ID:", id);
+        
         const { data, error } = await supabase
           .from('entreprises')
           .select('*')
           .eq('id', id)
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching entreprise:", error);
+          
+          // Si c'est juste que l'entreprise n'existe pas, essayons de la créer
+          if (error.code === 'PGRST116') {
+            // Vérifier si l'utilisateur connecté est cette entreprise
+            if (user && user.id === id && user.role === 'entreprise') {
+              console.log("Creating entreprise profile for user:", user.id);
+              
+              // Créer l'entreprise
+              const { data: createdData, error: createError } = await supabase
+                .from('entreprises')
+                .upsert({
+                  id: user.id,
+                  name: user.name || 'Entreprise',
+                  email: user.email,
+                  logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'E')}&background=random`,
+                  is_verified: false,
+                  created_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+                
+              if (createError) {
+                throw createError;
+              }
+              
+              setEntreprise(createdData);
+              return;
+            }
+          }
+          
+          throw error;
+        }
         
         setEntreprise(data);
       } catch (err: any) {
@@ -46,10 +82,17 @@ export default function ProfilEntreprise() {
     }
     
     fetchEntreprise();
-  }, [id]);
+  }, [id, user]);
   
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Chargement...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p>Chargement du profil...</p>
+        </div>
+      </div>
+    );
   }
   
   if (error || !entreprise) {

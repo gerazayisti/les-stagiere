@@ -33,6 +33,13 @@ export default function ProfilStagiaire() {
   
   const isCurrentUser = user?.id === stagiaire.id;
   
+  // Construire les objets sociaux à partir des données disponibles
+  const socials = {
+    website: stagiaire.social_links?.website || "",
+    github: stagiaire.social_links?.github || "",
+    linkedin: stagiaire.social_links?.linkedin || ""
+  };
+  
   return (
     <div className="container mx-auto py-8 px-4">
       <ProfileHeader 
@@ -40,11 +47,7 @@ export default function ProfilStagiaire() {
         avatarUrl={stagiaire.avatar_url}
         bio={stagiaire.bio || ""}
         location={stagiaire.location || ""}
-        socials={{
-          website: stagiaire.user_metadata?.website || "",
-          github: stagiaire.user_metadata?.github || "",
-          linkedin: stagiaire.user_metadata?.linkedin || ""
-        }}
+        socials={socials}
         editable={isCurrentUser}
         onEdit={() => {}}
       />
@@ -59,7 +62,7 @@ export default function ProfilStagiaire() {
         <TabsContent value="about">
           <AboutTab 
             bio={stagiaire.bio || ""}
-            disponibility={stagiaire.disponibility}
+            disponibility={stagiaire.disponibility || "upcoming"}
             education={stagiaire.education || []}
             isPremium={stagiaire.is_premium}
             userId={stagiaire.id}
