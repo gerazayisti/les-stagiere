@@ -1,48 +1,30 @@
 
-import { useState, useEffect } from "react"
-import { useNavigate, useLocation, Link } from "react-router-dom"
-import { auth, UserRole } from "@/lib/auth"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter
-} from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { toast } from "sonner"
-import { Eye, EyeOff, AlertCircle, Loader2, Mail, CheckCircle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useAuth } from "@/hooks/useAuth"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { auth, UserRole } from "@/lib/auth";
+import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { RegistrationForm } from "@/components/registration/RegistrationForm";
+import { VerificationEmailSent } from "@/components/registration/VerificationEmailSent";
 
 export default function Inscription() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { isAuthenticated, user } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [checkingEmail, setCheckingEmail] = useState(false)
-  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
-  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null)
-  const [emailSent, setEmailSent] = useState(false)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated, user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: "",
     role: "stagiaire" as UserRole,
-  })
+  });
 
   const getRedirectPath = () => {
     const params = new URLSearchParams(location.search);
@@ -71,7 +53,6 @@ export default function Inscription() {
     }
   }, [isAuthenticated, user, navigate, location.search]);
 
-  // Effet pour vérifier si l'email est disponible - avec gestion des échecs gracieuse
   useEffect(() => {
     const checkEmail = async () => {
       if (formData.email && formData.email.includes('@') && formData.email.includes('.')) {
@@ -79,16 +60,12 @@ export default function Inscription() {
         setEmailAvailable(null);
         
         try {
-          // Attendre un peu pour éviter trop de requêtes pendant la frappe
           const timeoutId = setTimeout(async () => {
             try {
-              console.log("Vérification de la disponibilité de l'email:", formData.email);
               const exists = await auth.checkEmailExists(formData.email);
-              console.log("Résultat de la vérification:", exists ? "Email déjà utilisé" : "Email disponible");
               setEmailAvailable(!exists);
             } catch (error) {
               console.warn("Vérification d'email échouée:", error);
-              // On ne montre pas d'erreur à l'utilisateur, on laisse juste le champ neutre
               setEmailAvailable(null);
             } finally {
               setCheckingEmail(false);
@@ -135,9 +112,9 @@ export default function Inscription() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setFormError(null)
+    e.preventDefault();
+    setLoading(true);
+    setFormError(null);
 
     try {
       if (!formData.email.includes('@') || !formData.email.includes('.')) {
@@ -160,28 +137,15 @@ export default function Inscription() {
         return;
       }
       
-      console.log("Tentative d'inscription avec les données:", {
-        ...formData,
-        password: "***"
-      });
-      
       const result = await auth.signUp(formData);
-      
-      console.log("Résultat de l'inscription:", result.success ? "Succès" : "Échec", result.error || "");
       
       if (result.success) {
         setEmailSent(true);
         toast.success("Inscription réussie !", {
-          description: "Veuillez vérifier votre email pour confirmer votre compte. Une fois confirmé, votre profil sera créé automatiquement."
+          description: "Veuillez vérifier votre email pour confirmer votre compte"
         });
       } else if (result.error) {
         setFormError(result.error.message);
-        console.error("Erreur d'inscription:", result.error);
-        
-        // Afficher des informations plus détaillées pour le débogage
-        if (result.error.message.includes("Database")) {
-          console.error("Problème de base de données détecté. Vérifiez les tables et les politiques RLS.");
-        }
       }
     } catch (error: any) {
       console.error("Exception lors de la soumission du formulaire:", error);
@@ -214,42 +178,11 @@ export default function Inscription() {
   if (emailSent) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Vérifiez votre email</CardTitle>
-            <CardDescription className="text-center">
-              Un email de confirmation a été envoyé à {formData.email}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center space-y-4 py-6">
-            <Mail className="h-16 w-16 text-primary" />
-            <p className="text-center text-muted-foreground">
-              Cliquez sur le lien dans l'email pour activer votre compte. Si vous ne recevez pas l'email, vérifiez votre dossier spam.
-            </p>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={handleResendEmail}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Envoi en cours...
-                </>
-              ) : (
-                "Renvoyer l'email"
-              )}
-            </Button>
-            <div className="text-sm text-center">
-              <Link to="/connexion" className="text-primary hover:underline">
-                Retour à la connexion
-              </Link>
-            </div>
-          </CardFooter>
-        </Card>
+        <VerificationEmailSent
+          email={formData.email}
+          loading={loading}
+          onResendEmail={handleResendEmail}
+        />
       </div>
     );
   }
@@ -265,148 +198,17 @@ export default function Inscription() {
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[400px] pr-4">
-            {formError && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{formError}</AlertDescription>
-              </Alert>
-            )}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Type de compte</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value: UserRole) => 
-                    setFormData({ ...formData, role: value })
-                  }
-                  disabled={loading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez votre profil" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="stagiaire">Stagiaire</SelectItem>
-                    <SelectItem value="entreprise">Entreprise</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="name">
-                  {formData.role === 'entreprise' ? "Nom de l'entreprise" : "Nom complet"}
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  disabled={loading}
-                  autoComplete="name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex justify-between">
-                  <span>Email</span>
-                  {emailAvailable === true && (
-                    <span className="text-xs text-green-500 flex items-center">
-                      <CheckCircle className="h-3 w-3 mr-1" /> Disponible
-                    </span>
-                  )}
-                  {emailAvailable === false && (
-                    <span className="text-xs text-red-500">Déjà utilisé</span>
-                  )}
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="votre@email.com"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    disabled={loading}
-                    autoComplete="email"
-                    className={emailAvailable === false ? "border-red-300 pr-10" : ""}
-                  />
-                  {checkingEmail && (
-                    <Loader2 className="h-4 w-4 animate-spin absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Mot de passe</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    required
-                    disabled={loading}
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-500" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-500" />
-                    )}
-                  </button>
-                </div>
-                {passwordStrength && (
-                  <div className="mt-1">
-                    <div className="flex gap-1 h-1">
-                      <div className={`flex-1 rounded-full ${
-                        passwordStrength === 'weak' ? 'bg-red-500' : 
-                        passwordStrength === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                      }`}></div>
-                      <div className={`flex-1 rounded-full ${
-                        passwordStrength === 'weak' ? 'bg-gray-200' : 
-                        passwordStrength === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                      }`}></div>
-                      <div className={`flex-1 rounded-full ${
-                        passwordStrength === 'strong' ? 'bg-green-500' : 'bg-gray-200'
-                      }`}></div>
-                    </div>
-                    <p className="text-xs mt-1 text-muted-foreground">
-                      {passwordStrength === 'weak' ? 'Mot de passe faible' : 
-                       passwordStrength === 'medium' ? 'Mot de passe moyen' : 'Mot de passe fort'}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-end">
-                <Link to="/connexion" className="text-sm text-primary hover:underline">
-                  Déjà un compte ? Se connecter
-                </Link>
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={loading || (formData.email.includes('@') && emailAvailable === false)}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Inscription en cours...
-                  </>
-                ) : (
-                  "S'inscrire"
-                )}
-              </Button>
-            </form>
+            <RegistrationForm
+              loading={loading}
+              formError={formError}
+              formData={formData}
+              emailAvailable={emailAvailable}
+              checkingEmail={checkingEmail}
+              passwordStrength={passwordStrength}
+              onSubmit={handleSubmit}
+              onInputChange={handleInputChange}
+              onRoleChange={(value) => setFormData({ ...formData, role: value })}
+            />
           </ScrollArea>
         </CardContent>
       </Card>
