@@ -1,16 +1,15 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProfileHeader from '@/components/profile/ProfileHeader';
-import AboutTab from '@/components/profile/AboutTab';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { AboutTab } from '@/components/profile/AboutTab';
 import { useParams, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import AddInternshipOfferForm from '@/components/profile/AddInternshipOfferForm';
+import { AddInternshipOfferForm } from '@/components/profile/AddInternshipOfferForm';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import InternshipOffersList from '@/components/profile/InternshipOffersList';
-import CompanyRecommendations from '@/components/profile/CompanyRecommendations';
+import { InternshipOffersList } from '@/components/profile/InternshipOffersList';
+import { CompanyRecommendations } from '@/components/profile/CompanyRecommendations';
 import { supabase } from '@/lib/supabase';
 
 export default function ProfilEntreprise() {
@@ -22,8 +21,7 @@ export default function ProfilEntreprise() {
   const [error, setError] = useState<string | null>(null);
   const [isAddOfferModalOpen, setIsAddOfferModalOpen] = useState(false);
   
-  // Charger les données de l'entreprise
-  useState(() => {
+  useEffect(() => {
     async function fetchEntreprise() {
       try {
         if (!id) return;
@@ -60,7 +58,6 @@ export default function ProfilEntreprise() {
   const isCurrentUser = user?.id === entreprise.id;
   
   const handleAddOffer = (offerData: any) => {
-    // Implémentation pour ajouter une offre
     console.log('Ajout d\'une offre:', offerData);
     toast.success('Offre de stage ajoutée avec succès!');
     setIsAddOfferModalOpen(false);

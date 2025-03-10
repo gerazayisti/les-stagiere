@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from "@/components/ui/button"
@@ -54,8 +53,8 @@ interface Project {
   gallery_urls: string[];
   project_url: string;
   github_url: string;
-  start_date: Date | null;
-  end_date: Date | null;
+  start_date: Date;
+  end_date: Date;
   status: 'completed' | 'in_progress' | 'planned';
   highlights: string[];
   team_size: number;
@@ -140,7 +139,28 @@ const AddProjectModal: React.FC<AddProjectModalProps> = ({ isOpen, onClose, onSa
   });
 
   function onSubmit(values: z.infer<typeof projectSchema>) {
-    onSave(values);
+    const projectData: Omit<Project, "id"> = {
+      title: values.title,
+      description: values.description,
+      short_description: values.short_description,
+      domain: values.domain,
+      technologies: values.technologies,
+      image_url: values.image_url,
+      gallery_urls: values.gallery_urls,
+      project_url: values.project_url,
+      github_url: values.github_url,
+      start_date: values.start_date,
+      end_date: values.end_date,
+      status: values.status,
+      highlights: values.highlights,
+      team_size: values.team_size,
+      role: values.role,
+      is_featured: values.is_featured,
+      created_at: values.created_at,
+      updated_at: values.updated_at,
+    };
+    
+    onSave(projectData);
     onClose();
   }
 

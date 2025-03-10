@@ -1,10 +1,10 @@
 
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProfileHeader from '@/components/profile/ProfileHeader';
-import AboutTab from '@/components/profile/AboutTab';
-import CVTab from '@/components/profile/CVTab';
-import Recommendations from '@/components/profile/Recommendations';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { AboutTab } from '@/components/profile/AboutTab';
+import { CVTab } from '@/components/profile/CVTab';
+import { Recommendations } from '@/components/profile/Recommendations';
 import Portfolio from '@/components/profile/Portfolio';
 import { useStagiaire } from '@/hooks/useStagiaire';
 import { useParams } from 'react-router-dom';
