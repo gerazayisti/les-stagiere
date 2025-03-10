@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { auth } from "@/lib/auth";
@@ -16,6 +15,7 @@ export default function Connexion() {
   const location = useLocation();
   const { isAuthenticated, user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [loginInProgress, setLoginInProgress] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -23,23 +23,19 @@ export default function Connexion() {
     password: "",
   });
 
-  // Récupérer le paramètre de redirection s'il existe
   const getRedirectPath = () => {
     const params = new URLSearchParams(location.search);
     return params.get('redirect') || null;
   };
 
-  // Rediriger si déjà connecté
   useEffect(() => {
-    if (isAuthenticated && user) {
-      // Vérifier s'il y a un chemin de redirection
+    if (isAuthenticated && user && !loginInProgress) {
       const redirectPath = getRedirectPath();
       if (redirectPath) {
         navigate(redirectPath);
         return;
       }
 
-      // Sinon, rediriger selon le rôle
       if (user.role === 'entreprise') {
         navigate(`/entreprises/${user.id}`);
       } else if (user.role === 'stagiaire') {
@@ -48,14 +44,12 @@ export default function Connexion() {
         navigate('/complete-profile');
       }
       
-      // Afficher un toast
       toast.info("Vous êtes déjà connecté", {
         description: "Redirection en cours..."
       });
     }
-  }, [isAuthenticated, user, navigate, location.search]);
+  }, [isAuthenticated, user, navigate, location.search, loginInProgress]);
 
-  // Récupérer les éventuels messages d'erreur ou succès de la redirection
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const error = params.get('error');
@@ -77,39 +71,48 @@ export default function Connexion() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setLoginInProgress(true);
     setFormError(null);
 
     try {
-      console.log("Tentative de connexion...");
-      const { user } = await auth.signIn(formData);
-      console.log("Utilisateur connecté:", user);
+      toast.loading("Connexion en cours...", { id: "login-toast" });
       
-      // Rafraîchir les données utilisateur dans le contexte d'authentification
+      const { user } = await auth.signIn(formData);
+      
+      toast.success("Connexion réussie", {
+        id: "login-toast",
+        description: `Bienvenue, ${user.user_metadata?.name || user.email}`
+      });
+      
       if (refreshUser) {
         await refreshUser();
       }
       
-      // Vérifier s'il y a un chemin de redirection
       const redirectPath = getRedirectPath();
       
-      // Redirection vers la page appropriée après un court délai
-      // pour laisser le temps au state de se mettre à jour
-      setTimeout(() => {
-        if (redirectPath) {
-          navigate(redirectPath);
-        } else if (user.user_metadata?.role === 'entreprise') {
-          navigate(`/entreprises/${user.id}`);
-        } else if (user.user_metadata?.role === 'stagiaire') {
-          navigate(`/stagiaires/${user.id}`);
-        } else {
-          navigate('/complete-profile');
-        }
-        
-        setLoading(false);
-      }, 500); // Réduit à 500ms pour une expérience plus fluide
+      localStorage.setItem('preAuthUserRole', user.user_metadata?.role || 'inconnu');
+      localStorage.setItem('preAuthUserName', user.user_metadata?.name || user.email);
+      
+      if (redirectPath) {
+        navigate(redirectPath);
+      } else if (user.user_metadata?.role === 'entreprise') {
+        navigate(`/entreprises/${user.id}`);
+      } else if (user.user_metadata?.role === 'stagiaire') {
+        navigate(`/stagiaires/${user.id}`);
+      } else {
+        navigate('/complete-profile');
+      }
     } catch (error: any) {
       console.error("Erreur de connexion:", error);
+      
+      toast.error("Échec de connexion", {
+        id: "login-toast",
+        description: error.message || "Une erreur s'est produite lors de la connexion"
+      });
+      
       setFormError(error.message || "Une erreur s'est produite lors de la connexion");
+      setLoginInProgress(false);
+    } finally {
       setLoading(false);
     }
   };
@@ -121,7 +124,6 @@ export default function Connexion() {
       [name]: value
     });
     
-    // Effacer l'erreur quand l'utilisateur commence à taper
     if (formError) {
       setFormError(null);
     }

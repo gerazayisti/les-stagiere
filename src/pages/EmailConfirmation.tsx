@@ -5,10 +5,10 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { auth } from '@/lib/auth';
 
 export default function EmailConfirmation() {
   const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,89 +26,93 @@ export default function EmailConfirmation() {
           throw new Error('No access token found');
         }
 
-        // Get the session to get user information
+        setStatus('processing');
+        
+        // Get the user information from token
         const { data: { user }, error: sessionError } = await supabase.auth.getUser(accessToken);
 
         if (sessionError || !user) {
           throw sessionError || new Error('User not found');
         }
-
-        console.log("User from token:", user);
         
-        // Create profile based on user role
+        // Get role from user metadata
         const role = user.user_metadata?.role;
-        console.log("Role from metadata:", role);
+        const name = user.user_metadata?.name || 'Utilisateur';
+        
+        // Create basic user record first (lightweight operation)
+        const { error: userError } = await supabase
+          .from('users')
+          .upsert({
+            id: user.id,
+            email: user.email,
+            role: role || 'stagiaire',
+            name: name,
+            is_active: true
+          });
+          
+        if (userError) {
+          console.error("Error creating user record:", userError);
+        }
+        
+        // Prepare redirection
+        let redirectPath = '/';
         
         if (role === 'entreprise') {
-          // Create entreprise profile
-          const { error: insertError } = await supabase
+          // Create enterprise profile in background
+          supabase
             .from('entreprises')
             .upsert({
               id: user.id,
-              name: user.user_metadata?.name || 'Entreprise',
+              name: name,
               email: user.email,
-              logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.name || 'E')}&background=random`,
+              logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
               is_verified: false,
               created_at: new Date().toISOString()
+            })
+            .then(({ error }) => {
+              if (error) console.error("Error creating enterprise profile:", error);
             });
             
-          if (insertError) {
-            console.error("Error creating entreprise profile:", insertError);
-            throw insertError;
-          }
-          
-          // Also create a basic user record
-          await supabase
-            .from('users')
-            .upsert({
-              id: user.id,
-              email: user.email,
-              role: 'entreprise',
-              name: user.user_metadata?.name || 'Entreprise',
-              is_active: true
-            });
-            
-          navigate(`/entreprises/${user.id}`);
-        } else if (role === 'stagiaire') {
-          // Create stagiaire profile
-          const { error: insertError } = await supabase
+          redirectPath = `/entreprises/${user.id}`;
+        } 
+        else if (role === 'stagiaire') {
+          // Create intern profile in background
+          supabase
             .from('stagiaires')
             .upsert({
               id: user.id,
-              name: user.user_metadata?.name || 'Stagiaire',
+              name: name,
               email: user.email,
-              avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.name || 'S')}&background=random`,
+              avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
               is_verified: false,
               created_at: new Date().toISOString()
+            })
+            .then(({ error }) => {
+              if (error) console.error("Error creating intern profile:", error);
             });
             
-          if (insertError) {
-            console.error("Error creating stagiaire profile:", insertError);
-            throw insertError;
-          }
-          
-          // Also create a basic user record
-          await supabase
-            .from('users')
-            .upsert({
-              id: user.id,
-              email: user.email,
-              role: 'stagiaire',
-              name: user.user_metadata?.name || 'Stagiaire',
-              is_active: true
-            });
-            
-          navigate(`/stagiaires/${user.id}`);
-        } else {
-          // Unknown role, redirect to complete profile
-          navigate('/complete-profile');
+          redirectPath = `/stagiaires/${user.id}`;
+        } 
+        else {
+          redirectPath = '/complete-profile';
         }
 
+        setStatus('success');
         toast.success('Email confirmé avec succès');
+        
+        // Set a short timeout to ensure toast is seen
+        setTimeout(() => {
+          navigate(redirectPath);
+        }, 800);
       } catch (error: any) {
         console.error('Erreur lors de la confirmation de l\'email:', error);
+        setStatus('error');
         toast.error('Erreur lors de la confirmation de l\'email');
-        navigate('/connexion?error=confirmation_failed');
+        
+        // Short timeout to ensure error is seen
+        setTimeout(() => {
+          navigate('/connexion?error=confirmation_failed');
+        }, 1500);
       } finally {
         setLoading(false);
       }
@@ -117,18 +121,39 @@ export default function EmailConfirmation() {
     handleEmailConfirmation();
   }, [navigate]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="p-6">
-          <div className="flex items-center space-x-4">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <p>Vérification de votre email...</p>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Card className="p-6 w-full max-w-md">
+        <div className="flex flex-col items-center space-y-4">
+          {loading || status === 'processing' ? (
+            <>
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-center">Vérification de votre email en cours...</p>
+              <p className="text-sm text-muted-foreground text-center">Cela peut prendre quelques instants</p>
+            </>
+          ) : status === 'success' ? (
+            <>
+              <div className="h-8 w-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </div>
+              <p className="text-center">Email confirmé avec succès!</p>
+              <p className="text-sm text-muted-foreground text-center">Vous allez être redirigé...</p>
+            </>
+          ) : (
+            <>
+              <div className="h-8 w-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </div>
+              <p className="text-center">Erreur lors de la confirmation de l'email</p>
+              <p className="text-sm text-muted-foreground text-center">Vous allez être redirigé vers la page de connexion...</p>
+            </>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
 }

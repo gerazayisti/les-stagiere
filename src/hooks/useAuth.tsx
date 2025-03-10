@@ -12,41 +12,75 @@ export function useAuth() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Fonction pour convertir les données d'utilisateur Supabase en notre modèle User
+  // Optimized function to convert Supabase user data to our User model
   const formatUserData = useCallback(async (supabaseUser: any): Promise<User | null> => {
     if (!supabaseUser) return null;
     
-    console.log("Formatage de l'utilisateur:", supabaseUser);
-    
-    // Vérifier si l'utilisateur a un profil dans la table users
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role, name')
-      .eq('id', supabaseUser.id)
-      .maybeSingle();
-    
-    if (userError) {
-      console.error("Erreur lors de la récupération du profil utilisateur:", userError);
+    // Check for cached user data to avoid unnecessary database calls
+    const cachedUserData = localStorage.getItem(`cachedUserProfile_${supabaseUser.id}`);
+    if (cachedUserData) {
+      const parsedData = JSON.parse(cachedUserData);
+      const cacheAge = Date.now() - parsedData.timestamp;
+      
+      // Use cache if it's less than 5 minutes old
+      if (cacheAge < 300000) {
+        console.log("Using cached user profile data");
+        return parsedData.user;
+      }
     }
     
-    // Si l'utilisateur n'a pas encore de profil, utiliser les données de user_metadata
-    const role = userData?.role || supabaseUser.user_metadata?.role || null;
-    const name = userData?.name || supabaseUser.user_metadata?.name || '';
-    
-    return {
-      id: supabaseUser.id,
-      email: supabaseUser.email!,
-      role: role || 'stagiaire',
-      name: name,
-      email_confirmed_at: supabaseUser.email_confirmed_at,
-      user_metadata: supabaseUser.user_metadata
-    };
+    // No valid cache, fetch from database
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role, name')
+        .eq('id', supabaseUser.id)
+        .maybeSingle();
+      
+      if (userError) {
+        console.error("Erreur lors de la récupération du profil utilisateur:", userError);
+      }
+      
+      // Use user data from DB or fallback to metadata
+      const role = userData?.role || supabaseUser.user_metadata?.role || 'stagiaire';
+      const name = userData?.name || supabaseUser.user_metadata?.name || '';
+      
+      const formattedUser = {
+        id: supabaseUser.id,
+        email: supabaseUser.email!,
+        role: role,
+        name: name,
+        email_confirmed_at: supabaseUser.email_confirmed_at,
+        user_metadata: supabaseUser.user_metadata
+      };
+      
+      // Cache the user data
+      localStorage.setItem(`cachedUserProfile_${supabaseUser.id}`, JSON.stringify({
+        user: formattedUser,
+        timestamp: Date.now()
+      }));
+      
+      return formattedUser;
+    } catch (error) {
+      console.error("Erreur lors de la récupération des données utilisateur:", error);
+      
+      // Fallback to basic user data without DB fields
+      const basicUser = {
+        id: supabaseUser.id,
+        email: supabaseUser.email!,
+        role: supabaseUser.user_metadata?.role || 'stagiaire',
+        name: supabaseUser.user_metadata?.name || '',
+        email_confirmed_at: supabaseUser.email_confirmed_at,
+        user_metadata: supabaseUser.user_metadata
+      };
+      
+      return basicUser;
+    }
   }, []);
 
-  // Vérifier la session actuelle
+  // Check current session with optimized loading
   const checkUser = useCallback(async () => {
     try {
-      setLoading(true);
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
@@ -54,56 +88,87 @@ export function useAuth() {
       }
 
       if (session?.user) {
+        // Start with setting basic user data from session to show UI faster
+        const basicUserData = {
+          id: session.user.id,
+          email: session.user.email!,
+          role: session.user.user_metadata?.role || 'stagiaire',
+          name: session.user.user_metadata?.name || '',
+          email_confirmed_at: session.user.email_confirmed_at,
+          user_metadata: session.user.user_metadata
+        };
+        
+        // Set initial user state with basic data for faster UI rendering
+        setUser(basicUserData);
+        setUserRole(basicUserData.role);
+        setLoading(false);
+        
+        // Then fetch complete user data in background
         const formattedUser = await formatUserData(session.user);
-        setUser(formattedUser);
-        setUserRole(formattedUser?.role || null);
+        if (formattedUser) {
+          setUser(formattedUser);
+          setUserRole(formattedUser.role);
+        }
       } else {
         setUser(null);
         setUserRole(null);
+        setLoading(false);
       }
     } catch (error) {
       console.error('Erreur lors de la vérification de l\'utilisateur:', error);
       setUser(null);
       setUserRole(null);
-    } finally {
       setLoading(false);
     }
   }, [formatUserData]);
 
-  // Méthode pour rafraîchir manuellement les données utilisateur
+  // Method to manually refresh user data
   const refreshUser = useCallback(async () => {
     return checkUser();
   }, [checkUser]);
 
-  // Effet pour initialiser l'état d'authentification
+  // Effect to initialize authentication state
   useEffect(() => {
-    // Vérifier la session actuelle au montage
+    // Check current session on mount
     checkUser();
 
-    // Écouter les changements d'auth
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session?.user);
-      
       if (event === 'SIGNED_OUT') {
-        console.log("Utilisateur déconnecté, nettoyage de l'état...");
         setUser(null);
         setUserRole(null);
+        localStorage.removeItem(`cachedUserProfile_${session?.user?.id}`);
       } else if (session?.user) {
+        // Set basic user data immediately for faster UI rendering
+        const basicUserData = {
+          id: session.user.id,
+          email: session.user.email!,
+          role: session.user.user_metadata?.role || 'stagiaire',
+          name: session.user.user_metadata?.name || '',
+          email_confirmed_at: session.user.email_confirmed_at,
+          user_metadata: session.user.user_metadata
+        };
+        
+        setUser(basicUserData);
+        setUserRole(basicUserData.role);
+        
+        // Then fetch complete user data in background
         const formattedUser = await formatUserData(session.user);
-        setUser(formattedUser);
-        setUserRole(formattedUser?.role || null);
+        if (formattedUser) {
+          setUser(formattedUser);
+          setUserRole(formattedUser.role);
+        }
       }
       
       setLoading(false);
     });
 
     return () => {
-      console.log("Nettoyage du listener d'authentification");
       subscription.unsubscribe();
     };
   }, [checkUser, formatUserData]);
 
-  // Fonction de déconnexion
+  // Logout function
   const signOut = async () => {
     try {
       setLoading(true);
@@ -111,6 +176,11 @@ export function useAuth() {
       const { error } = await supabase.auth.signOut();
       
       if (error) throw error;
+      
+      // Clean up cached user data
+      if (user) {
+        localStorage.removeItem(`cachedUserProfile_${user.id}`);
+      }
       
       setUser(null);
       setUserRole(null);

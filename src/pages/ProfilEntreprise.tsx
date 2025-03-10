@@ -22,6 +22,7 @@ export default function ProfilEntreprise() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddOfferModalOpen, setIsAddOfferModalOpen] = useState(false);
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   
   useEffect(() => {
     async function fetchEntreprise() {
@@ -29,7 +30,37 @@ export default function ProfilEntreprise() {
         if (!id) return;
         
         console.log("Fetching entreprise with ID:", id);
+        setLoading(true);
         
+        // First try to get from cache for immediate UI response
+        const cachedData = localStorage.getItem(`cachedCompanyProfile_${id}`);
+        if (cachedData) {
+          const { data, timestamp } = JSON.parse(cachedData);
+          // Use cache if it's less than 5 minutes old
+          if (Date.now() - timestamp < 300000) {
+            console.log("Using cached company profile");
+            setEntreprise(data);
+            setLoading(false);
+            
+            // Still fetch in background to update cache
+            fetchFromDatabase();
+            return;
+          }
+        }
+        
+        // No valid cache, fetch from database
+        await fetchFromDatabase();
+        
+      } catch (err: any) {
+        console.error('Erreur lors du chargement de l\'entreprise:', err);
+        setError(err.message);
+        toast.error('Impossible de charger le profil de l\'entreprise');
+        setLoading(false);
+      }
+    }
+    
+    async function fetchFromDatabase() {
+      try {
         const { data, error } = await supabase
           .from('entreprises')
           .select('*')
@@ -37,45 +68,61 @@ export default function ProfilEntreprise() {
           .single();
           
         if (error) {
-          console.error("Error fetching entreprise:", error);
-          
-          // Si c'est juste que l'entreprise n'existe pas, essayons de la créer
-          if (error.code === 'PGRST116') {
-            // Vérifier si l'utilisateur connecté est cette entreprise
-            if (user && user.id === id && user.role === 'entreprise') {
-              console.log("Creating entreprise profile for user:", user.id);
+          // If company doesn't exist, check if the logged-in user is this company
+          if (error.code === 'PGRST116' && user && user.id === id && user.role === 'entreprise') {
+            console.log("Creating company profile for user:", user.id);
+            setIsCreatingProfile(true);
+            
+            // Create the company profile
+            const { data: createdData, error: createError } = await supabase
+              .from('entreprises')
+              .upsert({
+                id: user.id,
+                name: user.name || 'Entreprise',
+                email: user.email,
+                logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'E')}&background=random`,
+                is_verified: false,
+                created_at: new Date().toISOString()
+              }, { onConflict: 'id' });
               
-              // Créer l'entreprise
-              const { data: createdData, error: createError } = await supabase
-                .from('entreprises')
-                .upsert({
-                  id: user.id,
-                  name: user.name || 'Entreprise',
-                  email: user.email,
-                  logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'E')}&background=random`,
-                  is_verified: false,
-                  created_at: new Date().toISOString()
-                })
-                .select()
-                .single();
-                
-              if (createError) {
-                throw createError;
-              }
-              
-              setEntreprise(createdData);
-              return;
+            if (createError) {
+              throw createError;
             }
+            
+            // Fetch the newly created profile
+            const { data: newData, error: fetchError } = await supabase
+              .from('entreprises')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+              
+            if (fetchError) {
+              throw fetchError;
+            }
+            
+            setEntreprise(newData);
+            
+            // Cache the profile
+            localStorage.setItem(`cachedCompanyProfile_${id}`, JSON.stringify({
+              data: newData,
+              timestamp: Date.now()
+            }));
+            
+            setIsCreatingProfile(false);
+          } else {
+            throw error;
           }
+        } else {
+          setEntreprise(data);
           
-          throw error;
+          // Cache the profile
+          localStorage.setItem(`cachedCompanyProfile_${id}`, JSON.stringify({
+            data,
+            timestamp: Date.now()
+          }));
         }
-        
-        setEntreprise(data);
-      } catch (err: any) {
-        console.error('Erreur lors du chargement de l\'entreprise:', err);
-        setError(err.message);
-        toast.error('Impossible de charger le profil de l\'entreprise');
+      } catch (err) {
+        throw err;
       } finally {
         setLoading(false);
       }
@@ -89,7 +136,7 @@ export default function ProfilEntreprise() {
       <div className="flex justify-center items-center h-screen">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p>Chargement du profil...</p>
+          <p>{isCreatingProfile ? "Création de votre profil..." : "Chargement du profil..."}</p>
         </div>
       </div>
     );
@@ -131,8 +178,8 @@ export default function ProfilEntreprise() {
         </TabsList>
         <TabsContent value="about">
           <AboutTab 
-            bio={entreprise.description}
-            education={entreprise.industry}
+            bio={entreprise.description || ""}
+            education={entreprise.industry || ""}
             isPremium={entreprise.is_premium}
             userId={entreprise.id}
           />
