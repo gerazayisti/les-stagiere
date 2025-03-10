@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Eye, EyeOff, AlertCircle, Loader2, Mail } from "lucide-react"
+import { Eye, EyeOff, AlertCircle, Loader2, Mail, CheckCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/hooks/useAuth"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -31,6 +31,8 @@ export default function Inscription() {
   const location = useLocation()
   const { isAuthenticated, user } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [checkingEmail, setCheckingEmail] = useState(false)
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null)
@@ -68,6 +70,34 @@ export default function Inscription() {
       });
     }
   }, [isAuthenticated, user, navigate, location.search]);
+
+  // Effet pour vérifier si l'email est disponible
+  useEffect(() => {
+    const checkEmail = async () => {
+      if (formData.email && formData.email.includes('@') && formData.email.includes('.')) {
+        setCheckingEmail(true);
+        setEmailAvailable(null);
+        
+        try {
+          // Attendre un peu pour éviter trop de requêtes pendant la frappe
+          const timeoutId = setTimeout(async () => {
+            const exists = await auth.checkEmailExists(formData.email);
+            setEmailAvailable(!exists);
+            setCheckingEmail(false);
+          }, 800);
+          
+          return () => clearTimeout(timeoutId);
+        } catch (error) {
+          console.error("Erreur lors de la vérification de l'email:", error);
+          setCheckingEmail(false);
+        }
+      } else {
+        setEmailAvailable(null);
+      }
+    };
+    
+    checkEmail();
+  }, [formData.email]);
 
   const checkPasswordStrength = (password: string) => {
     if (password.length < 6) {
@@ -117,6 +147,12 @@ export default function Inscription() {
         setFormError(formData.role === 'entreprise' 
           ? "Le nom de l'entreprise est trop court" 
           : "Votre nom est trop court");
+        setLoading(false);
+        return;
+      }
+      
+      if (emailAvailable === false) {
+        setFormError("Cette adresse email est déjà utilisée");
         setLoading(false);
         return;
       }
@@ -261,18 +297,34 @@ export default function Inscription() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="votre@email.com"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  disabled={loading}
-                  autoComplete="email"
-                />
+                <Label htmlFor="email" className="flex justify-between">
+                  <span>Email</span>
+                  {emailAvailable === true && (
+                    <span className="text-xs text-green-500 flex items-center">
+                      <CheckCircle className="h-3 w-3 mr-1" /> Disponible
+                    </span>
+                  )}
+                  {emailAvailable === false && (
+                    <span className="text-xs text-red-500">Déjà utilisé</span>
+                  )}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="votre@email.com"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    disabled={loading}
+                    autoComplete="email"
+                    className={emailAvailable === false ? "border-red-300 pr-10" : ""}
+                  />
+                  {checkingEmail && (
+                    <Loader2 className="h-4 w-4 animate-spin absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -330,7 +382,11 @@ export default function Inscription() {
                 </Link>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading || (formData.email.includes('@') && emailAvailable === false)}
+              >
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -345,5 +401,5 @@ export default function Inscription() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
