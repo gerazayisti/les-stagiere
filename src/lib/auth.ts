@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError } from '@/types/auth';
@@ -119,72 +118,24 @@ export const auth = {
         };
       }
       
-      if (password.length < 8) {
-        return {
-          success: false,
-          error: {
-            message: "Le mot de passe doit contenir au moins 8 caractères",
-            status: 400
-          }
-        };
-      }
-      
       console.log("Tentative d'inscription avec les données:", {
         email,
         role,
         name,
-        password: "********" // Masquer le mot de passe
+        password: "********"
       });
       
-      // 2. Vérifier si l'email existe déjà
-      try {
-        const { data: existingUser, error: userCheckError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', email)
-          .maybeSingle();
-        
-        if (existingUser) {
-          return {
-            success: false,
-            error: {
-              message: "Cette adresse email est déjà utilisée",
-              status: 409
-            }
-          };
-        }
-      } catch (error) {
-        console.warn("Erreur lors de la vérification d'email existant:", error);
-        // Continuons le processus même si cette vérification échoue
-      }
-      
-      // 3. Inscription via Supabase Auth - SANS INCLURE LE RÔLE
-      // On stocke seulement le nom et l'email dans les métadonnées utilisateur
+      // 2. Inscription via Supabase Auth - UNIQUEMENT email et password
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            name,
-            email
-          },
           emailRedirectTo: `${window.location.origin}/email-confirmation`
-        },
+        }
       });
 
       if (signUpError) {
         console.error("Erreur lors de l'inscription:", signUpError);
-        
-        if (signUpError.message.includes("already registered")) {
-          return {
-            success: false,
-            error: {
-              message: "Cette adresse email est déjà utilisée",
-              status: 409
-            }
-          };
-        }
-        
         return {
           success: false,
           error: {
@@ -195,60 +146,36 @@ export const auth = {
         };
       }
 
-      console.log("Résultat de l'inscription:", authData);
-
-      // 4. Stocker temporairement les informations de rôle et de profil
-      // On les utilisera après confirmation de l'email
       if (authData?.user) {
-        // Stockage des informations de rôle et de profil dans le localStorage
-        // pour une utilisation ultérieure après confirmation de l'email
+        // Stocker les informations temporairement pour la création du profil après confirmation
         localStorage.setItem(`userProfile_${authData.user.id}`, JSON.stringify({
           id: authData.user.id,
-          email: authData.user.email || email,
+          email: authData.user.email,
           role,
           name
         }));
-        
-        // On ne crée pas immédiatement le profil utilisateur dans public.users
-        // Ce sera fait après confirmation de l'email
         
         toast.success("Inscription réussie", {
           description: "Vérifiez votre email pour confirmer votre compte"
         });
         
         return { success: true, data: authData };
-      } else {
-        return {
-          success: false,
-          error: {
-            message: "Erreur lors de la création du compte",
-            status: 500,
-            isRetryable: true
-          }
-        };
       }
+      
+      return {
+        success: false,
+        error: {
+          message: "Erreur lors de la création du compte",
+          status: 500,
+          isRetryable: true
+        }
+      };
     } catch (error: any) {
       console.error("Erreur d'inscription:", error);
       
-      let message = "Une erreur est survenue lors de l'inscription";
-      let status = 500;
-      let isRetryable = true;
-      
-      if (error.message?.includes("already registered") || error.message?.includes("déjà utilisée")) {
-        message = "Cette adresse email est déjà utilisée";
-        status = 409;
-        isRetryable = false;
-      } else if (error.message?.includes("Password should be")) {
-        message = "Le mot de passe doit contenir au moins 6 caractères";
-        status = 400;
-        isRetryable = false;
-      } else if (error.status === 500 || error.code === "unexpected_failure") {
-        message = "Erreur serveur. Veuillez réessayer ultérieurement.";
-        status = 500;
-        isRetryable = true;
-      } else if (error.message) {
-        message = error.message;
-      }
+      const message = error.message?.includes("already registered") 
+        ? "Cette adresse email est déjà utilisée"
+        : "Une erreur est survenue lors de l'inscription";
       
       toast.error("Erreur d'inscription", {
         description: message
@@ -258,48 +185,8 @@ export const auth = {
         success: false,
         error: {
           message,
-          status,
-          isRetryable
-        }
-      };
-    }
-  },
-
-  // Création du profil après confirmation de l'email
-  async createProfileAfterConfirmation(userId: string): Promise<AuthResponse> {
-    try {
-      // Récupérer les informations temporaires de profil depuis le localStorage
-      const storedProfileData = localStorage.getItem(`userProfile_${userId}`);
-      
-      if (!storedProfileData) {
-        return {
-          success: false,
-          error: {
-            message: "Informations de profil non trouvées",
-            status: 404
-          }
-        };
-      }
-      
-      const profileData = JSON.parse(storedProfileData);
-      
-      // Créer le profil utilisateur dans les tables publiques
-      const result = await createUserProfile(profileData);
-      
-      if (result.success) {
-        // Supprimer les données temporaires
-        localStorage.removeItem(`userProfile_${userId}`);
-      }
-      
-      return result;
-    } catch (error: any) {
-      console.error("Erreur lors de la création du profil après confirmation:", error);
-      return {
-        success: false,
-        error: {
-          message: error.message || "Erreur lors de la création du profil",
-          status: 500,
-          isRetryable: true
+          status: error.status || 500,
+          isRetryable: !error.message?.includes("already registered")
         }
       };
     }
@@ -539,5 +426,80 @@ export const auth = {
       console.error("Erreur lors de la suppression de l'avatar:", error);
       throw error;
     }
-  }
+  },
+
+  // Création du profil après confirmation de l'email
+  async createProfileAfterConfirmation(userId: string): Promise<AuthResponse> {
+    try {
+      const storedProfileData = localStorage.getItem(`userProfile_${userId}`);
+      
+      if (!storedProfileData) {
+        return {
+          success: false,
+          error: {
+            message: "Informations de profil non trouvées",
+            status: 404
+          }
+        };
+      }
+      
+      const profileData = JSON.parse(storedProfileData);
+      
+      // Créer d'abord l'entrée dans la table users
+      const { error: userError } = await supabase
+        .from('users')
+        .upsert({
+          id: userId,
+          email: profileData.email,
+          role: profileData.role,
+          name: profileData.name,
+          is_active: true
+        });
+
+      if (userError) {
+        console.error("Erreur lors de la création du profil utilisateur:", userError);
+        throw userError;
+      }
+
+      // Créer le profil spécifique selon le rôle
+      if (profileData.role === 'stagiaire') {
+        const { error: stagiaireError } = await supabase
+          .from('stagiaires')
+          .upsert({
+            id: userId,
+            name: profileData.name,
+            email: profileData.email,
+            avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=random`
+          });
+
+        if (stagiaireError) throw stagiaireError;
+      } else if (profileData.role === 'entreprise') {
+        const { error: entrepriseError } = await supabase
+          .from('entreprises')
+          .upsert({
+            id: userId,
+            name: profileData.name,
+            email: profileData.email,
+            logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=random`
+          });
+
+        if (entrepriseError) throw entrepriseError;
+      }
+      
+      // Supprimer les données temporaires
+      localStorage.removeItem(`userProfile_${userId}`);
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Erreur lors de la création du profil:', error);
+      return {
+        success: false,
+        error: {
+          message: error.message || "Erreur lors de la création du profil",
+          status: error.code === '23505' ? 409 : 500,
+          isRetryable: true
+        }
+      };
+    }
+  },
 };
