@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 
@@ -28,6 +27,23 @@ export async function createUserProfile(userData: {
   try {
     console.log(`Création du profil utilisateur pour ${id} avec le rôle ${role}`);
     
+    // Vérifier d'abord si l'utilisateur existe déjà dans la table users
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+      
+    if (checkError) {
+      console.error("Erreur lors de la vérification de l'existence de l'utilisateur:", checkError);
+      return { success: false, error: checkError };
+    }
+    
+    if (existingUser) {
+      console.log("L'utilisateur existe déjà dans la table users, pas besoin de le créer à nouveau");
+      return { success: true };
+    }
+    
     // 1. Créer l'entrée dans la table users (principale)
     const { error: userError } = await supabase
       .from('users')
@@ -46,6 +62,22 @@ export async function createUserProfile(userData: {
     
     // 2. Selon le rôle, créer l'entrée spécifique
     if (role === 'stagiaire') {
+      // Vérifier si le stagiaire existe déjà
+      const { data: existingStagiaire, error: checkStagiaireError } = await supabase
+        .from('stagiaires')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle();
+        
+      if (checkStagiaireError) {
+        console.error("Erreur lors de la vérification de l'existence du stagiaire:", checkStagiaireError);
+      }
+      
+      if (existingStagiaire) {
+        console.log("Le stagiaire existe déjà, pas besoin de le créer à nouveau");
+        return { success: true };
+      }
+      
       const { error: stagiaireError } = await supabase
         .from('stagiaires')
         .insert({
@@ -64,6 +96,22 @@ export async function createUserProfile(userData: {
       }
     } 
     else if (role === 'entreprise') {
+      // Vérifier si l'entreprise existe déjà
+      const { data: existingEntreprise, error: checkEntrepriseError } = await supabase
+        .from('entreprises')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle();
+        
+      if (checkEntrepriseError) {
+        console.error("Erreur lors de la vérification de l'existence de l'entreprise:", checkEntrepriseError);
+      }
+      
+      if (existingEntreprise) {
+        console.log("L'entreprise existe déjà, pas besoin de la créer à nouveau");
+        return { success: true };
+      }
+      
       const { error: entrepriseError } = await supabase
         .from('entreprises')
         .insert({
@@ -112,13 +160,25 @@ export const auth = {
         password: "********" // Masquer le mot de passe
       });
       
-      // 2. Inscription via Supabase Auth
+      // 2. Vérifier si l'email existe déjà dans auth
+      const { data: authUserData, error: checkError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false,
+        }
+      });
+      
+      if (authUserData?.user) {
+        throw new Error("Cette adresse email est déjà utilisée");
+      }
+      
+      // 3. Inscription via Supabase Auth avec redirection pour confirmation d'email
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { role, name },
-          emailRedirectTo: `${window.location.origin}/connexion?email_confirmed=true`
+          emailRedirectTo: `${window.location.origin}/email-confirmation`
         },
       });
 
@@ -134,10 +194,10 @@ export const auth = {
 
       console.log("Résultat de l'inscription:", authData);
 
-      // 3. Si l'utilisateur est créé avec succès dans Auth, créer immédiatement le profil
+      // 4. Si l'utilisateur est créé avec succès dans Auth, créer immédiatement le profil
       if (authData?.user) {
         try {
-          // Créer immédiatement le profil utilisateur, sans setTimeout
+          // Créer immédiatement le profil utilisateur
           const userProfileResult = await createUserProfile({
             id: authData.user.id,
             email: authData.user.email || email,
@@ -147,9 +207,11 @@ export const auth = {
           
           if (!userProfileResult.success) {
             console.error("L'utilisateur a été créé dans auth mais pas dans les tables publiques", userProfileResult.error);
+            
             // Si l'erreur est critique, on peut l'escalader
             if (userProfileResult.error && 'code' in userProfileResult.error && userProfileResult.error.code === '23505') {
-              throw new Error("Ce profil existe déjà dans notre base de données");
+              // C'est une violation de contrainte d'unicité, mais l'utilisateur est créé dans auth
+              console.warn("Conflit de clé unique lors de la création du profil, mais l'utilisateur est créé dans auth");
             }
           } else {
             console.log("Profil utilisateur créé avec succès dans les tables publiques");
@@ -159,7 +221,7 @@ export const auth = {
           
           // Si l'erreur est liée à une contrainte d'unicité (email déjà utilisé), on le signale
           if (profileError && 'code' in profileError && profileError.code === '23505') {
-            throw new Error("Ce profil existe déjà dans notre base de données");
+            console.warn("Ce profil existe déjà dans la base de données, mais l'utilisateur est créé dans auth");
           }
           
           // Pour les autres erreurs, on continue le processus car l'utilisateur est créé dans auth
@@ -177,7 +239,7 @@ export const auth = {
       
       let message = "Une erreur est survenue lors de l'inscription";
       
-      if (error.message?.includes("already registered")) {
+      if (error.message?.includes("already registered") || error.message?.includes("déjà utilisée")) {
         message = "Cette adresse email est déjà utilisée";
       } else if (error.message?.includes("Password should be")) {
         message = "Le mot de passe doit contenir au moins 6 caractères";
@@ -203,7 +265,12 @@ export const auth = {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          throw new Error("Veuillez confirmer votre email avant de vous connecter");
+        }
+        throw error;
+      }
       
       toast.success("Connexion réussie", {
         description: `Bienvenue, ${data.user.user_metadata?.name || data.user.email}`
@@ -217,7 +284,7 @@ export const auth = {
       
       if (error.message.includes("Invalid login credentials")) {
         message = "Email ou mot de passe incorrect";
-      } else if (error.message.includes("Email not confirmed")) {
+      } else if (error.message.includes("Email not confirmed") || error.message.includes("confirmer votre email")) {
         message = "Veuillez confirmer votre email avant de vous connecter";
       }
       
@@ -226,6 +293,35 @@ export const auth = {
       });
       
       throw new Error(message);
+    }
+  },
+
+  // Renvoyer l'email de confirmation
+  async resendConfirmationEmail(email: string) {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/email-confirmation`
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Email envoyé", {
+        description: "Un nouvel email de confirmation a été envoyé"
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Erreur lors de l'envoi de l'email de confirmation:", error);
+      
+      toast.error("Erreur", {
+        description: "Impossible d'envoyer l'email de confirmation"
+      });
+      
+      throw error;
     }
   },
 

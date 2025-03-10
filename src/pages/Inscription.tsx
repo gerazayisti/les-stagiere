@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { auth, UserRole } from "@/lib/auth"
@@ -10,6 +11,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from "@/components/ui/card"
 import {
   Select,
@@ -19,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
+import { Eye, EyeOff, AlertCircle, Loader2, Mail } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/hooks/useAuth"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -33,6 +35,7 @@ export default function Inscription() {
   const [formError, setFormError] = useState<string | null>(null)
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null)
   const [retryCount, setRetryCount] = useState(0)
+  const [emailSent, setEmailSent] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -132,13 +135,10 @@ export default function Inscription() {
         const result = await auth.signUp(formData);
         
         if (result.success) {
+          setEmailSent(true);
           toast.success("Inscription réussie !", {
-            description: "Veuillez vérifier votre email pour continuer."
+            description: "Veuillez vérifier votre email pour confirmer votre compte."
           });
-
-          setTimeout(() => {
-            navigate('/connexion');
-          }, 1500);
         }
       } catch (error: any) {
         console.error("Erreur lors de l'inscription:", error);
@@ -173,6 +173,69 @@ export default function Inscription() {
       setLoading(false);
     }
   };
+
+  const handleResendEmail = async () => {
+    if (!formData.email) {
+      setFormError("Veuillez entrer une adresse email");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await auth.resendConfirmationEmail(formData.email);
+      toast.success("Email de confirmation renvoyé", {
+        description: "Veuillez vérifier votre boîte mail"
+      });
+    } catch (error: any) {
+      console.error("Erreur lors du renvoi de l'email:", error);
+      setFormError("Impossible de renvoyer l'email de confirmation");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (emailSent) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">Vérifiez votre email</CardTitle>
+            <CardDescription className="text-center">
+              Un email de confirmation a été envoyé à {formData.email}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center space-y-4 py-6">
+            <Mail className="h-16 w-16 text-primary" />
+            <p className="text-center text-muted-foreground">
+              Cliquez sur le lien dans l'email pour activer votre compte. Si vous ne recevez pas l'email, vérifiez votre dossier spam.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleResendEmail}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Envoi en cours...
+                </>
+              ) : (
+                "Renvoyer l'email"
+              )}
+            </Button>
+            <div className="text-sm text-center">
+              <Link to="/connexion" className="text-primary hover:underline">
+                Retour à la connexion
+              </Link>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
