@@ -14,13 +14,12 @@ CREATE TYPE stage_type AS ENUM ('temps_plein', 'temps_partiel', 'alternance', 'r
 CREATE TYPE message_status AS ENUM ('sent', 'delivered', 'read');
 CREATE TYPE notification_type AS ENUM ('message', 'candidature', 'recommendation', 'stage');
 
--- Base user table for authentication
+-- Table utilisateurs qui étend auth.users
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    id UUID PRIMARY KEY, -- UUID qui correspond à l'id de auth.users
+    email VARCHAR(255) UNIQUE NOT NULL, -- Correspond à l'email dans auth.users
     role user_role NOT NULL,
-    email_verified BOOLEAN DEFAULT false,
+    name VARCHAR(255),
     is_active BOOLEAN DEFAULT true,
     last_login TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
@@ -72,6 +71,22 @@ CREATE TABLE entreprises (
     verified BOOLEAN DEFAULT false,
     rating DECIMAL(3,2),
     number_of_reviews INTEGER DEFAULT 0
+);
+
+-- Documents
+CREATE TABLE documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    stagiaire_id UUID REFERENCES stagiaires(id),
+    type VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    file_url TEXT NOT NULL,
+    file_size INTEGER,
+    file_type VARCHAR(50),
+    is_primary BOOLEAN DEFAULT false,
+    is_public BOOLEAN DEFAULT false,
+    upload_date TIMESTAMP DEFAULT NOW(),
+    last_modified TIMESTAMP,
+    metadata JSONB
 );
 
 -- Stages (Internship offers)
