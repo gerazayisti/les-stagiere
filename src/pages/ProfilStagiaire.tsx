@@ -41,9 +41,9 @@ export default function ProfilStagiaire() {
         bio={stagiaire.bio || ""}
         location={stagiaire.location || ""}
         socials={{
-          website: stagiaire.website || "",
-          github: stagiaire.github || "",
-          linkedin: stagiaire.linkedin || ""
+          website: stagiaire.user_metadata?.website || "",
+          github: stagiaire.user_metadata?.github || "",
+          linkedin: stagiaire.user_metadata?.linkedin || ""
         }}
         editable={isCurrentUser}
         onEdit={() => {}}
@@ -58,9 +58,9 @@ export default function ProfilStagiaire() {
         </TabsList>
         <TabsContent value="about">
           <AboutTab 
-            bio={stagiaire.bio}
-            education={stagiaire.education}
-            disponibility={stagiaire.disponibility || "upcoming"}
+            bio={stagiaire.bio || ""}
+            disponibility={stagiaire.disponibility}
+            education={stagiaire.education || []}
             isPremium={stagiaire.is_premium}
             userId={stagiaire.id}
           />

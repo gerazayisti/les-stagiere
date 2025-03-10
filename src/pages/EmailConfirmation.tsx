@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { auth } from '@/lib/auth';
 
 export default function EmailConfirmation() {
   const [loading, setLoading] = useState(true);
@@ -32,10 +33,14 @@ export default function EmailConfirmation() {
           throw sessionError || new Error('User not found');
         }
 
+        // Create or update profile in the database
+        await auth.createProfileAfterConfirmation(user.id);
+
         // Redirect based on user role
-        if (user.user_metadata?.role === 'entreprise') {
+        const role = user.user_metadata?.role;
+        if (role === 'entreprise') {
           navigate(`/entreprises/${user.id}`);
-        } else if (user.user_metadata?.role === 'stagiaire') {
+        } else if (role === 'stagiaire') {
           navigate(`/stagiaires/${user.id}`);
         } else {
           navigate('/complete-profile');

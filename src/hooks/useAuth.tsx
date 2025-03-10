@@ -28,34 +28,14 @@ export function useAuth() {
       console.error("Erreur lors de la récupération du profil utilisateur:", userError);
     }
     
-    // Si l'utilisateur n'a pas encore de profil, utiliser les données temporaires
-    let role = userData?.role || supabaseUser.user_metadata?.role;
-    let name = userData?.name || supabaseUser.user_metadata?.name || '';
-    
-    if (!role && supabaseUser.email_confirmed_at) {
-      // L'email est confirmé mais pas de profil - vérifier les données stockées
-      const storedProfile = localStorage.getItem(`userProfile_${supabaseUser.id}`);
-      if (storedProfile) {
-        try {
-          const profileData = JSON.parse(storedProfile);
-          role = profileData.role;
-          name = profileData.name;
-          
-          // Créer le profil maintenant
-          const result = await auth.createProfileAfterConfirmation(supabaseUser.id);
-          if (!result.success) {
-            console.error("Échec de la création du profil après confirmation:", result.error);
-          }
-        } catch (e) {
-          console.error("Erreur lors de la récupération des données temporaires:", e);
-        }
-      }
-    }
+    // Si l'utilisateur n'a pas encore de profil, utiliser les données de user_metadata
+    const role = userData?.role || supabaseUser.user_metadata?.role || null;
+    const name = userData?.name || supabaseUser.user_metadata?.name || '';
     
     return {
       id: supabaseUser.id,
       email: supabaseUser.email!,
-      role: role || 'stagiaire', // Valeur par défaut si non trouvée
+      role: role || 'stagiaire',
       name: name,
       email_confirmed_at: supabaseUser.email_confirmed_at,
       user_metadata: supabaseUser.user_metadata
@@ -88,7 +68,7 @@ export function useAuth() {
       setLoading(false);
     }
   }, [formatUserData]);
-  
+
   // Méthode pour rafraîchir manuellement les données utilisateur
   const refreshUser = useCallback(async () => {
     return checkUser();
@@ -96,7 +76,7 @@ export function useAuth() {
 
   // Effet pour initialiser l'état d'authentification
   useEffect(() => {
-    // Vérifier la session actuelle
+    // Vérifier la session actuelle au montage
     checkUser();
 
     // Écouter les changements d'auth
