@@ -13,6 +13,8 @@ export function useInternshipOffers(companyId: string) {
   useEffect(() => {
     const fetchOffers = async () => {
       try {
+        setLoading(true);
+        
         // Try to get from cache first for immediate UI response
         const cachedOffers = localStorage.getItem(`cachedOffers_${companyId}`);
         if (cachedOffers) {
@@ -20,6 +22,7 @@ export function useInternshipOffers(companyId: string) {
           // Use cache if less than 2 minutes old
           if (Date.now() - timestamp < 120000) {
             setOffers(data);
+            setLoading(false);
             // Still fetch fresh data in the background
           }
         }
@@ -43,12 +46,12 @@ export function useInternshipOffers(companyId: string) {
         }));
         
         setOffers(offersData);
+        setLoading(false);
       } catch (err: any) {
         console.error("Error fetching offers:", err);
         setError(err.message);
-        toast.error("Impossible de charger les offres de stage");
-      } finally {
         setLoading(false);
+        toast.error("Impossible de charger les offres de stage");
       }
     };
 

@@ -101,8 +101,8 @@ export default function ProfilStagiaire() {
       ? stagiaire.disponibility 
       : "upcoming";
       
-  // Ensure education is properly formatted - fixing the TypeScript error by using the correct typing
-  const education = stagiaire.education || [];
+  // FIX: Ensure education is properly formatted - accepting the array type instead of string
+  const education = Array.isArray(stagiaire.education) ? stagiaire.education : [];
   
   return (
     <div className="container mx-auto py-8 px-4">
