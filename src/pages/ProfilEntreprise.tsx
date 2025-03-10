@@ -13,6 +13,7 @@ import { InternshipOffersList } from '@/components/profile/InternshipOffersList'
 import { CompanyRecommendations } from '@/components/profile/CompanyRecommendations';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProfilEntreprise() {
   const { id } = useParams<{ id: string }>();
@@ -20,130 +21,151 @@ export default function ProfilEntreprise() {
   const { user } = useAuth();
   const [entreprise, setEntreprise] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [headerLoaded, setHeaderLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAddOfferModalOpen, setIsAddOfferModalOpen] = useState(false);
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   
+  // Chargement progressif - charger d'abord les données de base
   useEffect(() => {
-    async function fetchEntreprise() {
+    async function loadBasicData() {
       try {
         if (!id) return;
         
-        console.log("Fetching entreprise with ID:", id);
-        setLoading(true);
+        console.log("Charging basic entreprise data for ID:", id);
         
-        // First try to get from cache for immediate UI response
+        // Essayer d'abord d'obtenir depuis le cache pour une réponse UI immédiate
         const cachedData = localStorage.getItem(`cachedCompanyProfile_${id}`);
         if (cachedData) {
           const { data, timestamp } = JSON.parse(cachedData);
-          // Use cache if it's less than 5 minutes old
+          // Utiliser le cache s'il a moins de 5 minutes
           if (Date.now() - timestamp < 300000) {
             console.log("Using cached company profile");
             setEntreprise(data);
-            setLoading(false);
-            
-            // Still fetch in background to update cache
-            fetchFromDatabase();
-            return;
+            setHeaderLoaded(true);
           }
         }
         
-        // No valid cache, fetch from database
-        await fetchFromDatabase();
-        
-      } catch (err: any) {
-        console.error('Erreur lors du chargement de l\'entreprise:', err);
-        setError(err.message);
-        toast.error('Impossible de charger le profil de l\'entreprise');
-        setLoading(false);
+        // Peu importe si nous avons chargé depuis le cache, charger depuis la DB
+        fetchEnterpriseData();
+      } catch (err) {
+        console.error('Erreur initiale:', err);
       }
     }
     
-    async function fetchFromDatabase() {
-      try {
-        const { data, error } = await supabase
-          .from('entreprises')
-          .select('*')
-          .eq('id', id)
-          .single();
+    loadBasicData();
+  }, [id]);
+  
+  async function fetchEnterpriseData() {
+    try {
+      if (!id) return;
+      
+      // Vérifier si l'utilisateur connecté est cette entreprise
+      const isCurrentUserCompany = user && user.id === id && user.role === 'entreprise';
+      
+      console.log("Fetching full entreprise data with ID:", id);
+      
+      let { data, error: fetchError } = await supabase
+        .from('entreprises')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      
+      if (fetchError) {
+        console.error("Fetch error:", fetchError);
+        
+        // Si l'entreprise n'existe pas et que l'utilisateur connecté est cette entreprise
+        if (isCurrentUserCompany) {
+          console.log("Creating company profile for user:", user.id);
+          setIsCreatingProfile(true);
           
-        if (error) {
-          // If company doesn't exist, check if the logged-in user is this company
-          if (error.code === 'PGRST116' && user && user.id === id && user.role === 'entreprise') {
-            console.log("Creating company profile for user:", user.id);
-            setIsCreatingProfile(true);
+          // Créer le profil de l'entreprise
+          const { error: createError } = await supabase
+            .from('entreprises')
+            .upsert({
+              id: user.id,
+              name: user.name || 'Entreprise',
+              email: user.email,
+              logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'E')}&background=random`,
+              is_verified: false,
+              created_at: new Date().toISOString()
+            }, { onConflict: 'id' });
             
-            // Create the company profile
-            const { data: createdData, error: createError } = await supabase
-              .from('entreprises')
-              .upsert({
-                id: user.id,
-                name: user.name || 'Entreprise',
-                email: user.email,
-                logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'E')}&background=random`,
-                is_verified: false,
-                created_at: new Date().toISOString()
-              }, { onConflict: 'id' });
-              
-            if (createError) {
-              throw createError;
-            }
-            
-            // Fetch the newly created profile
-            const { data: newData, error: fetchError } = await supabase
-              .from('entreprises')
-              .select('*')
-              .eq('id', user.id)
-              .single();
-              
-            if (fetchError) {
-              throw fetchError;
-            }
-            
-            setEntreprise(newData);
-            
-            // Cache the profile
-            localStorage.setItem(`cachedCompanyProfile_${id}`, JSON.stringify({
-              data: newData,
-              timestamp: Date.now()
-            }));
-            
-            setIsCreatingProfile(false);
-          } else {
-            throw error;
+          if (createError) {
+            throw createError;
           }
-        } else {
-          setEntreprise(data);
           
-          // Cache the profile
+          // Récupérer le profil nouvellement créé
+          const { data: newData, error: newFetchError } = await supabase
+            .from('entreprises')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+            
+          if (newFetchError) {
+            throw newFetchError;
+          }
+          
+          data = newData;
+          
+          // Mettre en cache le profil
           localStorage.setItem(`cachedCompanyProfile_${id}`, JSON.stringify({
             data,
             timestamp: Date.now()
           }));
+          
+          setIsCreatingProfile(false);
+        } else {
+          throw fetchError;
         }
-      } catch (err) {
-        throw err;
-      } finally {
-        setLoading(false);
+      } else if (data) {
+        // Mettre en cache le profil
+        localStorage.setItem(`cachedCompanyProfile_${id}`, JSON.stringify({
+          data,
+          timestamp: Date.now()
+        }));
       }
+      
+      setEntreprise(data);
+      setHeaderLoaded(true);
+      setLoading(false);
+    } catch (err: any) {
+      console.error('Erreur lors du chargement de l\'entreprise:', err);
+      setError(err.message);
+      setLoading(false);
+      toast.error('Impossible de charger le profil de l\'entreprise');
     }
-    
-    fetchEntreprise();
-  }, [id, user]);
+  }
   
-  if (loading) {
+  // Rendu d'un squelette pendant le chargement des données de base
+  if (!headerLoaded) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex flex-col items-center space-y-4 mb-8">
+          <Skeleton className="h-24 w-24 rounded-full" />
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <div className="flex justify-center mt-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+  
+  if (loading && isCreatingProfile) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p>{isCreatingProfile ? "Création de votre profil..." : "Chargement du profil..."}</p>
+          <p>Création de votre profil...</p>
         </div>
       </div>
     );
   }
   
   if (error || !entreprise) {
-    return <Navigate to="/404" />;
+    return <Navigate to="/" />;
   }
   
   const isCurrentUser = user?.id === entreprise.id;

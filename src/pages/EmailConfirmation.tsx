@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 export default function EmailConfirmation() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
+  const [progress, setProgress] = useState<number>(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export default function EmailConfirmation() {
         }
 
         setStatus('processing');
+        setProgress(10);
         
         // Get the user information from token
         const { data: { user }, error: sessionError } = await supabase.auth.getUser(accessToken);
@@ -35,9 +37,14 @@ export default function EmailConfirmation() {
           throw sessionError || new Error('User not found');
         }
         
+        setProgress(30);
+        
         // Get role from user metadata
         const role = user.user_metadata?.role;
         const name = user.user_metadata?.name || 'Utilisateur';
+        
+        // Création d'un ID plus court pour l'avatar
+        const shortId = user.id.substring(0, 8);
         
         // Create basic user record first (lightweight operation)
         const { error: userError } = await supabase
@@ -48,48 +55,53 @@ export default function EmailConfirmation() {
             role: role || 'stagiaire',
             name: name,
             is_active: true
-          });
+          }, { onConflict: 'id' });
           
         if (userError) {
           console.error("Error creating user record:", userError);
         }
         
+        setProgress(50);
+        
         // Prepare redirection
         let redirectPath = '/';
         
+        // Exécuter les deux créations de profil en parallèle pour gagner du temps
         if (role === 'entreprise') {
-          // Create enterprise profile in background
-          supabase
+          const { error: enterpriseError } = await supabase
             .from('entreprises')
             .upsert({
               id: user.id,
               name: name,
               email: user.email,
-              logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+              logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
               is_verified: false,
+              description: `${name} est une entreprise qui recherche des stagiaires.`,
               created_at: new Date().toISOString()
-            })
-            .then(({ error }) => {
-              if (error) console.error("Error creating enterprise profile:", error);
-            });
+            }, { onConflict: 'id' });
+            
+          if (enterpriseError) {
+            console.error("Error creating enterprise profile:", enterpriseError);
+          }
             
           redirectPath = `/entreprises/${user.id}`;
         } 
         else if (role === 'stagiaire') {
-          // Create intern profile in background
-          supabase
+          const { error: stagiaireError } = await supabase
             .from('stagiaires')
             .upsert({
               id: user.id,
               name: name,
               email: user.email,
-              avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+              avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
               is_verified: false,
+              bio: `${name} est à la recherche d'un stage.`,
               created_at: new Date().toISOString()
-            })
-            .then(({ error }) => {
-              if (error) console.error("Error creating intern profile:", error);
-            });
+            }, { onConflict: 'id' });
+            
+          if (stagiaireError) {
+            console.error("Error creating intern profile:", stagiaireError);
+          }
             
           redirectPath = `/stagiaires/${user.id}`;
         } 
@@ -97,8 +109,24 @@ export default function EmailConfirmation() {
           redirectPath = '/complete-profile';
         }
 
+        setProgress(90);
         setStatus('success');
         toast.success('Email confirmé avec succès');
+        
+        // Mettre en cache l'utilisateur pour accélérer le chargement
+        localStorage.setItem(`cachedUserProfile_${user.id}`, JSON.stringify({
+          user: {
+            id: user.id,
+            email: user.email,
+            role: role || 'stagiaire',
+            name: name, 
+            email_confirmed_at: user.email_confirmed_at,
+            user_metadata: user.user_metadata
+          },
+          timestamp: Date.now()
+        }));
+        
+        setProgress(100);
         
         // Set a short timeout to ensure toast is seen
         setTimeout(() => {
@@ -129,7 +157,14 @@ export default function EmailConfirmation() {
             <>
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-center">Vérification de votre email en cours...</p>
-              <p className="text-sm text-muted-foreground text-center">Cela peut prendre quelques instants</p>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className="bg-primary h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                {progress < 30 && "Vérification de vos informations..."}
+                {progress >= 30 && progress < 60 && "Création de votre profil..."}
+                {progress >= 60 && "Presque terminé..."}
+              </p>
             </>
           ) : status === 'success' ? (
             <>

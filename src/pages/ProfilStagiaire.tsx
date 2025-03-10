@@ -7,22 +7,22 @@ import { CVTab } from '@/components/profile/CVTab';
 import { Recommendations } from '@/components/profile/Recommendations';
 import Portfolio from '@/components/profile/Portfolio';
 import { useStagiaire } from '@/hooks/useStagiaire';
-import { useParams } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 
 export default function ProfilStagiaire() {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("about");
-  const { stagiaire, loading, error } = useStagiaire(id);
+  const { stagiaire, loading, error } = useStagiaire(id || '');
   const { user } = useAuth();
   
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
           <p>Chargement du profil...</p>
         </div>
       </div>
@@ -31,11 +31,11 @@ export default function ProfilStagiaire() {
   
   if (error) {
     toast.error("Erreur lors du chargement du profil");
-    return <Navigate to="/404" />;
+    return <Navigate to="/" />;
   }
   
   if (!stagiaire) {
-    return <Navigate to="/404" />;
+    return <Navigate to="/" />;
   }
   
   const isCurrentUser = user?.id === stagiaire.id;
@@ -53,7 +53,7 @@ export default function ProfilStagiaire() {
       ? stagiaire.disponibility 
       : "upcoming";
       
-  // Ensure education is properly formatted
+  // Ensure education is properly formatted - résolution de l'erreur TypeScript
   const education = stagiaire.education || [];
   
   return (
@@ -95,7 +95,7 @@ export default function ProfilStagiaire() {
         </TabsContent>
         <TabsContent value="recommendations">
           <Recommendations 
-            recommendations={[]}
+            recommendations={stagiaire.recommendations || []}
             isOwner={isCurrentUser}
             stagiaireId={stagiaire.id}
             isPremium={stagiaire.is_premium}
