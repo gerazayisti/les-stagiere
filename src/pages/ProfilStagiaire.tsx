@@ -101,8 +101,11 @@ export default function ProfilStagiaire() {
       ? stagiaire.disponibility 
       : "upcoming";
       
-  // FIX: Ensure education is properly formatted - accepting the array type instead of string
-  const education = Array.isArray(stagiaire.education) ? stagiaire.education : [];
+  // Fix for education type issue - ensure it's handled properly with the AboutTab component
+  // Convert string to array format if needed
+  const educationData = Array.isArray(stagiaire.education) 
+    ? stagiaire.education 
+    : [];
   
   return (
     <div className="container mx-auto py-8 px-4">
@@ -127,7 +130,7 @@ export default function ProfilStagiaire() {
           <AboutTab 
             bio={stagiaire.bio || ""}
             disponibility={disponibility}
-            education={education}
+            education={educationData}
             isPremium={stagiaire.is_premium}
             userId={stagiaire.id}
           />
