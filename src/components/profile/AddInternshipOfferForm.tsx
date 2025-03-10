@@ -1,232 +1,256 @@
-
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { supabase } from "@/lib/supabase";
-import { InternshipOffer } from "@/types/project";
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, X } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Database } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar"
+import { CalendarIcon } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
+import { ListSkills } from '../ListSkills';
 
-const internshipFormSchema = z.object({
-  title: z.string().min(5, {
-    message: "Le titre doit contenir au moins 5 caractères.",
-  }),
-  description: z.string().min(20, {
-    message: "La description doit contenir au moins 20 caractères.",
-  }),
-  location: z.string().min(2, {
-    message: "Veuillez spécifier une localisation valide.",
-  }),
-  type: z.enum(["temps_plein", "temps_partiel", "alternance", "remote"], {
-    required_error: "Veuillez sélectionner un type de stage.",
-  }),
-  duration: z.string().min(2, {
-    message: "Veuillez spécifier une durée.",
-  }),
-  start_date: z.date({
-    required_error: "Veuillez sélectionner une date de début.",
-  }),
-  compensation: z.string().optional(),
-  required_skills: z.array(z.string()).nonempty({
-    message: "Veuillez ajouter au moins une compétence requise.",
-  }),
-  preferred_skills: z.array(z.string()).optional(),
-  status: z.enum(["active", "closed", "draft"], {
-    required_error: "Veuillez sélectionner un statut.",
-  }),
-});
+type Stage = Database['public']['Tables']['stages']['Row'];
 
-type InternshipFormValues = z.infer<typeof internshipFormSchema>;
+interface AddInternshipOfferFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: Stage) => void;
+  initialData?: Stage;
+}
 
-export function AddInternshipOfferForm({ companyId, onSuccess }: { 
-  companyId: string, 
-  onSuccess?: () => void 
-}) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newSkill, setNewSkill] = useState("");
-  const [newPreferredSkill, setNewPreferredSkill] = useState("");
+export default function AddInternshipOfferForm({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+}: AddInternshipOfferFormProps) {
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [shortDescription, setShortDescription] = useState(initialData?.short_description || "");
+  const [requirements, setRequirements] = useState(initialData?.requirements || "");
+  const [responsibilities, setResponsibilities] = useState(initialData?.responsibilities || "");
+  const [location, setLocation] = useState(initialData?.location || "");
+  const [remotePolicy, setRemotePolicy] = useState(initialData?.remote_policy || "");
+  const [type, setType] = useState(initialData?.type || "temps_plein");
+  const [duration, setDuration] = useState(initialData?.duration || "");
+  const [startDate, setStartDate] = useState<Date | undefined>(initialData?.start_date ? new Date(initialData.start_date) : undefined);
+  const [compensationAmount, setCompensationAmount] = useState(initialData?.compensation?.amount || 0);
+  const [compensationCurrency, setCompensationCurrency] = useState(initialData?.compensation?.currency || "EUR");
+  const [compensationPeriod, setCompensationPeriod] = useState(initialData?.compensation?.period || "mois");
+  const emptySkillsArray: [string, ...string[]] = [''];
   
-  const defaultValues: Partial<InternshipFormValues> = {
-    title: "",
-    description: "",
-    location: "",
-    type: "temps_plein",
-    duration: "",
-    compensation: "",
-    required_skills: [],
-    preferred_skills: [],
-    status: "draft",
-  };
+  const [requiredSkills, setRequiredSkills] = useState<[string, ...string[]]>(initialData?.required_skills ? (initialData.required_skills as [string, ...string[]]) : emptySkillsArray);
+  const [preferredSkills, setPreferredSkills] = useState<[string, ...string[]]>(initialData?.preferred_skills ? (initialData.preferred_skills as [string, ...string[]]) : emptySkillsArray);
+  const [educationLevel, setEducationLevel] = useState(initialData?.education_level || "");
+  const [status, setStatus] = useState(initialData?.status || "draft");
+  const [deadline, setDeadline] = useState<Date | undefined>(initialData?.deadline ? new Date(initialData.deadline) : undefined);
+  const [isFeatured, setIsFeatured] = useState(initialData?.is_featured || false);
+  const [isUrgent, setIsUrgent] = useState(initialData?.is_urgent || false);
+  const [loading, setLoading] = useState(false);
+  const [skills, setSkills] = useState<string[]>([]);
 
-  const form = useForm<InternshipFormValues>({
-    resolver: zodResolver(internshipFormSchema),
-    defaultValues,
-  });
+  useEffect(() => {
+    const fetchSkills = async () => {
+      const { data, error } = await supabase
+        .from('skills')
+        .select('name');
 
-  const onSubmit = async (data: InternshipFormValues) => {
-    setIsSubmitting(true);
-    
-    try {
-      // Convert date to ISO string for storage
-      const formattedData = {
-        ...data,
-        start_date: data.start_date.toISOString(),
-        entreprise_id: companyId,
-        created_at: new Date().toISOString(),
-      };
-      
-      const { error } = await supabase
-        .from('stages')
-        .insert([formattedData]);
-      
       if (error) {
-        console.error("Erreur lors de l'enregistrement:", error);
-        toast.error("Impossible d'enregistrer l'offre de stage");
-        return;
+        console.error("Erreur lors de la récupération des compétences:", error);
+      } else {
+        const skillNames = data.map(skill => skill.name);
+        setSkills(skillNames);
       }
-      
-      toast.success("Offre de stage ajoutée avec succès");
-      form.reset(defaultValues);
-      
-      if (onSuccess) {
-        onSuccess();
-      }
+    };
+
+    fetchSkills();
+  }, []);
+
+  const handleAddRequiredSkill = (skill: string) => {
+    if (skill && !requiredSkills.includes(skill)) {
+      setRequiredSkills([...requiredSkills, skill] as [string, ...string[]]);
+    }
+  };
+
+  const handleRemoveRequiredSkill = (index: number) => {
+    const updatedSkills = [...requiredSkills];
+    updatedSkills.splice(index, 1);
+    
+    if (updatedSkills.length === 0) {
+      setRequiredSkills(emptySkillsArray);
+    } else {
+      setRequiredSkills(updatedSkills as [string, ...string[]]);
+    }
+  };
+
+  const handleAddPreferredSkill = (skill: string) => {
+    if (skill && !preferredSkills.includes(skill)) {
+      setPreferredSkills([...preferredSkills, skill] as [string, ...string[]]);
+    }
+  };
+
+  const handleRemovePreferredSkill = (index: number) => {
+    const updatedSkills = [...preferredSkills];
+    updatedSkills.splice(index, 1);
+
+    if (updatedSkills.length === 0) {
+      setPreferredSkills(emptySkillsArray);
+    } else {
+      setPreferredSkills(updatedSkills as [string, ...string[]]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const stageData: Stage = {
+        id: initialData?.id || '',
+        title,
+        description,
+        short_description: shortDescription,
+        requirements,
+        responsibilities,
+        location,
+        remote_policy,
+        type,
+        duration,
+        start_date: startDate ? format(startDate, 'yyyy-MM-dd') : '',
+        compensation: {
+          amount: compensationAmount,
+          currency: compensationCurrency,
+          period: compensationPeriod,
+        },
+        required_skills,
+        preferred_skills: preferredSkills,
+        education_level,
+        entreprise_id: '', // This should be populated from context or props
+        status,
+        created_at: initialData?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deadline: deadline ? format(deadline, 'yyyy-MM-dd') : '',
+        is_featured: isFeatured,
+        is_urgent: isUrgent,
+        views_count: initialData?.views_count || 0,
+        applications_count: initialData?.applications_count || 0,
+        search_vector: initialData?.search_vector || null
+      };
+
+      onSave(stageData);
+      onClose();
+      toast.success("Stage ajouté avec succès!");
     } catch (error) {
-      console.error("Erreur inattendue:", error);
-      toast.error("Une erreur est survenue");
+      console.error("Erreur lors de l'ajout du stage:", error);
+      toast.error("Erreur lors de l'ajout du stage");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const addRequiredSkill = () => {
-    if (!newSkill.trim()) return;
-    
-    const currentSkills = form.getValues().required_skills || [];
-    if (!currentSkills.includes(newSkill.trim())) {
-      form.setValue("required_skills", [...currentSkills, newSkill.trim()]);
-      setNewSkill("");
-    }
-  };
-
-  const removeRequiredSkill = (skillToRemove: string) => {
-    const currentSkills = form.getValues().required_skills || [];
-    form.setValue(
-      "required_skills",
-      currentSkills.filter((skill) => skill !== skillToRemove)
-    );
-  };
-
-  const addPreferredSkill = () => {
-    if (!newPreferredSkill.trim()) return;
-    
-    const currentSkills = form.getValues().preferred_skills || [];
-    if (!currentSkills.includes(newPreferredSkill.trim())) {
-      form.setValue("preferred_skills", [...currentSkills, newPreferredSkill.trim()]);
-      setNewPreferredSkill("");
-    }
-  };
-
-  const removePreferredSkill = (skillToRemove: string) => {
-    const currentSkills = form.getValues().preferred_skills || [];
-    form.setValue(
-      "preferred_skills",
-      currentSkills.filter((skill) => skill !== skillToRemove)
-    );
-  };
+  if (!isOpen) return null;
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Titre de l'offre*</FormLabel>
-              <FormControl>
-                <Input placeholder="Ex: Stage développeur web fullstack" {...field} />
-              </FormControl>
-              <FormDescription>
-                Un titre précis et attractif pour votre offre de stage.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description*</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Décrivez les missions, responsabilités et objectifs du stage..."
-                  className="min-h-[120px]"
-                  {...field}
+    <div className="fixed inset-0 z-50 overflow-auto bg-black/50">
+      <div className="relative w-full max-w-2xl mx-auto mt-10">
+        <Card className="rounded-lg shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-2xl">Ajouter une offre de stage</CardTitle>
+            <CardDescription>
+              Remplissez les informations ci-dessous pour créer une nouvelle offre de stage.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4">
+              <div>
+                <Label htmlFor="title">Titre du stage</Label>
+                <Input
+                  type="text"
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
                 />
-              </FormControl>
-              <FormDescription>
-                Une description détaillée du stage, des responsabilités et du contexte.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Localisation*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Ex: Paris, France" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Type de stage*</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez un type" />
-                    </SelectTrigger>
-                  </FormControl>
+              </div>
+              <div>
+                <Label htmlFor="shortDescription">Description courte</Label>
+                <Input
+                  type="text"
+                  id="shortDescription"
+                  value={shortDescription}
+                  onChange={(e) => setShortDescription(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description complète</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="requirements">Exigences</Label>
+                <Textarea
+                  id="requirements"
+                  value={requirements}
+                  onChange={(e) => setRequirements(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="responsibilities">Responsabilités</Label>
+                <Textarea
+                  id="responsibilities"
+                  value={responsibilities}
+                  onChange={(e) => setResponsibilities(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="location">Lieu</Label>
+                <Input
+                  type="text"
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="remotePolicy">Politique de télétravail</Label>
+                <Input
+                  type="text"
+                  id="remotePolicy"
+                  value={remotePolicy}
+                  onChange={(e) => setRemotePolicy(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="type">Type de stage</Label>
+                <Select value={type} onValueChange={setType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez le type" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="temps_plein">Temps plein</SelectItem>
                     <SelectItem value="temps_partiel">Temps partiel</SelectItem>
@@ -234,217 +258,167 @@ export function AddInternshipOfferForm({ companyId, onSuccess }: {
                     <SelectItem value="remote">Télétravail</SelectItem>
                   </SelectContent>
                 </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="duration"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Durée*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Ex: 6 mois" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="start_date"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Date de début*</FormLabel>
+              </div>
+              <div>
+                <Label htmlFor="duration">Durée</Label>
+                <Input
+                  type="text"
+                  id="duration"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Date de début</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "dd/MM/yyyy")
-                        ) : (
-                          <span>Sélectionner une date</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, "PPP") : <span>Choisir une date</span>}
+                    </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0" align="center" side="bottom">
                     <Calendar
                       mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
+                      selected={startDate}
+                      onSelect={setStartDate}
                       disabled={(date) =>
-                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                        date < new Date()
                       }
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="compensation"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Rémunération</FormLabel>
-              <FormControl>
-                <Input placeholder="Ex: 800€/mois" {...field} />
-              </FormControl>
-              <FormDescription>
-                Indiquez la rémunération proposée pour ce stage (optionnel).
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="required_skills"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Compétences requises*</FormLabel>
-              <div className="flex gap-2">
-                <FormControl>
-                  <Input
-                    placeholder="Ex: React.js"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addRequiredSkill();
-                      }
-                    }}
-                  />
-                </FormControl>
-                <Button type="button" size="sm" onClick={addRequiredSkill}>
-                  <Plus className="h-4 w-4" />
-                </Button>
               </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {field.value?.map((skill) => (
-                  <div
-                    key={skill}
-                    className="flex items-center bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm"
-                  >
-                    {skill}
-                    <button
-                      type="button"
-                      onClick={() => removeRequiredSkill(skill)}
-                      className="ml-1 text-secondary-foreground/70 hover:text-secondary-foreground"
+              <div>
+                <Label>Date limite</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !deadline && "text-muted-foreground"
+                      )}
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <FormDescription>
-                Compétences essentielles que le candidat doit posséder.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="preferred_skills"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Compétences souhaitées</FormLabel>
-              <div className="flex gap-2">
-                <FormControl>
-                  <Input
-                    placeholder="Ex: TypeScript"
-                    value={newPreferredSkill}
-                    onChange={(e) => setNewPreferredSkill(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addPreferredSkill();
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {deadline ? format(deadline, "PPP") : <span>Choisir une date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="center" side="bottom">
+                    <Calendar
+                      mode="single"
+                      selected={deadline}
+                      onSelect={setDeadline}
+                      disabled={(date) =>
+                        date < new Date()
                       }
-                    }}
-                  />
-                </FormControl>
-                <Button type="button" size="sm" onClick={addPreferredSkill}>
-                  <Plus className="h-4 w-4" />
-                </Button>
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {field.value?.map((skill) => (
-                  <div
-                    key={skill}
-                    className="flex items-center bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm"
-                  >
-                    {skill}
-                    <button
-                      type="button"
-                      onClick={() => removePreferredSkill(skill)}
-                      className="ml-1 text-muted-foreground/70 hover:text-muted-foreground"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
+              <div>
+                <Label>Compétences requises</Label>
+                <ListSkills skills={skills} onAddSkill={handleAddRequiredSkill} onRemoveSkill={handleRemoveRequiredSkill} selectedSkills={requiredSkills} />
               </div>
-              <FormDescription>
-                Compétences qui seraient un plus pour la candidature (optionnel).
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Statut de l'offre*</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
+              <div>
+                <Label>Compétences préférées</Label>
+                <ListSkills skills={skills} onAddSkill={handleAddPreferredSkill} onRemoveSkill={handleRemovePreferredSkill} selectedSkills={preferredSkills} />
+              </div>
+              <div>
+                <Label htmlFor="educationLevel">Niveau d'éducation</Label>
+                <Input
+                  type="text"
+                  id="educationLevel"
+                  value={educationLevel}
+                  onChange={(e) => setEducationLevel(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="compensationAmount">Montant de la compensation</Label>
+                <Input
+                  type="number"
+                  id="compensationAmount"
+                  value={compensationAmount}
+                  onChange={(e) => setCompensationAmount(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="compensationCurrency">Devise de la compensation</Label>
+                <Select value={compensationCurrency} onValueChange={setCompensationCurrency}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez un statut" />
+                    <SelectValue placeholder="Sélectionnez la devise" />
                   </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="draft">Brouillon</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="closed">Fermée</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                "Brouillon" n'est pas visible par les candidats, "Active" est publiée, "Fermée" n'accepte plus de candidatures.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Enregistrement..." : "Ajouter l'offre de stage"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+                  <SelectContent>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="CAD">CAD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="compensationPeriod">Période de compensation</Label>
+                <Select value={compensationPeriod} onValueChange={setCompensationPeriod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez la période" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="heure">Heure</SelectItem>
+                    <SelectItem value="jour">Jour</SelectItem>
+                    <SelectItem value="semaine">Semaine</SelectItem>
+                    <SelectItem value="mois">Mois</SelectItem>
+                    <SelectItem value="annee">Année</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="status">Statut</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez le statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Brouillon</SelectItem>
+                    <SelectItem value="active">Actif</SelectItem>
+                    <SelectItem value="expired">Expiré</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isFeatured"
+                  checked={isFeatured}
+                  onCheckedChange={(checked) => setIsFeatured(!!checked)}
+                />
+                <Label htmlFor="isFeatured">En vedette</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isUrgent"
+                  checked={isUrgent}
+                  onCheckedChange={(checked) => setIsUrgent(!!checked)}
+                />
+                <Label htmlFor="isUrgent">Urgent</Label>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="ghost" onClick={onClose}>
+                  Annuler
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Enregistrement..." : "Enregistrer"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

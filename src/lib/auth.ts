@@ -4,41 +4,20 @@ import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError, Use
 
 export type UserRole = 'stagiaire' | 'entreprise' | 'admin';
 
-// Fonction pour vérifier si un profil existe déjà
-async function checkProfileExists(id: string, table: string): Promise<boolean> {
-  try {
-    const { data } = await supabase
-      .from(table)
-      .select('id')
-      .eq('id', id)
-      .maybeSingle();
-      
-    return !!data;
-  } catch (error) {
-    console.error(`Exception lors de la vérification dans ${table}:`, error);
-    return false;
-  }
-}
-
-// Fonction pour vérifier si un email existe déjà
+// Fonction simplifiée pour vérifier si un email existe déjà
 async function checkEmailExists(email: string): Promise<boolean> {
   try {
-    // Méthode simplifiée qui utilise seulement la requête à la table users
-    const { data, error } = await supabase
+    // Utiliser directement la méthode de Supabase pour vérifier l'email
+    const { data } = await supabase
       .from('users')
       .select('email')
       .eq('email', email)
       .maybeSingle();
-    
-    if (error) {
-      console.error("Erreur lors de la vérification de l'email:", error);
-      return false; // En cas d'erreur, supposons que l'email n'existe pas
-    }
-    
+      
     return !!data;
   } catch (error) {
-    console.error("Exception lors de la vérification de l'email:", error);
-    return false; // En cas d'erreur, supposons que l'email n'existe pas
+    console.error(`Erreur lors de la vérification de l'email:`, error);
+    return false;
   }
 }
 
@@ -208,13 +187,29 @@ export const auth = {
         }
 
         if (authData?.user) {
-          // Stocker les informations temporairement pour la création du profil après confirmation
-          localStorage.setItem(`userProfile_${authData.user.id}`, JSON.stringify({
-            id: authData.user.id,
-            email: authData.user.email,
-            role,
-            name
-          }));
+          try {
+            // Créer le profil utilisateur immédiatement, sans attendre la confirmation d'email
+            const profileResult = await createUserProfile({
+              id: authData.user.id,
+              email: authData.user.email || email,
+              role,
+              name
+            });
+            
+            if (!profileResult.success) {
+              console.error("Erreur lors de la création du profil après inscription:", profileResult.error);
+            }
+            
+            // Stocker les informations utilisateur temporairement
+            localStorage.setItem(`userProfile_${authData.user.id}`, JSON.stringify({
+              id: authData.user.id,
+              email: authData.user.email,
+              role,
+              name
+            }));
+          } catch (profileError) {
+            console.error("Erreur lors de la création du profil:", profileError);
+          }
           
           toast.success("Inscription réussie", {
             description: "Vérifiez votre email pour confirmer votre compte"
