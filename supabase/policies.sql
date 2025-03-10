@@ -1,4 +1,3 @@
-
 -- Politiques de sécurité RLS pour Supabase
 
 -- IMPORTANT: Désactivation complète des politiques RLS pour permettre l'inscription
@@ -27,6 +26,61 @@ ALTER TABLE stagiaire_skills DISABLE ROW LEVEL SECURITY;
 ALTER TABLE favorites DISABLE ROW LEVEL SECURITY;
 ALTER TABLE password_resets DISABLE ROW LEVEL SECURITY;
 ALTER TABLE email_verifications DISABLE ROW LEVEL SECURITY;
+
+-- First, make sure we enable uuid-ossp extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Enable RLS but with proper policies
+ALTER TABLE auth.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stagiaires ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entreprises ENABLE ROW LEVEL SECURITY;
+
+-- Policy for users table to allow inserts during registration
+CREATE POLICY "Enable insert for registration" ON users
+    FOR INSERT
+    WITH CHECK (true);
+
+-- Policy for stagiaires table to allow inserts during registration
+CREATE POLICY "Enable insert for stagiaires registration" ON stagiaires
+    FOR INSERT
+    WITH CHECK (true);
+
+-- Policy for entreprises table to allow inserts during registration
+CREATE POLICY "Enable insert for entreprises registration" ON entreprises
+    FOR INSERT
+    WITH CHECK (true);
+
+-- Modify the users table policy to allow select
+CREATE POLICY "Enable select for authenticated users" ON users
+    FOR SELECT
+    USING (auth.uid() IS NOT NULL);
+
+-- Add trigger function to automatically create profile entry
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.users (id, email, role)
+    VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'role', 'stagiaire'));
+    
+    IF (NEW.raw_user_meta_data->>'role' = 'stagiaire') THEN
+        INSERT INTO public.stagiaires (id, name, email)
+        VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'name', ''), NEW.email);
+    ELSIF (NEW.raw_user_meta_data->>'role' = 'entreprise') THEN
+        INSERT INTO public.entreprises (id, name, email)
+        VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'name', ''), NEW.email);
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create the trigger
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_new_user();
 
 -- Politique pour la table users (notre table publique)
 -- Ces politiques seront réactivées plus tard quand l'inscription fonctionnera
