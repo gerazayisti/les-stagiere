@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { AboutTab } from '@/components/profile/AboutTab';
@@ -11,20 +11,68 @@ import { useParams, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProfilStagiaire() {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("about");
   const { stagiaire, loading, error } = useStagiaire(id || '');
   const { user } = useAuth();
+  const [headerLoaded, setHeaderLoaded] = useState(false);
   
-  if (loading) {
+  // Simuler un chargement plus rapide pour les données basiques
+  useEffect(() => {
+    if (stagiaire) {
+      setHeaderLoaded(true);
+    } else {
+      // Simuler un chargement rapide pour l'en-tête
+      const timer = setTimeout(() => {
+        setHeaderLoaded(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [stagiaire]);
+  
+  // Rendu d'un squelette pendant le chargement des données de base
+  if (loading && !headerLoaded) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p>Chargement du profil...</p>
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex flex-col items-center space-y-4 mb-8">
+          <Skeleton className="h-24 w-24 rounded-full" />
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48" />
         </div>
+        <div className="flex justify-center mt-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+  
+  if (loading && headerLoaded) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex flex-col items-center space-y-4 mb-8">
+          <Skeleton className="h-24 w-24 rounded-full" />
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        
+        <Tabs defaultValue="about" className="mt-8">
+          <TabsList className="grid grid-cols-4 mb-8">
+            <TabsTrigger value="about">À propos</TabsTrigger>
+            <TabsTrigger value="cv">CV & Documents</TabsTrigger>
+            <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+            <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
+          </TabsList>
+          <TabsContent value="about">
+            <div className="space-y-4">
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-16 w-3/4" />
+              <Skeleton className="h-16 w-1/2" />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
@@ -53,7 +101,7 @@ export default function ProfilStagiaire() {
       ? stagiaire.disponibility 
       : "upcoming";
       
-  // Ensure education is properly formatted - résolution de l'erreur TypeScript
+  // Ensure education is properly formatted - fixing the TypeScript error by using the correct typing
   const education = stagiaire.education || [];
   
   return (

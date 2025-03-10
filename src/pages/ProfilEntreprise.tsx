@@ -65,11 +65,12 @@ export default function ProfilEntreprise() {
       
       console.log("Fetching full entreprise data with ID:", id);
       
+      // Correction du bug: utiliser .eq() au lieu de passer un paramètre id dans select()
       let { data, error: fetchError } = await supabase
         .from('entreprises')
         .select('*')
         .eq('id', id)
-        .maybeSingle();
+        .single();
       
       if (fetchError) {
         console.error("Fetch error:", fetchError);
@@ -89,7 +90,7 @@ export default function ProfilEntreprise() {
               logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'E')}&background=random`,
               is_verified: false,
               created_at: new Date().toISOString()
-            }, { onConflict: 'id' });
+            });
             
           if (createError) {
             throw createError;
@@ -100,7 +101,7 @@ export default function ProfilEntreprise() {
             .from('entreprises')
             .select('*')
             .eq('id', user.id)
-            .maybeSingle();
+            .single();
             
           if (newFetchError) {
             throw newFetchError;

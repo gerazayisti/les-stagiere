@@ -1,8 +1,4 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
-import { InternshipOffer } from "@/types/project";
-import { Button } from "@/components/ui/button";
 import { 
   Card, 
   CardContent, 
@@ -12,39 +8,13 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CalendarDays, MapPin, Clock, Briefcase, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { useInternshipOffers } from "@/hooks/useInternshipOffers";
 
 export function InternshipOffersList({ companyId }: { companyId: string }) {
-  const [offers, setOffers] = useState<InternshipOffer[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchOffers = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('stages')
-          .select('*')
-          .eq('entreprise_id', companyId)
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error("Erreur lors de la récupération des offres:", error);
-          toast.error("Impossible de charger les offres de stage");
-        } else {
-          setOffers(data as unknown as InternshipOffer[]);
-        }
-      } catch (error) {
-        console.error("Erreur inattendue:", error);
-        toast.error("Une erreur est survenue lors du chargement des offres");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOffers();
-  }, [companyId]);
+  const { offers, loading, error } = useInternshipOffers(companyId);
 
   if (loading) {
     return (
@@ -53,6 +23,22 @@ export function InternshipOffersList({ companyId }: { companyId: string }) {
           <Skeleton key={i} className="h-48 w-full rounded-lg" />
         ))}
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="bg-muted/50">
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <Briefcase className="h-12 w-12 mb-2 text-muted-foreground mx-auto" />
+            <h3 className="text-lg font-medium mb-1">Erreur de chargement</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Impossible de charger les offres de stage. Veuillez réessayer plus tard.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -117,7 +103,7 @@ export function InternshipOffersList({ companyId }: { companyId: string }) {
               </div>
             </div>
 
-            {offer.required_skills.length > 0 && (
+            {offer.required_skills && offer.required_skills.length > 0 && (
               <div className="mt-4">
                 <div className="text-sm font-medium mb-2">Compétences requises:</div>
                 <div className="flex flex-wrap gap-1">
