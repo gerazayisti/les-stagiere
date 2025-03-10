@@ -102,7 +102,7 @@ export async function createUserProfile(userData: {
 }
 
 export const auth = {
-  // Inscription d'un nouvel utilisateur
+  // Inscription d'un nouvel utilisateur - MODIFIÉE POUR SIMPLIFIER
   async signUp(data: SignUpData): Promise<AuthResponse> {
     const { email, password, role, name } = data;
     
@@ -126,13 +126,10 @@ export const auth = {
       });
       
       // 2. Inscription via Supabase Auth - UNIQUEMENT email et password
-      // Important: Nous ne passons pas de métadonnées à la création du compte
+      // Important: Nous ne passons AUCUNE métadonnée, pas même les options
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/email-confirmation`
-        }
+        password
       });
 
       if (signUpError) {
