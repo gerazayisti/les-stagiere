@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -67,12 +68,16 @@ export default function ProfilEntreprise() {
     <div className="container mx-auto py-8 px-4">
       <ProfileHeader 
         name={entreprise.name}
-        position={entreprise.industry || "Entreprise"}
         avatarUrl={entreprise.logo_url}
-        coverImageUrl="https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1469&q=80"
-        isCurrentUser={isCurrentUser}
-        profileType="entreprise"
-        userId={entreprise.id}
+        bio={entreprise.description || ""}
+        location={entreprise.location || ""}
+        socials={{
+          website: entreprise.website || "",
+          github: entreprise.github || "",
+          linkedin: entreprise.linkedin || ""
+        }}
+        editable={isCurrentUser}
+        onEdit={() => {}}
       />
       
       <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-8">
@@ -83,8 +88,10 @@ export default function ProfilEntreprise() {
         </TabsList>
         <TabsContent value="about">
           <AboutTab 
-            profile={entreprise} 
-            isCurrentUser={isCurrentUser} 
+            bio={entreprise.description}
+            education={entreprise.industry}
+            isPremium={entreprise.is_premium}
+            userId={entreprise.id}
           />
         </TabsContent>
         <TabsContent value="offers">
@@ -109,8 +116,11 @@ export default function ProfilEntreprise() {
         </TabsContent>
         <TabsContent value="recommendations">
           <CompanyRecommendations 
-            companyId={entreprise.id} 
-            canAddRecommendation={user?.role === 'stagiaire'} 
+            userId={user?.id || ""}
+            companyId={entreprise.id}
+            companyName={entreprise.name}
+            companyLogo={entreprise.logo_url}
+            isPremium={entreprise.is_premium}
           />
         </TabsContent>
       </Tabs>

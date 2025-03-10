@@ -37,12 +37,16 @@ export default function ProfilStagiaire() {
     <div className="container mx-auto py-8 px-4">
       <ProfileHeader 
         name={stagiaire.name}
-        position={stagiaire.title || "Stagiaire"}
         avatarUrl={stagiaire.avatar_url}
-        coverImageUrl="https://images.unsplash.com/photo-1504805572947-34fad45aed93?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
-        isCurrentUser={isCurrentUser}
-        profileType="stagiaire"
-        userId={stagiaire.id}
+        bio={stagiaire.bio || ""}
+        location={stagiaire.location || ""}
+        socials={{
+          website: stagiaire.website || "",
+          github: stagiaire.github || "",
+          linkedin: stagiaire.linkedin || ""
+        }}
+        editable={isCurrentUser}
+        onEdit={() => {}}
       />
       
       <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-8">
@@ -54,14 +58,17 @@ export default function ProfilStagiaire() {
         </TabsList>
         <TabsContent value="about">
           <AboutTab 
-            profile={stagiaire} 
-            isCurrentUser={isCurrentUser} 
+            bio={stagiaire.bio}
+            education={stagiaire.education}
+            disponibility={stagiaire.disponibility || "upcoming"}
+            isPremium={stagiaire.is_premium}
+            userId={stagiaire.id}
           />
         </TabsContent>
         <TabsContent value="cv">
           <CVTab 
-            profile={stagiaire} 
-            isCurrentUser={isCurrentUser} 
+            userId={stagiaire.id}
+            isPremium={stagiaire.is_premium}
           />
         </TabsContent>
         <TabsContent value="portfolio">
@@ -69,9 +76,10 @@ export default function ProfilStagiaire() {
         </TabsContent>
         <TabsContent value="recommendations">
           <Recommendations 
-            profileId={stagiaire.id} 
-            profileType="stagiaire" 
-            canAddRecommendation={user?.role === 'entreprise' && user?.id !== stagiaire.id} 
+            recommendations={[]}
+            isOwner={isCurrentUser}
+            stagiaireId={stagiaire.id}
+            isPremium={stagiaire.is_premium}
           />
         </TabsContent>
       </Tabs>

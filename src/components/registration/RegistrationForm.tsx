@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { UserRole } from "@/lib/auth";
 import { Link } from "react-router-dom";
+import { PasswordStrengthIndicator } from "./PasswordStrengthIndicator";
 
 interface RegistrationFormProps {
   loading: boolean;
