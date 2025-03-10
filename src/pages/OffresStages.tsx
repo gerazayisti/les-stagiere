@@ -32,6 +32,8 @@ const OffresStages = () => {
   const fetchStages = async () => {
     try {
       setLoading(true);
+      console.log("Récupération des stages actifs...");
+      
       const { data, error } = await supabase
         .from('stages')
         .select('*')
@@ -39,9 +41,11 @@ const OffresStages = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
+        console.error("Erreur lors de la requête:", error);
         throw error;
       }
 
+      console.log("Stages récupérés:", data);
       setStages(data || []);
     } catch (error) {
       console.error('Erreur lors de la récupération des stages:', error);

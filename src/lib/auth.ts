@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 import { AuthError, AuthResponse, SignInData, SignUpData } from '@/types/auth';
@@ -30,6 +31,8 @@ export async function createUserProfile(userData: {
   const { id, email, role, name } = userData;
   
   try {
+    console.log("Création du profil pour:", userData);
+    
     // 1. Créer d'abord dans la table users
     const { error: userError } = await supabase
       .from('users')
@@ -39,9 +42,12 @@ export async function createUserProfile(userData: {
         role,
         name,
         is_active: true,
-      });
+      }, { onConflict: 'id' });
 
-    if (userError) throw userError;
+    if (userError) {
+      console.error("Erreur lors de l'insertion dans users:", userError);
+      throw userError;
+    }
     
     // 2. Créer le profil spécifique selon le rôle
     if (role === 'stagiaire') {
@@ -55,9 +61,12 @@ export async function createUserProfile(userData: {
           skills: [],
           languages: [],
           preferred_locations: []
-        });
+        }, { onConflict: 'id' });
 
-      if (stagiaireError) throw stagiaireError;
+      if (stagiaireError) {
+        console.error("Erreur lors de l'insertion dans stagiaires:", stagiaireError);
+        throw stagiaireError;
+      }
     } 
     else if (role === 'entreprise') {
       const { error: entrepriseError } = await supabase
@@ -71,9 +80,12 @@ export async function createUserProfile(userData: {
           location: '',
           benefits: [],
           website: ''
-        });
+        }, { onConflict: 'id' });
 
-      if (entrepriseError) throw entrepriseError;
+      if (entrepriseError) {
+        console.error("Erreur lors de l'insertion dans entreprises:", entrepriseError);
+        throw entrepriseError;
+      }
     }
     
     return { success: true };
@@ -147,11 +159,16 @@ export const auth = {
       }
       
       // 3. Inscription via Supabase Auth
+      // IMPORTANT: Ne pas inclure le role dans les métadonnées transmises à auth.signUp
+      // car cela peut entrer en conflit avec le système de rôles interne de Supabase
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { role, name },
+          data: {
+            name, // Seulement inclure le nom dans les métadonnées
+            email // Inclure l'email pour faciliter l'accès plus tard
+          },
           emailRedirectTo: `${window.location.origin}/email-confirmation`
         },
       });
@@ -186,7 +203,7 @@ export const auth = {
         const userProfileResult = await createUserProfile({
           id: authData.user.id,
           email: authData.user.email || email,
-          role,
+          role, // Le rôle est utilisé uniquement dans notre table publique users
           name
         });
         
