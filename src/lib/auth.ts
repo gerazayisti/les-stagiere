@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError, User } from '@/types/auth';
@@ -24,22 +23,21 @@ async function checkProfileExists(id: string, table: string): Promise<boolean> {
 // Fonction pour vérifier si un email existe déjà
 async function checkEmailExists(email: string): Promise<boolean> {
   try {
-    // Méthode la plus simple: vérifier directement dans la table users
-    const { data } = await supabase
+    // Méthode simplifiée qui utilise seulement la requête à la table users
+    const { data, error } = await supabase
       .from('users')
       .select('email')
       .eq('email', email)
       .maybeSingle();
     
-    if (data) {
-      console.log("Email trouvé dans la table users:", data);
-      return true;
+    if (error) {
+      console.error("Erreur lors de la vérification de l'email:", error);
+      return false; // En cas d'erreur, supposons que l'email n'existe pas
     }
     
-    // Par défaut, considérez que l'email n'existe pas
-    return false;
+    return !!data;
   } catch (error) {
-    console.error("Erreur lors de la vérification de l'email:", error);
+    console.error("Exception lors de la vérification de l'email:", error);
     return false; // En cas d'erreur, supposons que l'email n'existe pas
   }
 }
