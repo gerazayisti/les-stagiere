@@ -1,18 +1,28 @@
 import { supabase } from './supabase';
 import { toast } from 'sonner';
+import { AuthError, AuthResponse, SignInData, SignUpData } from '@/types/auth';
 
 export type UserRole = 'stagiaire' | 'entreprise' | 'admin';
 
-interface SignUpData {
-  email: string;
-  password: string;
-  role: UserRole;
-  name: string;
-}
-
-interface SignInData {
-  email: string;
-  password: string;
+// Fonction pour vérifier si un profil existe déjà
+async function checkProfileExists(id: string, table: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from(table)
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+      
+    if (error) {
+      console.error(`Erreur lors de la vérification de l'existence dans ${table}:`, error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error(`Exception lors de la vérification dans ${table}:`, error);
+    return false;
+  }
 }
 
 // Fonction pour créer les données utilisateur dans les tables publiques
@@ -21,136 +31,154 @@ export async function createUserProfile(userData: {
   email: string, 
   role: UserRole, 
   name: string 
-}) {
+}): Promise<AuthResponse> {
   const { id, email, role, name } = userData;
   
   try {
     console.log(`Création du profil utilisateur pour ${id} avec le rôle ${role}`);
     
     // Vérifier d'abord si l'utilisateur existe déjà dans la table users
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', id)
-      .maybeSingle();
+    const userExists = await checkProfileExists(id, 'users');
+    
+    if (userExists) {
+      console.log("L'utilisateur existe déjà dans la table users");
+      // Si l'utilisateur existe dans users, vérifions s'il existe dans sa table spécifique
+      const specificTableExists = await checkProfileExists(id, role === 'stagiaire' ? 'stagiaires' : 'entreprises');
       
-    if (checkError) {
-      console.error("Erreur lors de la vérification de l'existence de l'utilisateur:", checkError);
-      return { success: false, error: checkError };
-    }
-    
-    if (existingUser) {
-      console.log("L'utilisateur existe déjà dans la table users, pas besoin de le créer à nouveau");
-      return { success: true };
-    }
-    
-    // 1. Créer l'entrée dans la table users (principale)
-    const { error: userError } = await supabase
-      .from('users')
-      .insert({
-        id,
-        email,
-        role,
-        name,
-        is_active: true,
-      });
-
-    if (userError) {
-      console.error("Erreur lors de la création dans la table users:", userError);
-      return { success: false, error: userError };
-    }
-    
-    // 2. Selon le rôle, créer l'entrée spécifique
-    if (role === 'stagiaire') {
-      // Vérifier si le stagiaire existe déjà
-      const { data: existingStagiaire, error: checkStagiaireError } = await supabase
-        .from('stagiaires')
-        .select('id')
-        .eq('id', id)
-        .maybeSingle();
-        
-      if (checkStagiaireError) {
-        console.error("Erreur lors de la vérification de l'existence du stagiaire:", checkStagiaireError);
-      }
-      
-      if (existingStagiaire) {
-        console.log("Le stagiaire existe déjà, pas besoin de le créer à nouveau");
+      if (specificTableExists) {
+        console.log(`Le profil existe déjà dans la table ${role === 'stagiaire' ? 'stagiaires' : 'entreprises'}`);
         return { success: true };
       }
-      
-      const { error: stagiaireError } = await supabase
-        .from('stagiaires')
+    }
+    
+    // Créer l'entrée dans la table users si elle n'existe pas encore
+    if (!userExists) {
+      const { error: userError } = await supabase
+        .from('users')
         .insert({
           id,
-          name,
           email,
-          avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-          skills: [],
-          languages: [],
-          preferred_locations: []
+          role,
+          name,
+          is_active: true,
         });
 
-      if (stagiaireError) {
-        console.error("Erreur lors de la création du stagiaire:", stagiaireError);
-        return { success: false, error: stagiaireError };
+      if (userError) {
+        console.error("Erreur lors de la création dans la table users:", userError);
+        return { 
+          success: false, 
+          error: {
+            message: "Erreur lors de la création du profil utilisateur",
+            code: userError.code,
+            status: userError.code === '23505' ? 409 : 500,
+            isRetryable: userError.code !== '23505'
+          }
+        };
+      }
+    }
+    
+    // Créer l'entrée spécifique selon le rôle
+    if (role === 'stagiaire') {
+      const stagiaireExists = await checkProfileExists(id, 'stagiaires');
+      
+      if (!stagiaireExists) {
+        const { error: stagiaireError } = await supabase
+          .from('stagiaires')
+          .insert({
+            id,
+            name,
+            email,
+            avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+            skills: [],
+            languages: [],
+            preferred_locations: []
+          });
+
+        if (stagiaireError) {
+          console.error("Erreur lors de la création du stagiaire:", stagiaireError);
+          return { 
+            success: false, 
+            error: {
+              message: "Erreur lors de la création du profil stagiaire",
+              code: stagiaireError.code,
+              status: stagiaireError.code === '23505' ? 409 : 500,
+              isRetryable: stagiaireError.code !== '23505'
+            }
+          };
+        }
       }
     } 
     else if (role === 'entreprise') {
-      // Vérifier si l'entreprise existe déjà
-      const { data: existingEntreprise, error: checkEntrepriseError } = await supabase
-        .from('entreprises')
-        .select('id')
-        .eq('id', id)
-        .maybeSingle();
-        
-      if (checkEntrepriseError) {
-        console.error("Erreur lors de la vérification de l'existence de l'entreprise:", checkEntrepriseError);
-      }
+      const entrepriseExists = await checkProfileExists(id, 'entreprises');
       
-      if (existingEntreprise) {
-        console.log("L'entreprise existe déjà, pas besoin de la créer à nouveau");
-        return { success: true };
-      }
-      
-      const { error: entrepriseError } = await supabase
-        .from('entreprises')
-        .insert({
-          id,
-          name,
-          email,
-          logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-          industry: '',
-          location: '',
-          benefits: [],
-          website: ''
-        });
+      if (!entrepriseExists) {
+        const { error: entrepriseError } = await supabase
+          .from('entreprises')
+          .insert({
+            id,
+            name,
+            email,
+            logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+            industry: '',
+            location: '',
+            benefits: [],
+            website: ''
+          });
 
-      if (entrepriseError) {
-        console.error("Erreur lors de la création de l'entreprise:", entrepriseError);
-        return { success: false, error: entrepriseError };
+        if (entrepriseError) {
+          console.error("Erreur lors de la création de l'entreprise:", entrepriseError);
+          return { 
+            success: false, 
+            error: {
+              message: "Erreur lors de la création du profil entreprise",
+              code: entrepriseError.code,
+              status: entrepriseError.code === '23505' ? 409 : 500,
+              isRetryable: entrepriseError.code !== '23505'
+            }
+          };
+        }
       }
     }
     
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur lors de la création du profil utilisateur:', error);
-    return { success: false, error };
+    return { 
+      success: false, 
+      error: {
+        message: "Erreur interne lors de la création du profil",
+        status: 500,
+        isRetryable: true
+      }
+    };
   }
 }
 
 export const auth = {
   // Inscription d'un nouvel utilisateur
-  async signUp(data: SignUpData) {
+  async signUp(data: SignUpData): Promise<AuthResponse> {
     const { email, password, role, name } = data;
     
     try {
       // 1. Validation des données
       if (!email || !password || !role || !name) {
-        throw new Error("Toutes les informations sont requises");
+        return {
+          success: false,
+          error: {
+            message: "Toutes les informations sont requises",
+            status: 400
+          }
+        };
       }
       
       if (password.length < 8) {
-        throw new Error("Le mot de passe doit contenir au moins 8 caractères");
+        return {
+          success: false,
+          error: {
+            message: "Le mot de passe doit contenir au moins 8 caractères",
+            status: 400
+          }
+        };
       }
       
       console.log("Tentative d'inscription avec les données:", {
@@ -160,19 +188,29 @@ export const auth = {
         password: "********" // Masquer le mot de passe
       });
       
-      // 2. Vérifier si l'email existe déjà dans auth
-      const { data: authUserData, error: checkError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false,
+      // 2. Vérifier si l'email existe déjà
+      try {
+        const { data: existingUser, error: userCheckError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
+        
+        if (existingUser) {
+          return {
+            success: false,
+            error: {
+              message: "Cette adresse email est déjà utilisée",
+              status: 409
+            }
+          };
         }
-      });
-      
-      if (authUserData?.user) {
-        throw new Error("Cette adresse email est déjà utilisée");
+      } catch (error) {
+        console.warn("Erreur lors de la vérification d'email existant:", error);
+        // Continuons le processus même si cette vérification échoue
       }
       
-      // 3. Inscription via Supabase Auth avec redirection pour confirmation d'email
+      // 3. Inscription via Supabase Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -186,46 +224,48 @@ export const auth = {
         console.error("Erreur lors de l'inscription:", signUpError);
         
         if (signUpError.message.includes("already registered")) {
-          throw new Error("Cette adresse email est déjà utilisée");
+          return {
+            success: false,
+            error: {
+              message: "Cette adresse email est déjà utilisée",
+              status: 409
+            }
+          };
         }
         
-        throw signUpError;
+        return {
+          success: false,
+          error: {
+            message: signUpError.message,
+            status: 500,
+            isRetryable: true
+          }
+        };
       }
 
       console.log("Résultat de l'inscription:", authData);
 
       // 4. Si l'utilisateur est créé avec succès dans Auth, créer immédiatement le profil
       if (authData?.user) {
-        try {
-          // Créer immédiatement le profil utilisateur
-          const userProfileResult = await createUserProfile({
-            id: authData.user.id,
-            email: authData.user.email || email,
-            role,
-            name
-          });
+        const userProfileResult = await createUserProfile({
+          id: authData.user.id,
+          email: authData.user.email || email,
+          role,
+          name
+        });
+        
+        if (!userProfileResult.success) {
+          console.error("L'utilisateur a été créé dans auth mais pas dans les tables publiques", userProfileResult.error);
           
-          if (!userProfileResult.success) {
-            console.error("L'utilisateur a été créé dans auth mais pas dans les tables publiques", userProfileResult.error);
-            
-            // Si l'erreur est critique, on peut l'escalader
-            if (userProfileResult.error && 'code' in userProfileResult.error && userProfileResult.error.code === '23505') {
-              // C'est une violation de contrainte d'unicité, mais l'utilisateur est créé dans auth
-              console.warn("Conflit de clé unique lors de la création du profil, mais l'utilisateur est créé dans auth");
+          // On continue car l'utilisateur pourra compléter son profil plus tard
+          return {
+            success: true,
+            data: authData,
+            error: {
+              message: "Votre compte a été créé mais votre profil est incomplet",
+              status: 202
             }
-          } else {
-            console.log("Profil utilisateur créé avec succès dans les tables publiques");
-          }
-        } catch (profileError: any) {
-          console.error("Erreur lors de la création du profil:", profileError);
-          
-          // Si l'erreur est liée à une contrainte d'unicité (email déjà utilisé), on le signale
-          if (profileError && 'code' in profileError && profileError.code === '23505') {
-            console.warn("Ce profil existe déjà dans la base de données, mais l'utilisateur est créé dans auth");
-          }
-          
-          // Pour les autres erreurs, on continue le processus car l'utilisateur est créé dans auth
-          // Il pourra compléter son profil plus tard
+          };
         }
       }
       
@@ -238,13 +278,21 @@ export const auth = {
       console.error("Erreur d'inscription:", error);
       
       let message = "Une erreur est survenue lors de l'inscription";
+      let status = 500;
+      let isRetryable = true;
       
       if (error.message?.includes("already registered") || error.message?.includes("déjà utilisée")) {
         message = "Cette adresse email est déjà utilisée";
+        status = 409;
+        isRetryable = false;
       } else if (error.message?.includes("Password should be")) {
         message = "Le mot de passe doit contenir au moins 6 caractères";
+        status = 400;
+        isRetryable = false;
       } else if (error.status === 500 || error.code === "unexpected_failure") {
         message = "Erreur serveur. Veuillez réessayer ultérieurement.";
+        status = 500;
+        isRetryable = true;
       } else if (error.message) {
         message = error.message;
       }
@@ -253,7 +301,14 @@ export const auth = {
         description: message
       });
       
-      throw new Error(message);
+      return {
+        success: false,
+        error: {
+          message,
+          status,
+          isRetryable
+        }
+      };
     }
   },
 
@@ -475,3 +530,4 @@ export const auth = {
     }
   }
 };
+

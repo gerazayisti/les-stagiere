@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { auth, UserRole } from "@/lib/auth"
@@ -34,7 +33,6 @@ export default function Inscription() {
   const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
   const [emailSent, setEmailSent] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
@@ -127,45 +125,17 @@ export default function Inscription() {
         password: "***"
       });
       
-      try {
-        if (retryCount > 0) {
-          await new Promise(resolve => setTimeout(resolve, retryCount * 300));
-        }
-
-        const result = await auth.signUp(formData);
-        
-        if (result.success) {
-          setEmailSent(true);
-          toast.success("Inscription réussie !", {
-            description: "Veuillez vérifier votre email pour confirmer votre compte."
-          });
-        }
-      } catch (error: any) {
-        console.error("Erreur lors de l'inscription:", error);
-        
-        if (error.message?.includes("Erreur serveur")) {
-          setRetryCount(prev => prev + 1);
-          
-          if (retryCount < 2) {
-            toast.error("Problème de connexion", {
-              description: "Nouvelle tentative en cours..."
-            });
-            
-            setLoading(false);
-            setTimeout(() => {
-              handleSubmit(e);
-            }, 1000);
-            return;
-          }
-        }
-        
-        if (error.message) {
-          setFormError(error.message);
-        } else {
-          setFormError("Une erreur est survenue lors de l'inscription");
-        }
-      }
+      const result = await auth.signUp(formData);
       
+      if (result.success) {
+        setEmailSent(true);
+        toast.success("Inscription réussie !", {
+          description: "Veuillez vérifier votre email pour confirmer votre compte."
+        });
+      } else if (result.error) {
+        setFormError(result.error.message);
+        console.error("Erreur d'inscription:", result.error);
+      }
     } catch (error: any) {
       console.error("Erreur lors de la soumission du formulaire:", error);
       setFormError(error.message || "Erreur lors de l'inscription");
