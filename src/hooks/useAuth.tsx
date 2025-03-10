@@ -4,14 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { auth } from '@/lib/auth';
-
-export interface User {
-  id: string;
-  email: string;
-  role: 'stagiaire' | 'entreprise' | 'admin';
-  email_confirmed_at?: string;
-  user_metadata?: any;
-}
+import { User } from '@/types/auth';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -28,7 +21,7 @@ export function useAuth() {
     // Vérifier si l'utilisateur a un profil dans la table users
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, name')
       .eq('id', supabaseUser.id)
       .maybeSingle();
     
@@ -38,6 +31,7 @@ export function useAuth() {
     
     // Si l'utilisateur n'a pas encore de profil, utiliser les données temporaires
     let role = userData?.role;
+    let name = userData?.name || supabaseUser.user_metadata?.name || '';
     
     if (!role && supabaseUser.email_confirmed_at) {
       // L'email est confirmé mais pas de profil - vérifier les données stockées
@@ -46,6 +40,7 @@ export function useAuth() {
         try {
           const profileData = JSON.parse(storedProfile);
           role = profileData.role;
+          name = profileData.name;
           
           // Créer le profil maintenant
           await auth.createProfileAfterConfirmation(supabaseUser.id);
@@ -59,6 +54,7 @@ export function useAuth() {
       id: supabaseUser.id,
       email: supabaseUser.email!,
       role: role || 'stagiaire', // Valeur par défaut si non trouvée
+      name: name,
       email_confirmed_at: supabaseUser.email_confirmed_at,
       user_metadata: supabaseUser.user_metadata
     };

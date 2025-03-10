@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { toast } from 'sonner';
-import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError } from '@/types/auth';
+import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError, User } from '@/types/auth';
 
 export type UserRole = 'stagiaire' | 'entreprise' | 'admin';
 
@@ -126,6 +126,7 @@ export const auth = {
       });
       
       // 2. Inscription via Supabase Auth - UNIQUEMENT email et password
+      // Important: Nous ne passons pas de métadonnées à la création du compte
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -445,51 +446,20 @@ export const auth = {
       
       const profileData = JSON.parse(storedProfileData);
       
-      // Créer d'abord l'entrée dans la table users
-      const { error: userError } = await supabase
-        .from('users')
-        .upsert({
-          id: userId,
-          email: profileData.email,
-          role: profileData.role,
-          name: profileData.name,
-          is_active: true
-        });
-
-      if (userError) {
-        console.error("Erreur lors de la création du profil utilisateur:", userError);
-        throw userError;
-      }
-
-      // Créer le profil spécifique selon le rôle
-      if (profileData.role === 'stagiaire') {
-        const { error: stagiaireError } = await supabase
-          .from('stagiaires')
-          .upsert({
-            id: userId,
-            name: profileData.name,
-            email: profileData.email,
-            avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=random`
-          });
-
-        if (stagiaireError) throw stagiaireError;
-      } else if (profileData.role === 'entreprise') {
-        const { error: entrepriseError } = await supabase
-          .from('entreprises')
-          .upsert({
-            id: userId,
-            name: profileData.name,
-            email: profileData.email,
-            logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=random`
-          });
-
-        if (entrepriseError) throw entrepriseError;
+      // Créer les profils utilisateur
+      const result = await createUserProfile({
+        id: userId,
+        email: profileData.email,
+        role: profileData.role,
+        name: profileData.name
+      });
+      
+      if (result.success) {
+        // Supprimer les données temporaires
+        localStorage.removeItem(`userProfile_${userId}`);
       }
       
-      // Supprimer les données temporaires
-      localStorage.removeItem(`userProfile_${userId}`);
-      
-      return { success: true };
+      return result;
     } catch (error: any) {
       console.error('Erreur lors de la création du profil:', error);
       return {
