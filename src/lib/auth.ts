@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError, User } from '@/types/auth';
@@ -149,6 +148,12 @@ export const auth = {
       
       // 3. Inscription via Supabase Auth avec gestion des erreurs réseau
       try {
+        // Get the current domain for redirect URL
+        const origin = window.location.origin;
+        const redirectUrl = `${origin}/email-confirmation`;
+        
+        console.log("Using redirect URL:", redirectUrl);
+        
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -157,8 +162,8 @@ export const auth = {
               name,
               role
             },
-            // Utilisez une URL de redirection absolue vers Vercel
-            emailRedirectTo: `https://les-stagiere.vercel.app/email-confirmation`
+            // Use the dynamically generated redirect URL
+            emailRedirectTo: redirectUrl
           }
         });
 
@@ -190,15 +195,35 @@ export const auth = {
         if (authData?.user) {
           try {
             // Créer le profil utilisateur immédiatement, sans attendre la confirmation d'email
-            const profileResult = await createUserProfile({
-              id: authData.user.id,
-              email: authData.user.email || email,
-              role,
-              name
-            });
-            
-            if (!profileResult.success) {
-              console.error("Erreur lors de la création du profil après inscription:", profileResult.error);
+            // Avec des champs plus complets pour éviter des erreurs de contrainte
+            if (role === 'stagiaire') {
+              // Ensure we create a complete stagiaire profile
+              await supabase.from('stagiaires').upsert({
+                id: authData.user.id,
+                name,
+                email,
+                avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
+                is_verified: false,
+                bio: `${name} est à la recherche d'un stage.`,
+                created_at: new Date().toISOString(),
+                education: [],
+                skills: [],
+                languages: [],
+                social_links: {},
+                is_premium: false,
+                disponibility: "upcoming"
+              }, { onConflict: 'id' });
+            } else {
+              const profileResult = await createUserProfile({
+                id: authData.user.id,
+                email: authData.user.email || email,
+                role,
+                name
+              });
+              
+              if (!profileResult.success) {
+                console.error("Erreur lors de la création du profil après inscription:", profileResult.error);
+              }
             }
             
             // Stocker les informations utilisateur temporairement
@@ -358,11 +383,15 @@ export const auth = {
   // Renvoyer l'email de confirmation
   async resendConfirmationEmail(email: string) {
     try {
+      // Get the current domain for redirect URL
+      const origin = window.location.origin;
+      const redirectUrl = `${origin}/email-confirmation`;
+      
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email,
         options: {
-          emailRedirectTo: `https://les-stagiere.vercel.app/email-confirmation`
+          emailRedirectTo: redirectUrl
         }
       });
       

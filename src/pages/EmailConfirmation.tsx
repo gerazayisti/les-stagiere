@@ -43,9 +43,6 @@ export default function EmailConfirmation() {
         const role = user.user_metadata?.role;
         const name = user.user_metadata?.name || 'Utilisateur';
         
-        // Création d'un ID plus court pour l'avatar
-        const shortId = user.id.substring(0, 8);
-        
         // Create basic user record first (lightweight operation)
         const { error: userError } = await supabase
           .from('users')
@@ -96,7 +93,14 @@ export default function EmailConfirmation() {
               avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
               is_verified: false,
               bio: `${name} est à la recherche d'un stage.`,
-              created_at: new Date().toISOString()
+              created_at: new Date().toISOString(),
+              // Add more required fields to prevent null constraints
+              education: [],
+              skills: [],
+              languages: [],
+              social_links: {},
+              is_premium: false,
+              disponibility: "upcoming"
             }, { onConflict: 'id' });
             
           if (stagiaireError) {

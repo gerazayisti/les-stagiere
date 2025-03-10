@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import {
@@ -9,18 +9,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useEffect, useState } from "react";
-import { ThemeToggle } from "./ThemeToggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useState, lazy, Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Settings } from "lucide-react";
+
+const ThemeToggle = lazy(() => import("./ThemeToggle"));
 
 export default function Navigation() {
   const navigate = useNavigate();
   const { user, userRole, loading, signOut, isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
 
   const getInitials = (text: string) => {
     if (!text) return "??";
@@ -55,7 +57,6 @@ export default function Navigation() {
   const handleSignOut = async () => {
     try {
       setIsSigningOut(true);
-      console.log("Déconnexion initiée depuis Navigation");
       
       const success = await signOut();
       
@@ -69,6 +70,38 @@ export default function Navigation() {
     } finally {
       setIsSigningOut(false);
     }
+  };
+
+  const getAvatarUrl = () => {
+    if (!user) return "";
+    if (userRole === "entreprise") {
+      return user.user_metadata?.logo_url || "";
+    }
+    return user.user_metadata?.avatar_url || "";
+  };
+
+  const renderAvatar = () => {
+    const avatarUrl = getAvatarUrl();
+    
+    if (loading) {
+      return <Skeleton className="h-8 w-8 rounded-full" />;
+    }
+    
+    return (
+      <Avatar>
+        {avatarUrl && (
+          <AvatarImage 
+            src={avatarUrl} 
+            alt={getUserDisplayName()} 
+            onLoad={() => setAvatarLoaded(true)}
+            onError={() => setAvatarLoaded(false)}
+          />
+        )}
+        <AvatarFallback className="bg-primary/10">
+          {getInitials(getUserDisplayName())}
+        </AvatarFallback>
+      </Avatar>
+    );
   };
 
   useEffect(() => {
@@ -118,10 +151,13 @@ export default function Navigation() {
             >
               Contact
             </Link>
-            <ThemeToggle />
+            
+            <Suspense fallback={<Skeleton className="h-8 w-8" />}>
+              <ThemeToggle />
+            </Suspense>
 
             {loading ? (
-              <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
+              <Skeleton className="h-8 w-8 rounded-full" />
             ) : isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -129,11 +165,7 @@ export default function Navigation() {
                     variant="ghost"
                     className="relative h-10 w-10 rounded-full hover:bg-muted/50 transition-colors"
                   >
-                    <Avatar>
-                      <AvatarFallback className="bg-primary/10">
-                        {getInitials(getUserDisplayName())}
-                      </AvatarFallback>
-                    </Avatar>
+                    {renderAvatar()}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -212,7 +244,9 @@ export default function Navigation() {
           </div>
 
           <div className="md:hidden flex items-center gap-4">
-            <ThemeToggle />
+            <Suspense fallback={<Skeleton className="h-6 w-6" />}>
+              <ThemeToggle />
+            </Suspense>
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="text-foreground"

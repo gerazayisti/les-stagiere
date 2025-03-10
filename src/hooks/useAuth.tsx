@@ -10,6 +10,7 @@ import { User } from '@/types/auth';
 const SESSION_CACHE_KEY = 'app_session_cache';
 const USER_CACHE_PREFIX = 'cachedUserProfile_';
 const SESSION_CACHE_DURATION = 1000 * 60 * 60; // 1 heure
+const NAVIGATION_STATE_KEY = 'navigation_state'; // Navigation state cache
 
 // Fonction utilitaire pour récupérer des données mises en cache
 const getFromCache = (key: string) => {
@@ -44,9 +45,11 @@ const setInCache = (key: string, data: any, duration: number = SESSION_CACHE_DUR
 };
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  // Try to get initial state from cache for faster initial rendering
+  const cachedNavState = getFromCache(NAVIGATION_STATE_KEY);
+  const [user, setUser] = useState<User | null>(cachedNavState?.user || null);
+  const [loading, setLoading] = useState(!cachedNavState);
+  const [userRole, setUserRole] = useState<string | null>(cachedNavState?.userRole || null);
   const navigate = useNavigate();
 
   // Optimized function to convert Supabase user data to our User model
@@ -115,6 +118,13 @@ export function useAuth() {
         console.log("Using cached session");
         setUser(cachedSession.user);
         setUserRole(cachedSession.user.role);
+        setLoading(false);
+        
+        // Cache the navigation state for even faster initial renders
+        setInCache(NAVIGATION_STATE_KEY, { 
+          user: cachedSession.user, 
+          userRole: cachedSession.user.role 
+        }, 1000 * 60 * 5); // 5 minutes
         
         // Continue to fetch latest session in background 
         // pour maintenir à jour le cache de session
@@ -159,6 +169,12 @@ export function useAuth() {
         // Cache basic session data immediately
         setInCache(SESSION_CACHE_KEY, { user: basicUserData });
         
+        // Cache the navigation state for faster initial renders
+        setInCache(NAVIGATION_STATE_KEY, { 
+          user: basicUserData, 
+          userRole: basicUserData.role 
+        }, 1000 * 60 * 5); // 5 minutes
+        
         // Then fetch complete user data in background
         const formattedUser = await formatUserData(session.user);
         if (formattedUser) {
@@ -167,11 +183,18 @@ export function useAuth() {
           
           // Update cache with full user data
           setInCache(SESSION_CACHE_KEY, { user: formattedUser });
+          
+          // Update navigation state cache
+          setInCache(NAVIGATION_STATE_KEY, { 
+            user: formattedUser, 
+            userRole: formattedUser.role 
+          }, 1000 * 60 * 5); // 5 minutes
         }
       } else {
         setUser(null);
         setUserRole(null);
         localStorage.removeItem(SESSION_CACHE_KEY);
+        localStorage.removeItem(NAVIGATION_STATE_KEY);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération de la session:', error);
@@ -256,6 +279,7 @@ export function useAuth() {
         localStorage.removeItem(`${USER_CACHE_PREFIX}${currentUserId}`);
       }
       localStorage.removeItem(SESSION_CACHE_KEY);
+      localStorage.removeItem(NAVIGATION_STATE_KEY);
       
       setUser(null);
       setUserRole(null);
