@@ -30,7 +30,7 @@ export function useAuth() {
     }
     
     // Si l'utilisateur n'a pas encore de profil, utiliser les données temporaires
-    let role = userData?.role;
+    let role = userData?.role || supabaseUser.user_metadata?.role;
     let name = userData?.name || supabaseUser.user_metadata?.name || '';
     
     if (!role && supabaseUser.email_confirmed_at) {
@@ -43,7 +43,10 @@ export function useAuth() {
           name = profileData.name;
           
           // Créer le profil maintenant
-          await auth.createProfileAfterConfirmation(supabaseUser.id);
+          const result = await auth.createProfileAfterConfirmation(supabaseUser.id);
+          if (!result.success) {
+            console.error("Échec de la création du profil après confirmation:", result.error);
+          }
         } catch (e) {
           console.error("Erreur lors de la récupération des données temporaires:", e);
         }

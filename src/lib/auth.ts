@@ -24,20 +24,7 @@ async function checkProfileExists(id: string, table: string): Promise<boolean> {
 // Fonction pour vérifier si un email existe déjà
 async function checkEmailExists(email: string): Promise<boolean> {
   try {
-    // Méthode 1: Essayez de faire un signup sans créer d'utilisateur
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-      }
-    });
-    
-    // Si nous recevons "user not found", l'email n'existe pas
-    if (error && error.message.includes("user not found")) {
-      return false;
-    }
-    
-    // Méthode 2: Vérifiez si l'email existe dans la table users
+    // Méthode la plus simple: vérifier directement dans la table users
     const { data } = await supabase
       .from('users')
       .select('email')
@@ -45,10 +32,11 @@ async function checkEmailExists(email: string): Promise<boolean> {
       .maybeSingle();
     
     if (data) {
+      console.log("Email trouvé dans la table users:", data);
       return true;
     }
     
-    // Par défaut, considérez que l'email n'existe pas si nous n'avons pas de preuve du contraire
+    // Par défaut, considérez que l'email n'existe pas
     return false;
   } catch (error) {
     console.error("Erreur lors de la vérification de l'email:", error);
@@ -143,7 +131,7 @@ export const auth = {
     return checkEmailExists(email);
   },
 
-  // Inscription d'un nouvel utilisateur - VERSION MINIMALISTE
+  // Inscription d'un nouvel utilisateur - VERSION SIMPLIFIÉE
   async signUp(data: SignUpData): Promise<AuthResponse> {
     const { email, password, role, name } = data;
     
@@ -159,7 +147,7 @@ export const auth = {
         };
       }
       
-      // 2. Vérifier si l'email existe déjà (pour une meilleure UX)
+      // 2. Vérifier si l'email existe déjà
       try {
         const emailExists = await checkEmailExists(email);
         if (emailExists) {
@@ -182,69 +170,86 @@ export const auth = {
         password: "********"
       });
       
-      // 3. Inscription via Supabase Auth - UNIQUEMENT email et password
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/email-confirmation`
-        }
-      });
+      // 3. Inscription via Supabase Auth avec gestion des erreurs améliorée
+      try {
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+              role
+            },
+            emailRedirectTo: `${window.location.origin}/email-confirmation`
+          }
+        });
 
-      if (signUpError) {
-        console.error("Erreur lors de l'inscription:", signUpError);
-        
-        if (signUpError.message?.includes("already registered")) {
+        if (signUpError) {
+          console.error("Erreur Supabase lors de l'inscription:", signUpError);
+          
+          if (signUpError.message?.includes("already registered")) {
+            return {
+              success: false,
+              error: {
+                message: "Cette adresse email est déjà utilisée",
+                status: 409,
+                isRetryable: false
+              }
+            };
+          }
+          
+          // Afficher le message d'erreur exact pour un meilleur débogage
           return {
             success: false,
             error: {
-              message: "Cette adresse email est déjà utilisée",
-              status: 409,
-              isRetryable: false
+              message: `Erreur d'inscription: ${signUpError.message}`,
+              status: signUpError.status || 500,
+              isRetryable: true
             }
           };
+        }
+
+        if (authData?.user) {
+          // Stocker les informations temporairement pour la création du profil après confirmation
+          localStorage.setItem(`userProfile_${authData.user.id}`, JSON.stringify({
+            id: authData.user.id,
+            email: authData.user.email,
+            role,
+            name
+          }));
+          
+          toast.success("Inscription réussie", {
+            description: "Vérifiez votre email pour confirmer votre compte"
+          });
+          
+          return { success: true, data: authData };
         }
         
         return {
           success: false,
           error: {
-            message: signUpError.message,
-            status: signUpError.status || 500,
+            message: "Erreur lors de la création du compte",
+            status: 500,
+            isRetryable: true
+          }
+        };
+      } catch (signUpError: any) {
+        console.error("Exception lors de l'inscription:", signUpError);
+        return {
+          success: false,
+          error: {
+            message: `Exception: ${signUpError.message || "Erreur inconnue"}`,
+            status: 500,
             isRetryable: true
           }
         };
       }
-
-      if (authData?.user) {
-        // Stocker les informations temporairement pour la création du profil après confirmation
-        localStorage.setItem(`userProfile_${authData.user.id}`, JSON.stringify({
-          id: authData.user.id,
-          email: authData.user.email,
-          role,
-          name
-        }));
-        
-        toast.success("Inscription réussie", {
-          description: "Vérifiez votre email pour confirmer votre compte"
-        });
-        
-        return { success: true, data: authData };
-      }
-      
-      return {
-        success: false,
-        error: {
-          message: "Erreur lors de la création du compte",
-          status: 500,
-          isRetryable: true
-        }
-      };
     } catch (error: any) {
-      console.error("Erreur d'inscription:", error);
+      console.error("Erreur d'inscription (générale):", error);
       
       const message = error.message?.includes("already registered") 
         ? "Cette adresse email est déjà utilisée"
-        : "Une erreur est survenue lors de l'inscription";
+        : `Une erreur est survenue lors de l'inscription: ${error.message || "Erreur inconnue"}`;
       
       toast.error("Erreur d'inscription", {
         description: message

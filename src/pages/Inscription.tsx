@@ -82,7 +82,9 @@ export default function Inscription() {
           // Attendre un peu pour éviter trop de requêtes pendant la frappe
           const timeoutId = setTimeout(async () => {
             try {
+              console.log("Vérification de la disponibilité de l'email:", formData.email);
               const exists = await auth.checkEmailExists(formData.email);
+              console.log("Résultat de la vérification:", exists ? "Email déjà utilisé" : "Email disponible");
               setEmailAvailable(!exists);
             } catch (error) {
               console.warn("Vérification d'email échouée:", error);
@@ -165,6 +167,8 @@ export default function Inscription() {
       
       const result = await auth.signUp(formData);
       
+      console.log("Résultat de l'inscription:", result.success ? "Succès" : "Échec", result.error || "");
+      
       if (result.success) {
         setEmailSent(true);
         toast.success("Inscription réussie !", {
@@ -173,9 +177,14 @@ export default function Inscription() {
       } else if (result.error) {
         setFormError(result.error.message);
         console.error("Erreur d'inscription:", result.error);
+        
+        // Afficher des informations plus détaillées pour le débogage
+        if (result.error.message.includes("Database")) {
+          console.error("Problème de base de données détecté. Vérifiez les tables et les politiques RLS.");
+        }
       }
     } catch (error: any) {
-      console.error("Erreur lors de la soumission du formulaire:", error);
+      console.error("Exception lors de la soumission du formulaire:", error);
       setFormError(error.message || "Erreur lors de l'inscription");
     } finally {
       setLoading(false);
