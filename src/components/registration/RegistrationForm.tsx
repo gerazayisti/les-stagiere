@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Loader2, Eye, EyeOff, WifiOff } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,6 +31,7 @@ interface RegistrationFormProps {
   onSubmit: (e: React.FormEvent) => Promise<void>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRoleChange: (value: UserRole) => void;
+  networkError?: boolean;
 }
 
 export function RegistrationForm({
@@ -42,15 +43,16 @@ export function RegistrationForm({
   passwordStrength,
   onSubmit,
   onInputChange,
-  onRoleChange
+  onRoleChange,
+  networkError = false
 }: RegistrationFormProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {formError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+        <Alert variant={networkError ? "default" : "destructive"}>
+          {networkError ? <WifiOff className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}

@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError, User } from '@/types/auth';
@@ -17,6 +18,7 @@ async function checkEmailExists(email: string): Promise<boolean> {
     return !!data;
   } catch (error) {
     console.error(`Erreur lors de la vérification de l'email:`, error);
+    // Return false instead of throwing, to allow the signup flow to continue
     return false;
   }
 }
@@ -56,7 +58,6 @@ export async function createUserProfile(userData: {
         .upsert({
           id,
           name,
-          email,
           avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
           skills: [],
           languages: [],
@@ -74,7 +75,6 @@ export async function createUserProfile(userData: {
         .upsert({
           id,
           name,
-          email,
           logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
           industry: '',
           location: '',
@@ -108,7 +108,7 @@ export const auth = {
     return checkEmailExists(email);
   },
 
-  // Inscription d'un nouvel utilisateur - VERSION SIMPLIFIÉE
+  // Inscription d'un nouvel utilisateur - VERSION AMÉLIORÉE AVEC GESTION D'ERREURS RÉSEAU
   async signUp(data: SignUpData): Promise<AuthResponse> {
     const { email, password, role, name } = data;
     
@@ -147,7 +147,7 @@ export const auth = {
         password: "********"
       });
       
-      // 3. Inscription via Supabase Auth avec gestion des erreurs améliorée
+      // 3. Inscription via Supabase Auth avec gestion des erreurs réseau
       try {
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -228,6 +228,23 @@ export const auth = {
         };
       } catch (signUpError: any) {
         console.error("Exception lors de l'inscription:", signUpError);
+        
+        // Gestion spécifique des erreurs de connexion réseau
+        if (signUpError.message === "Failed to fetch" || 
+            signUpError.name === "TypeError" || 
+            signUpError.message?.includes("network") ||
+            signUpError.message?.includes("ERR_NAME_NOT_RESOLVED")) {
+          return {
+            success: false,
+            error: {
+              message: "Problème de connexion à notre serveur. Veuillez vérifier votre connexion internet et réessayer.",
+              status: 0,
+              isRetryable: true,
+              isNetworkError: true
+            }
+          };
+        }
+        
         return {
           success: false,
           error: {
@@ -239,6 +256,27 @@ export const auth = {
       }
     } catch (error: any) {
       console.error("Erreur d'inscription (générale):", error);
+      
+      // Gestion des erreurs réseau générales
+      if (error.message === "Failed to fetch" || 
+          error.name === "TypeError" || 
+          error.message?.includes("network") ||
+          error.message?.includes("ERR_NAME_NOT_RESOLVED")) {
+        
+        toast.error("Problème de connexion", {
+          description: "Impossible de se connecter au serveur. Veuillez vérifier votre connexion internet."
+        });
+        
+        return {
+          success: false,
+          error: {
+            message: "Problème de connexion à notre serveur. Veuillez vérifier votre connexion internet et réessayer.",
+            status: 0,
+            isRetryable: true,
+            isNetworkError: true
+          }
+        };
+      }
       
       const message = error.message?.includes("already registered") 
         ? "Cette adresse email est déjà utilisée"

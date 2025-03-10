@@ -17,6 +17,7 @@ export default function Inscription() {
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [networkError, setNetworkError] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [formData, setFormData] = useState({
@@ -108,6 +109,7 @@ export default function Inscription() {
     
     if (formError) {
       setFormError(null);
+      setNetworkError(false);
     }
   };
 
@@ -115,6 +117,7 @@ export default function Inscription() {
     e.preventDefault();
     setLoading(true);
     setFormError(null);
+    setNetworkError(false);
 
     try {
       if (!formData.email.includes('@') || !formData.email.includes('.')) {
@@ -146,10 +149,24 @@ export default function Inscription() {
         });
       } else if (result.error) {
         setFormError(result.error.message);
+        // Check if it's a network error
+        if (result.error.isNetworkError) {
+          setNetworkError(true);
+        }
       }
     } catch (error: any) {
       console.error("Exception lors de la soumission du formulaire:", error);
-      setFormError(error.message || "Erreur lors de l'inscription");
+      
+      // Check for network errors
+      if (error.message === "Failed to fetch" || 
+          error.name === "TypeError" || 
+          error.message?.includes("network") ||
+          error.message?.includes("ERR_NAME_NOT_RESOLVED")) {
+        setFormError("Problème de connexion à notre serveur. Veuillez vérifier votre connexion internet et réessayer.");
+        setNetworkError(true);
+      } else {
+        setFormError(error.message || "Erreur lors de l'inscription");
+      }
     } finally {
       setLoading(false);
     }
@@ -169,7 +186,17 @@ export default function Inscription() {
       });
     } catch (error: any) {
       console.error("Erreur lors du renvoi de l'email:", error);
-      setFormError("Impossible de renvoyer l'email de confirmation");
+      
+      // Check if it's a network error
+      if (error.message === "Failed to fetch" || 
+          error.name === "TypeError" || 
+          error.message?.includes("network") ||
+          error.message?.includes("ERR_NAME_NOT_RESOLVED")) {
+        setFormError("Problème de connexion à notre serveur. Veuillez vérifier votre connexion internet et réessayer.");
+        setNetworkError(true);
+      } else {
+        setFormError("Impossible de renvoyer l'email de confirmation");
+      }
     } finally {
       setLoading(false);
     }
@@ -208,6 +235,7 @@ export default function Inscription() {
               onSubmit={handleSubmit}
               onInputChange={handleInputChange}
               onRoleChange={(value) => setFormData({ ...formData, role: value })}
+              networkError={networkError}
             />
           </ScrollArea>
         </CardContent>

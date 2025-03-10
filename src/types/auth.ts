@@ -6,6 +6,7 @@ export interface AuthError {
   code?: string;
   status?: number;
   isRetryable?: boolean;
+  isNetworkError?: boolean;
 }
 
 export interface SignUpData {
