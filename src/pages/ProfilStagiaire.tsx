@@ -8,7 +8,6 @@ import { Recommendations } from '@/components/profile/Recommendations';
 import Portfolio from '@/components/profile/Portfolio';
 import { useStagiaire } from '@/hooks/useStagiaire';
 import { useParams } from 'react-router-dom';
-import { useToast } from '@/components/ui/use-toast';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
@@ -38,9 +37,9 @@ export default function ProfilStagiaire() {
     <div className="container mx-auto py-8 px-4">
       <ProfileHeader 
         name={stagiaire.name}
-        title={stagiaire.title || "Stagiaire"}
-        avatar={stagiaire.avatar_url}
-        coverImage="https://images.unsplash.com/photo-1504805572947-34fad45aed93?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
+        position={stagiaire.title || "Stagiaire"}
+        avatarUrl={stagiaire.avatar_url}
+        coverImageUrl="https://images.unsplash.com/photo-1504805572947-34fad45aed93?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
         isCurrentUser={isCurrentUser}
         profileType="stagiaire"
         userId={stagiaire.id}
@@ -55,13 +54,13 @@ export default function ProfilStagiaire() {
         </TabsList>
         <TabsContent value="about">
           <AboutTab 
-            stagiaire={stagiaire} 
+            profile={stagiaire} 
             isCurrentUser={isCurrentUser} 
           />
         </TabsContent>
         <TabsContent value="cv">
           <CVTab 
-            stagiaire={stagiaire} 
+            profile={stagiaire} 
             isCurrentUser={isCurrentUser} 
           />
         </TabsContent>
@@ -70,8 +69,8 @@ export default function ProfilStagiaire() {
         </TabsContent>
         <TabsContent value="recommendations">
           <Recommendations 
-            targetId={stagiaire.id} 
-            targetType="stagiaire" 
+            profileId={stagiaire.id} 
+            profileType="stagiaire" 
             canAddRecommendation={user?.role === 'entreprise' && user?.id !== stagiaire.id} 
           />
         </TabsContent>

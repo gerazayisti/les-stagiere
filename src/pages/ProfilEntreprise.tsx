@@ -5,7 +5,7 @@ import { AboutTab } from '@/components/profile/AboutTab';
 import { useParams, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { AddInternshipOfferForm } from '@/components/profile/AddInternshipOfferForm';
+import AddInternshipOfferForm from '@/components/profile/AddInternshipOfferForm';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { InternshipOffersList } from '@/components/profile/InternshipOffersList';
@@ -67,9 +67,9 @@ export default function ProfilEntreprise() {
     <div className="container mx-auto py-8 px-4">
       <ProfileHeader 
         name={entreprise.name}
-        title={entreprise.industry || "Entreprise"}
-        avatar={entreprise.logo_url}
-        coverImage="https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1469&q=80"
+        position={entreprise.industry || "Entreprise"}
+        avatarUrl={entreprise.logo_url}
+        coverImageUrl="https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1469&q=80"
         isCurrentUser={isCurrentUser}
         profileType="entreprise"
         userId={entreprise.id}
@@ -83,7 +83,7 @@ export default function ProfilEntreprise() {
         </TabsList>
         <TabsContent value="about">
           <AboutTab 
-            entreprise={entreprise} 
+            profile={entreprise} 
             isCurrentUser={isCurrentUser} 
           />
         </TabsContent>
@@ -97,7 +97,7 @@ export default function ProfilEntreprise() {
             )}
           </div>
           
-          <InternshipOffersList entrepriseId={entreprise.id} isOwner={isCurrentUser} />
+          <InternshipOffersList companyId={entreprise.id} />
           
           {isAddOfferModalOpen && (
             <AddInternshipOfferForm
@@ -109,7 +109,7 @@ export default function ProfilEntreprise() {
         </TabsContent>
         <TabsContent value="recommendations">
           <CompanyRecommendations 
-            entrepriseId={entreprise.id} 
+            companyId={entreprise.id} 
             canAddRecommendation={user?.role === 'stagiaire'} 
           />
         </TabsContent>
