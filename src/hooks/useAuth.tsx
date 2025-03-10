@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { auth } from '@/lib/auth';
 
 export interface User {
   id: string;
@@ -19,15 +20,45 @@ export function useAuth() {
   const navigate = useNavigate();
 
   // Fonction pour convertir les données d'utilisateur Supabase en notre modèle User
-  const formatUserData = useCallback((supabaseUser: any): User | null => {
+  const formatUserData = useCallback(async (supabaseUser: any): Promise<User | null> => {
     if (!supabaseUser) return null;
     
     console.log("Formatage de l'utilisateur:", supabaseUser);
     
+    // Vérifier si l'utilisateur a un profil dans la table users
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', supabaseUser.id)
+      .maybeSingle();
+    
+    if (userError) {
+      console.error("Erreur lors de la récupération du profil utilisateur:", userError);
+    }
+    
+    // Si l'utilisateur n'a pas encore de profil, utiliser les données temporaires
+    let role = userData?.role;
+    
+    if (!role && supabaseUser.email_confirmed_at) {
+      // L'email est confirmé mais pas de profil - vérifier les données stockées
+      const storedProfile = localStorage.getItem(`userProfile_${supabaseUser.id}`);
+      if (storedProfile) {
+        try {
+          const profileData = JSON.parse(storedProfile);
+          role = profileData.role;
+          
+          // Créer le profil maintenant
+          await auth.createProfileAfterConfirmation(supabaseUser.id);
+        } catch (e) {
+          console.error("Erreur lors de la récupération des données temporaires:", e);
+        }
+      }
+    }
+    
     return {
       id: supabaseUser.id,
       email: supabaseUser.email!,
-      role: supabaseUser.user_metadata?.role || 'stagiaire',
+      role: role || 'stagiaire', // Valeur par défaut si non trouvée
       email_confirmed_at: supabaseUser.email_confirmed_at,
       user_metadata: supabaseUser.user_metadata
     };
@@ -46,7 +77,7 @@ export function useAuth() {
       console.log("Current session:", session);
 
       if (session?.user) {
-        const formattedUser = formatUserData(session.user);
+        const formattedUser = await formatUserData(session.user);
         setUser(formattedUser);
         setUserRole(formattedUser?.role || null);
       } else {
@@ -82,7 +113,7 @@ export function useAuth() {
         setUser(null);
         setUserRole(null);
       } else if (session?.user) {
-        const formattedUser = formatUserData(session.user);
+        const formattedUser = await formatUserData(session.user);
         setUser(formattedUser);
         setUserRole(formattedUser?.role || null);
       }

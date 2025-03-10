@@ -1,7 +1,7 @@
 
 import { supabase } from './supabase';
 import { toast } from 'sonner';
-import { AuthError, AuthResponse, SignInData, SignUpData } from '@/types/auth';
+import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError } from '@/types/auth';
 
 export type UserRole = 'stagiaire' | 'entreprise' | 'admin';
 
@@ -158,16 +158,15 @@ export const auth = {
         // Continuons le processus même si cette vérification échoue
       }
       
-      // 3. Inscription via Supabase Auth
-      // IMPORTANT: Ne pas inclure le role dans les métadonnées transmises à auth.signUp
-      // car cela peut entrer en conflit avec le système de rôles interne de Supabase
+      // 3. Inscription via Supabase Auth - SANS INCLURE LE RÔLE
+      // On stocke seulement le nom et l'email dans les métadonnées utilisateur
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name, // Seulement inclure le nom dans les métadonnées
-            email // Inclure l'email pour faciliter l'accès plus tard
+            name,
+            email
           },
           emailRedirectTo: `${window.location.origin}/email-confirmation`
         },
@@ -198,35 +197,36 @@ export const auth = {
 
       console.log("Résultat de l'inscription:", authData);
 
-      // 4. Si l'utilisateur est créé avec succès dans Auth, créer immédiatement le profil
+      // 4. Stocker temporairement les informations de rôle et de profil
+      // On les utilisera après confirmation de l'email
       if (authData?.user) {
-        const userProfileResult = await createUserProfile({
+        // Stockage des informations de rôle et de profil dans le localStorage
+        // pour une utilisation ultérieure après confirmation de l'email
+        localStorage.setItem(`userProfile_${authData.user.id}`, JSON.stringify({
           id: authData.user.id,
           email: authData.user.email || email,
-          role, // Le rôle est utilisé uniquement dans notre table publique users
+          role,
           name
+        }));
+        
+        // On ne crée pas immédiatement le profil utilisateur dans public.users
+        // Ce sera fait après confirmation de l'email
+        
+        toast.success("Inscription réussie", {
+          description: "Vérifiez votre email pour confirmer votre compte"
         });
         
-        if (!userProfileResult.success) {
-          console.error("L'utilisateur a été créé dans auth mais pas dans les tables publiques", userProfileResult.error);
-          
-          // On continue car l'utilisateur pourra compléter son profil plus tard
-          return {
-            success: true,
-            data: authData,
-            error: {
-              message: "Votre compte a été créé mais votre profil est incomplet",
-              status: 202
-            }
-          };
-        }
+        return { success: true, data: authData };
+      } else {
+        return {
+          success: false,
+          error: {
+            message: "Erreur lors de la création du compte",
+            status: 500,
+            isRetryable: true
+          }
+        };
       }
-      
-      toast.success("Inscription réussie", {
-        description: "Vérifiez votre email pour confirmer votre compte"
-      });
-      
-      return { success: true, data: authData };
     } catch (error: any) {
       console.error("Erreur d'inscription:", error);
       
@@ -265,6 +265,46 @@ export const auth = {
     }
   },
 
+  // Création du profil après confirmation de l'email
+  async createProfileAfterConfirmation(userId: string): Promise<AuthResponse> {
+    try {
+      // Récupérer les informations temporaires de profil depuis le localStorage
+      const storedProfileData = localStorage.getItem(`userProfile_${userId}`);
+      
+      if (!storedProfileData) {
+        return {
+          success: false,
+          error: {
+            message: "Informations de profil non trouvées",
+            status: 404
+          }
+        };
+      }
+      
+      const profileData = JSON.parse(storedProfileData);
+      
+      // Créer le profil utilisateur dans les tables publiques
+      const result = await createUserProfile(profileData);
+      
+      if (result.success) {
+        // Supprimer les données temporaires
+        localStorage.removeItem(`userProfile_${userId}`);
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error("Erreur lors de la création du profil après confirmation:", error);
+      return {
+        success: false,
+        error: {
+          message: error.message || "Erreur lors de la création du profil",
+          status: 500,
+          isRetryable: true
+        }
+      };
+    }
+  },
+
   // Connexion d'un utilisateur existant
   async signIn({ email, password }: SignInData) {
     try {
@@ -278,6 +318,24 @@ export const auth = {
           throw new Error("Veuillez confirmer votre email avant de vous connecter");
         }
         throw error;
+      }
+      
+      // Vérifier si le profil existe, sinon le créer à partir des données stockées
+      if (data.user) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+          
+        if (!userData && !userError) {
+          // Le profil n'existe pas encore, vérifier s'il y a des données stockées
+          const storedProfileData = localStorage.getItem(`userProfile_${data.user.id}`);
+          
+          if (storedProfileData) {
+            await this.createProfileAfterConfirmation(data.user.id);
+          }
+        }
       }
       
       toast.success("Connexion réussie", {

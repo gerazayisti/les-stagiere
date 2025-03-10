@@ -34,3 +34,9 @@ export interface User {
   email_confirmed_at?: string;
   user_metadata?: any;
 }
+
+export interface SupabaseAuthError {
+  message: string;
+  status?: number;
+  code?: string;
+}

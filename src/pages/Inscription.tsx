@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { auth, UserRole } from "@/lib/auth"
@@ -130,7 +131,7 @@ export default function Inscription() {
       if (result.success) {
         setEmailSent(true);
         toast.success("Inscription réussie !", {
-          description: "Veuillez vérifier votre email pour confirmer votre compte."
+          description: "Veuillez vérifier votre email pour confirmer votre compte. Une fois confirmé, votre profil sera créé automatiquement."
         });
       } else if (result.error) {
         setFormError(result.error.message);
