@@ -3,7 +3,7 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileQuestion, Home, LogIn, Loader2, AlertCircle } from "lucide-react";
+import { FileQuestion, Home, LogIn, Loader2, AlertCircle, Database } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ const NotFound = () => {
   const [redirectAttempted, setRedirectAttempted] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<"db" | "auth" | "not_found" | null>(null);
   const redirectInProgress = useRef(false);
 
   useEffect(() => {
@@ -88,16 +89,74 @@ const NotFound = () => {
                   }
                 }
                 
-                // Redirection basée sur le rôle de l'utilisateur pour les autres cas
-                if (role === 'entreprise') {
-                  navigate(`/entreprises/${userId}`, { replace: true });
-                  return;
-                } else if (role === 'stagiaire') {
-                  navigate(`/stagiaires/${userId}`, { replace: true });
-                  return;
-                } else {
-                  navigate('/complete-profile', { replace: true });
-                  return;
+                // Vérifier si le profil existe réellement dans la base de données
+                try {
+                  if (role === 'entreprise') {
+                    const { data: entrepriseData, error: entrepriseError } = await supabase
+                      .from('entreprises')
+                      .select('id')
+                      .eq('id', userId)
+                      .single();
+                    
+                    if (entrepriseError) {
+                      // Si l'erreur est due à une table manquante
+                      if (entrepriseError.code === '42P01') {
+                        setErrorType("db");
+                        setErrorDetails("La base de données semble être mal configurée. Veuillez contacter l'administrateur.");
+                        return;
+                      }
+                      
+                      if (entrepriseError.code === 'PGRST116') {
+                        // Profil non trouvé, rediriger vers la page de complétion de profil
+                        navigate('/complete-profile', { replace: true });
+                        return;
+                      }
+                      
+                      throw entrepriseError;
+                    }
+                    
+                    navigate(`/entreprises/${userId}`, { replace: true });
+                    return;
+                  } else if (role === 'stagiaire') {
+                    const { data: stagiaireData, error: stagiaireError } = await supabase
+                      .from('stagiaires')
+                      .select('id')
+                      .eq('id', userId)
+                      .single();
+                    
+                    if (stagiaireError) {
+                      // Si l'erreur est due à une table manquante
+                      if (stagiaireError.code === '42P01') {
+                        setErrorType("db");
+                        setErrorDetails("La base de données semble être mal configurée. Veuillez contacter l'administrateur.");
+                        return;
+                      }
+                      
+                      if (stagiaireError.code === 'PGRST116') {
+                        // Profil non trouvé, rediriger vers la page de complétion de profil
+                        navigate('/complete-profile', { replace: true });
+                        return;
+                      }
+                      
+                      throw stagiaireError;
+                    }
+                    
+                    navigate(`/stagiaires/${userId}`, { replace: true });
+                    return;
+                  } else {
+                    navigate('/complete-profile', { replace: true });
+                    return;
+                  }
+                } catch (profileError: any) {
+                  console.error("Error during profile check:", profileError);
+                  
+                  // Si l'erreur est due à une table manquante dans la base de données
+                  if (profileError.code === '42P01') {
+                    setErrorType("db");
+                    setErrorDetails("La base de données semble être mal configurée. Veuillez contacter l'administrateur.");
+                  } else {
+                    setErrorDetails("Erreur lors de la vérification de votre profil: " + (profileError.message || "Une erreur inconnue s'est produite"));
+                  }
                 }
               } catch (profileError) {
                 console.error("Error during profile redirect:", profileError);
@@ -112,12 +171,24 @@ const NotFound = () => {
               // Si nous avons un token d'accès dans le hash mais pas de session
               navigate('/email-confirmation' + location.search + location.hash, { replace: true });
               return;
+            } else {
+              // Si nous n'avons pas de session, définir le type d'erreur sur "auth"
+              setErrorType("auth");
             }
-          } catch (sessionError) {
+          } catch (sessionError: any) {
             console.error("Session check error:", sessionError);
-            setErrorDetails("Erreur lors de la vérification de votre session");
-            // Continuer avec la gestion normale de 404
+            
+            // Si l'erreur est due à une table manquante dans la base de données
+            if (sessionError.code === '42P01') {
+              setErrorType("db");
+              setErrorDetails("La base de données semble être mal configurée. Veuillez contacter l'administrateur.");
+            } else {
+              setErrorDetails("Erreur lors de la vérification de votre session: " + (sessionError.message || "Une erreur inconnue s'est produite"));
+            }
           }
+        } else {
+          // Pour les autres pages non trouvées
+          setErrorType("not_found");
         }
       } catch (error: any) {
         console.error("Error during redirect check:", error);
@@ -140,6 +211,7 @@ const NotFound = () => {
     setRedirectAttempted(false);
     setRetryCount(prev => prev + 1);
     setErrorDetails(null);
+    setErrorType(null);
   };
 
   const handleHomeClick = () => {
@@ -147,10 +219,54 @@ const NotFound = () => {
     navigate('/', { replace: true, state: { noRedirect: true } });
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
+  const renderErrorContent = () => {
+    if (errorType === "db") {
+      return (
+        <>
+          <div className="flex justify-center mb-4">
+            <Database className="h-16 w-16 text-orange-500" />
+          </div>
+          <CardTitle className="text-2xl font-bold">Erreur de base de données</CardTitle>
+          <div className="mt-6 text-center space-y-4">
+            <p className="text-lg text-muted-foreground">
+              Il semble que la base de données ne soit pas correctement configurée.
+            </p>
+            <p className="text-muted-foreground">
+              Certaines tables nécessaires n'existent pas. Veuillez contacter l'administrateur 
+              ou exécuter les scripts de migration pour créer les tables manquantes.
+            </p>
+            {errorDetails && (
+              <div className="flex items-center justify-center gap-2 text-red-500 text-sm mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <p>{errorDetails}</p>
+              </div>
+            )}
+          </div>
+        </>
+      );
+    } else if (errorType === "auth") {
+      return (
+        <>
+          <div className="flex justify-center mb-4">
+            <LogIn className="h-16 w-16 text-primary" />
+          </div>
+          <CardTitle className="text-2xl font-bold">Authentification requise</CardTitle>
+          <div className="mt-6 text-center space-y-4">
+            <p className="text-lg text-muted-foreground">
+              Vous devez être connecté pour accéder à cette page.
+            </p>
+            {errorDetails && (
+              <div className="flex items-center justify-center gap-2 text-red-500 text-sm mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <p>{errorDetails}</p>
+              </div>
+            )}
+          </div>
+        </>
+      );
+    } else {
+      return (
+        <>
           <div className="flex justify-center mb-4">
             {loading ? (
               <Loader2 className="h-16 w-16 text-primary animate-spin" />
@@ -159,25 +275,37 @@ const NotFound = () => {
             )}
           </div>
           <CardTitle className="text-3xl font-bold">404</CardTitle>
-        </CardHeader>
-        <CardContent className="text-center space-y-6">
-          {loading ? (
-            <p className="text-lg text-muted-foreground">
-              Tentative de récupération de votre session...
-            </p>
-          ) : (
-            <>
+          <div className="mt-6 text-center">
+            {loading ? (
               <p className="text-lg text-muted-foreground">
-                La page que vous recherchez n'existe pas ou a été déplacée.
+                Tentative de récupération de votre session...
               </p>
-              {errorDetails && (
-                <div className="flex items-center justify-center gap-2 text-red-500 text-sm">
-                  <AlertCircle className="h-4 w-4" />
-                  <p>{errorDetails}</p>
-                </div>
-              )}
-            </>
-          )}
+            ) : (
+              <>
+                <p className="text-lg text-muted-foreground">
+                  La page que vous recherchez n'existe pas ou a été déplacée.
+                </p>
+                {errorDetails && (
+                  <div className="flex items-center justify-center gap-2 text-red-500 text-sm mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <p>{errorDetails}</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </>
+      );
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="max-w-md w-full">
+        <CardHeader className="text-center">
+          {renderErrorContent()}
+        </CardHeader>
+        <CardContent className="space-y-6">
           <div className="flex flex-col gap-3">
             <Button 
               className="w-full" 
