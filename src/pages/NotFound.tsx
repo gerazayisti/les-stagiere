@@ -1,9 +1,9 @@
 
 import { useLocation, Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState, useRef } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileQuestion, Home, LogIn, Loader2 } from "lucide-react";
+import { FileQuestion, Home, LogIn, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -13,15 +13,20 @@ const NotFound = () => {
   const [loading, setLoading] = useState(false);
   const [redirectAttempted, setRedirectAttempted] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const redirectInProgress = useRef(false);
 
   useEffect(() => {
+    // Fonction pour vérifier et rediriger l'utilisateur si nécessaire
     const checkAndRedirect = async () => {
-      if (loading) return; // Prevent multiple simultaneous checks
-      
-      setLoading(true);
+      // Éviter les appels multiples simultanés
+      if (redirectInProgress.current || loading) return;
+      redirectInProgress.current = true;
       
       try {
-        // Log the error for debugging purposes
+        setLoading(true);
+        
+        // Journalisation de l'erreur pour le débogage
         console.error(
           "404 Error: User attempted to access non-existent route:",
           location.pathname,
@@ -31,128 +36,101 @@ const NotFound = () => {
           location.hash
         );
         
-        // Check if this might be a failed auth redirect or a profile page
+        // Vérifier si c'est une redirection d'authentification échouée
         const isAuthRelated = 
           location.pathname.includes("/email-confirmation") || 
           location.search.includes("type=recovery") || 
           location.search.includes("type=signup") ||
           location.hash.includes("access_token=") ||
-          location.pathname === "/";  // Add homepage to auth check
+          location.pathname === "/";
         
         const isProfilePage = 
           location.pathname.includes("/entreprises/") || 
           location.pathname.includes("/stagiaires/");
         
+        // Journalisation pour le débogage
         if (isAuthRelated || isProfilePage) {
           console.log("This appears to be an auth-related or profile page redirect");
           
-          // Extraction du token d'accès du hash pour toute URL
-          let accessToken = '';
-          if (location.hash) {
-            const match = location.hash.match(/access_token=([^&]*)/);
-            if (match && match[1]) {
-              accessToken = match[1];
-              console.log("Found access token in hash, redirecting to proper path");
-              
-              // Pour toute URL avec un token d'accès, rediriger vers la confirmation d'email
-              if (!location.pathname.includes("/email-confirmation")) {
-                const fullPath = `/email-confirmation${location.search}${location.hash}`;
-                navigate(fullPath, { replace: true });
-                return;
-              }
-            }
-          }
-          
           try {
-            // Attempt to get session - this can help with email confirmation redirects
+            // Vérification de la session actuelle
             const { data, error } = await supabase.auth.getSession();
             console.log("Current session check:", data?.session ? "Has session" : "No session", error ? `Error: ${error.message}` : "No error");
             
             if (data?.session?.user) {
-              // User is authenticated, redirect based on role
               const role = data.session.user.user_metadata?.role || 'stagiaire';
               const userId = data.session.user.id;
               
-              // Cache navigation state for faster loading with timestamp
-              localStorage.setItem('navigation_state', JSON.stringify({ 
-                user: {
-                  id: userId,
-                  email: data.session.user.email,
-                  role: role,
-                  name: data.session.user.user_metadata?.name || 'Utilisateur', 
-                  email_confirmed_at: data.session.user.email_confirmed_at,
-                  user_metadata: data.session.user.user_metadata
-                }, 
-                userRole: role,
-                timestamp: Date.now()
-              }));
-              
-              // Clear any stale error state
-              sessionStorage.removeItem('auth_error');
-              
-              // If on a profile page, check if it's for the correct user
-              if (isProfilePage) {
-                const pathSegments = location.pathname.split('/');
-                const pathId = pathSegments[pathSegments.length - 1];
-                
-                // If we're on a profile page for the wrong user, redirect to their actual profile
-                if (pathId !== userId) {
-                  if (role === 'entreprise') {
-                    console.log(`Redirecting to correct enterprise profile: ${userId}`);
-                    navigate(`/entreprises/${userId}`, { replace: true });
-                    return;
-                  } else if (role === 'stagiaire') {
-                    console.log(`Redirecting to correct intern profile: ${userId}`);
-                    navigate(`/stagiaires/${userId}`, { replace: true });
-                    return;
-                  }
-                } else {
-                  // We're on the right profile page but it's not loading, retry fetching data
-                  if (retryCount < 3) {
-                    setRetryCount(prevCount => prevCount + 1);
-                    // Try to force refresh the profile data by reloading the page
-                    window.location.reload();
-                    return;
+              // Si nous avons une session valide, rediriger vers la page de profil appropriée
+              try {
+                // Gérer les erreurs de profil incorrects
+                if (isProfilePage) {
+                  const pathSegments = location.pathname.split('/');
+                  const pathId = pathSegments[pathSegments.length - 1];
+                  
+                  if (pathId !== userId) {
+                    // L'utilisateur essaie d'accéder à un profil inexistant ou incorrect
+                    if (retryCount < 2) {
+                      // Rediriger vers son propre profil
+                      const correctPath = role === 'entreprise' 
+                        ? `/entreprises/${userId}` 
+                        : `/stagiaires/${userId}`;
+                      
+                      toast.info("Redirection vers votre profil...");
+                      navigate(correctPath, { replace: true });
+                      return;
+                    } else {
+                      // Après plusieurs tentatives, rediriger vers l'accueil
+                      setErrorDetails("Impossible d'accéder au profil demandé après plusieurs tentatives");
+                      navigate('/', { replace: true });
+                      return;
+                    }
                   }
                 }
-              }
-              
-              if (role === 'entreprise') {
-                toast.success("Authentification réussie");
-                navigate(`/entreprises/${userId}`, { replace: true });
-                return;
-              } else if (role === 'stagiaire') {
-                toast.success("Authentification réussie");
-                navigate(`/stagiaires/${userId}`, { replace: true });
-                return;
-              } else {
-                toast.success("Authentification réussie");
-                navigate('/complete-profile', { replace: true });
-                return;
+                
+                // Redirection basée sur le rôle de l'utilisateur pour les autres cas
+                if (role === 'entreprise') {
+                  navigate(`/entreprises/${userId}`, { replace: true });
+                  return;
+                } else if (role === 'stagiaire') {
+                  navigate(`/stagiaires/${userId}`, { replace: true });
+                  return;
+                } else {
+                  navigate('/complete-profile', { replace: true });
+                  return;
+                }
+              } catch (profileError) {
+                console.error("Error during profile redirect:", profileError);
+                setErrorDetails("Erreur lors de la redirection vers votre profil");
+                // En cas d'erreur, continuer avec la gestion normale de 404
               }
             } else if (location.pathname === "/") {
-              // Si nous sommes sur la page d'accueil sans session, mieux gérer la redirection
-              navigate('/', { replace: true, state: { noRedirect: true, timestamp: Date.now() } });
+              // Si nous sommes sur la page d'accueil sans session
+              navigate('/', { replace: true, state: { noRedirect: true } });
               return;
             } else if (location.hash.includes("access_token=")) {
-              // Si nous avons un token d'accès dans le hash mais pas de session, rediriger vers la confirmation
+              // Si nous avons un token d'accès dans le hash mais pas de session
               navigate('/email-confirmation' + location.search + location.hash, { replace: true });
               return;
             }
           } catch (sessionError) {
             console.error("Session check error:", sessionError);
-            // Continue with normal 404 handling if session check fails
+            setErrorDetails("Erreur lors de la vérification de votre session");
+            // Continuer avec la gestion normale de 404
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error during redirect check:", error);
+        setErrorDetails(error.message || "Une erreur s'est produite lors de la redirection");
       } finally {
         setLoading(false);
         setRedirectAttempted(true);
+        redirectInProgress.current = false;
       }
     };
 
-    // Only attempt redirect if we haven't tried already in this render cycle
+    // Tenter la redirection seulement si nous n'avons pas déjà essayé
+    // et si l'utilisateur n'a pas explicitement demandé à ne pas être redirigé
     if (!redirectAttempted && !location.state?.noRedirect && retryCount < 3) {
       checkAndRedirect();
     }
@@ -160,7 +138,13 @@ const NotFound = () => {
 
   const handleRetry = () => {
     setRedirectAttempted(false);
-    setRetryCount(0);
+    setRetryCount(prev => prev + 1);
+    setErrorDetails(null);
+  };
+
+  const handleHomeClick = () => {
+    // Force navigation to home with no redirect flag
+    navigate('/', { replace: true, state: { noRedirect: true } });
   };
 
   return (
@@ -182,18 +166,33 @@ const NotFound = () => {
               Tentative de récupération de votre session...
             </p>
           ) : (
-            <p className="text-lg text-muted-foreground">
-              La page que vous recherchez n'existe pas ou a été déplacée.
-            </p>
+            <>
+              <p className="text-lg text-muted-foreground">
+                La page que vous recherchez n'existe pas ou a été déplacée.
+              </p>
+              {errorDetails && (
+                <div className="flex items-center justify-center gap-2 text-red-500 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <p>{errorDetails}</p>
+                </div>
+              )}
+            </>
           )}
           <div className="flex flex-col gap-3">
-            <Button asChild className="w-full" disabled={loading}>
-              <Link to="/">
-                <Home className="mr-2 h-4 w-4" />
-                Retour à l'accueil
-              </Link>
+            <Button 
+              className="w-full" 
+              disabled={loading} 
+              onClick={handleHomeClick}
+            >
+              <Home className="mr-2 h-4 w-4" />
+              Retour à l'accueil
             </Button>
-            <Button asChild variant="outline" className="w-full" disabled={loading}>
+            <Button 
+              asChild 
+              variant="outline" 
+              className="w-full" 
+              disabled={loading}
+            >
               <Link to="/connexion">
                 <LogIn className="mr-2 h-4 w-4" />
                 Se connecter
@@ -204,13 +203,22 @@ const NotFound = () => {
                 variant="ghost" 
                 className="w-full" 
                 onClick={handleRetry}
+                disabled={retryCount >= 3}
               >
                 <Loader2 className="mr-2 h-4 w-4" />
-                Réessayer la redirection
+                Réessayer la redirection 
+                {retryCount > 0 && ` (${retryCount}/3)`}
               </Button>
             )}
           </div>
         </CardContent>
+        <CardFooter className="text-center text-xs text-muted-foreground">
+          {retryCount >= 3 ? (
+            "Nombre maximum de tentatives atteint. Veuillez réessayer plus tard."
+          ) : (
+            "Si le problème persiste, veuillez contacter le support."
+          )}
+        </CardFooter>
       </Card>
     </div>
   );
