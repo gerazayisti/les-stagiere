@@ -15,6 +15,8 @@ export interface Candidature {
   interview_feedback?: string | null;
   date_postulation?: string;
   last_interaction?: string | null;
+  status_change_reason?: string | null;
+  status_changed_by?: 'entreprise' | 'stagiaire' | null;
   
   // Relations optionnelles
   stages?: {
@@ -228,6 +230,8 @@ export const useCandidatures = () => {
       internal_rating?: number;
       interview_date?: string;
       interview_feedback?: string;
+      status_change_reason?: string;
+      status_changed_by?: 'entreprise' | 'stagiaire';
     }
   ) => {
     try {
@@ -236,8 +240,10 @@ export const useCandidatures = () => {
         .from('candidatures')
         .update({
           status,
-          ...additionalData,
-          last_interaction: new Date().toISOString()
+          last_interaction: new Date().toISOString(),
+          status_change_reason: additionalData?.status_change_reason || null,
+          status_changed_by: additionalData?.status_changed_by || 'entreprise',
+          ...additionalData
         })
         .eq('id', candidatureId)
         .select()

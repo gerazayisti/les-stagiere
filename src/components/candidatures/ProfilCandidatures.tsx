@@ -15,13 +15,14 @@ import {
   XCircle, 
   FileSearch, 
   Building2, 
-  FileText 
+  FileText, 
+  Info
 } from "lucide-react";
 import { useCandidatures } from '@/hooks/useCandidatures';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const ProfilCandidatures: React.FC = () => {
@@ -74,6 +75,10 @@ export const ProfilCandidatures: React.FC = () => {
   };
 
   const handleViewDetails = (candidature: any) => {
+    setSelectedCandidature(candidature);
+  };
+
+  const openStatusDetailsModal = (candidature: any) => {
     setSelectedCandidature(candidature);
   };
 
@@ -136,6 +141,13 @@ export const ProfilCandidatures: React.FC = () => {
                       >
                         Détails
                       </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => openStatusDetailsModal(candidature)}
+                      >
+                        Détails du statut
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -179,6 +191,13 @@ export const ProfilCandidatures: React.FC = () => {
                             onClick={() => handleViewDetails(candidature)}
                           >
                             Détails
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => openStatusDetailsModal(candidature)}
+                          >
+                            Détails du statut
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -250,6 +269,49 @@ export const ProfilCandidatures: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de détails de statut */}
+      <Dialog 
+        open={!!selectedCandidature} 
+        onOpenChange={() => setSelectedCandidature(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Détails du statut de candidature</DialogTitle>
+            <DialogDescription>
+              Informations détaillées sur le statut de votre candidature
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedCandidature && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p><strong>Stage :</strong> {selectedCandidature.stages?.title}</p>
+                <p><strong>Entreprise :</strong> {selectedCandidature.stages?.entreprises?.name}</p>
+                <p>
+                  <strong>Date de candidature :</strong> 
+                  {selectedCandidature.date_postulation 
+                    ? format(new Date(selectedCandidature.date_postulation), 'dd MMMM yyyy à HH:mm', { locale: fr }) 
+                    : 'Date non disponible'}
+                </p>
+              </div>
+              {selectedCandidature.status_change_reason && (
+                <div>
+                  <h3 className="font-semibold">Motif de changement de statut</h3>
+                  <p className="italic">
+                    {selectedCandidature.status_change_reason}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {selectedCandidature.status_changed_by === 'entreprise' 
+                      ? 'Décision prise par l\'entreprise' 
+                      : 'Décision prise par le stagiaire'}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

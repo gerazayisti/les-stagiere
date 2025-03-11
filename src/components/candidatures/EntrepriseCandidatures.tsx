@@ -25,12 +25,14 @@ import { useCandidatures } from '@/hooks/useCandidatures';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from 'sonner';
 import { sendEmail } from '@/lib/emailService'; 
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export const EntrepriseCandidatures: React.FC = () => {
   const { user } = useAuth();
@@ -43,6 +45,12 @@ export const EntrepriseCandidatures: React.FC = () => {
   const [stages, setStages] = useState<any[]>([]);
   const [selectedCandidature, setSelectedCandidature] = useState<any>(null);
   const [candidateAnalysis, setCandidateAnalysis] = useState<any>(null);
+  const [statusChangeReason, setStatusChangeReason] = useState<string>('');
+  const [statusChangeModalOpen, setStatusChangeModalOpen] = useState<boolean>(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    candidatureId: string;
+    status: 'accepted' | 'rejected';
+  } | null>(null);
 
   useEffect(() => {
     const fetchCandidatures = async () => {
@@ -133,6 +141,81 @@ export const EntrepriseCandidatures: React.FC = () => {
       console.error('Erreur lors de la mise à jour du statut', error);
       toast.error('Impossible de mettre à jour le statut');
     }
+  };
+
+  const handleStatusChangeWithReason = async () => {
+    if (!pendingStatusChange) return;
+
+    try {
+      const { candidatureId, status } = pendingStatusChange;
+      const candidature = stages
+        .flatMap(stage => stage.candidatures)
+        .find((c: any) => c.id === candidatureId);
+
+      if (!candidature) {
+        toast.error('Candidature non trouvée');
+        return;
+      }
+
+      // Mettre à jour le statut avec la raison
+      await updateCandidatureStatus(
+        candidatureId, 
+        status === 'accepted' ? 'acceptee' : 'refusee', 
+        {
+          status_change_reason: statusChangeReason,
+          status_changed_by: 'entreprise',
+          interview_feedback: statusChangeReason
+        }
+      );
+
+      // Mettre à jour la liste des stages
+      const updatedStages = stages.map(stage => ({
+        ...stage,
+        candidatures: stage.candidatures.map((candidature: any) => 
+          candidature.id === candidatureId ? { 
+            ...candidature, 
+            status: status === 'accepted' ? 'acceptee' : 'refusee',
+            status_change_reason: statusChangeReason
+          } : candidature
+        )
+      }));
+      setStages(updatedStages);
+
+      // Préparer le message de notification
+      const statusMessages = {
+        'accepted': {
+          subject: 'Candidature acceptée',
+          body: `Félicitations ! Votre candidature pour le stage "${candidature.stages.title}" a été acceptée.\n\nMessage de l'entreprise : ${statusChangeReason}`
+        },
+        'rejected': {
+          subject: 'Candidature rejetée',
+          body: `Nous regrettons de vous informer que votre candidature pour le stage "${candidature.stages.title}" n'a pas été retenue.\n\nRaison : ${statusChangeReason}`
+        }
+      };
+
+      // Envoyer un email de notification
+      await sendEmail({
+        to: candidature.stagiaires.email,
+        subject: statusMessages[status].subject,
+        body: statusMessages[status].body
+      });
+
+      // Notification toast
+      toast.success(`Candidature ${status === 'accepted' ? 'acceptée' : 'rejetée'}`);
+
+      // Réinitialiser les états
+      setStatusChangeReason('');
+      setPendingStatusChange(null);
+      setStatusChangeModalOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut', error);
+      toast.error('Impossible de mettre à jour le statut');
+    }
+  };
+
+  const openStatusChangeModal = (candidatureId: string, status: 'accepted' | 'rejected') => {
+    setPendingStatusChange({ candidatureId, status });
+    setStatusChangeModalOpen(true);
   };
 
   const analyseCandidate = async (candidature: any) => {
@@ -286,14 +369,14 @@ export const EntrepriseCandidatures: React.FC = () => {
                                 <Button 
                                   variant="success" 
                                   size="sm"
-                                  onClick={() => handleUpdateStatus(candidature.id, 'accepted')}
+                                  onClick={() => openStatusChangeModal(candidature.id, 'accepted')}
                                 >
                                   Accepter
                                 </Button>
                                 <Button 
                                   variant="destructive" 
                                   size="sm"
-                                  onClick={() => handleUpdateStatus(candidature.id, 'rejected')}
+                                  onClick={() => openStatusChangeModal(candidature.id, 'rejected')}
                                 >
                                   Rejeter
                                 </Button>
@@ -482,6 +565,63 @@ export const EntrepriseCandidatures: React.FC = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de changement de statut avec raison */}
+      <Dialog 
+        open={statusChangeModalOpen} 
+        onOpenChange={(open) => {
+          setStatusChangeModalOpen(open);
+          if (!open) {
+            setPendingStatusChange(null);
+            setStatusChangeReason('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pendingStatusChange?.status === 'accepted' 
+                ? 'Accepter la candidature' 
+                : 'Rejeter la candidature'}
+            </DialogTitle>
+            <DialogDescription>
+              Veuillez indiquer la raison de votre décision
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <Label htmlFor="status-change-reason">
+              Motif de la décision
+            </Label>
+            <Textarea
+              id="status-change-reason"
+              placeholder={
+                pendingStatusChange?.status === 'accepted'
+                  ? 'Expliquez pourquoi vous acceptez ce candidat...'
+                  : 'Expliquez pourquoi vous rejetez ce candidat...'
+              }
+              value={statusChangeReason}
+              onChange={(e) => setStatusChangeReason(e.target.value)}
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setStatusChangeModalOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant={pendingStatusChange?.status === 'accepted' ? 'success' : 'destructive'}
+              onClick={handleStatusChangeWithReason}
+              disabled={!statusChangeReason.trim()}
+            >
+              {pendingStatusChange?.status === 'accepted' ? 'Accepter' : 'Rejeter'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
