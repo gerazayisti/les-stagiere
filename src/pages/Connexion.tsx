@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { auth } from "@/lib/auth";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Eye, EyeOff, Loader2, Mail, Lock, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock, AlertCircle, WifiOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -17,6 +18,7 @@ export default function Connexion() {
   const [loading, setLoading] = useState(false);
   const [loginInProgress, setLoginInProgress] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [networkError, setNetworkError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -73,48 +75,97 @@ export default function Connexion() {
     setLoading(true);
     setLoginInProgress(true);
     setFormError(null);
+    setNetworkError(false);
 
     try {
       toast.loading("Connexion en cours...", { id: "login-toast" });
       
-      const { user } = await auth.signIn(formData);
-      
-      toast.success("Connexion réussie", {
-        id: "login-toast",
-        description: `Bienvenue, ${user.user_metadata?.name || user.email}`
-      });
-      
-      if (refreshUser) {
-        await refreshUser();
-      }
-      
-      const redirectPath = getRedirectPath();
-      
-      localStorage.setItem('preAuthUserRole', user.user_metadata?.role || 'inconnu');
-      localStorage.setItem('preAuthUserName', user.user_metadata?.name || user.email);
-      
-      if (redirectPath) {
-        navigate(redirectPath);
-      } else if (user.user_metadata?.role === 'entreprise') {
-        navigate(`/entreprises/${user.id}`);
-      } else if (user.user_metadata?.role === 'stagiaire') {
-        navigate(`/stagiaires/${user.id}`);
-      } else {
-        navigate('/complete-profile');
-      }
+      // Add a small delay to ensure database connections are ready
+      setTimeout(async () => {
+        try {
+          const { user } = await auth.signIn(formData);
+          
+          toast.success("Connexion réussie", {
+            id: "login-toast",
+            description: `Bienvenue, ${user.user_metadata?.name || user.email}`
+          });
+          
+          if (refreshUser) {
+            await refreshUser();
+          }
+          
+          const redirectPath = getRedirectPath();
+          
+          localStorage.setItem('preAuthUserRole', user.user_metadata?.role || 'inconnu');
+          localStorage.setItem('preAuthUserName', user.user_metadata?.name || user.email);
+          
+          if (redirectPath) {
+            navigate(redirectPath);
+          } else if (user.user_metadata?.role === 'entreprise') {
+            navigate(`/entreprises/${user.id}`);
+          } else if (user.user_metadata?.role === 'stagiaire') {
+            navigate(`/stagiaires/${user.id}`);
+          } else {
+            navigate('/complete-profile');
+          }
+        } catch (error: any) {
+          console.error("Erreur de connexion:", error);
+          
+          toast.error("Échec de connexion", {
+            id: "login-toast",
+            description: handleAuthError(error)
+          });
+          
+          setFormError(handleAuthError(error));
+          setLoginInProgress(false);
+        } finally {
+          setLoading(false);
+        }
+      }, 500);
     } catch (error: any) {
       console.error("Erreur de connexion:", error);
       
       toast.error("Échec de connexion", {
         id: "login-toast",
-        description: error.message || "Une erreur s'est produite lors de la connexion"
+        description: handleAuthError(error)
       });
       
-      setFormError(error.message || "Une erreur s'est produite lors de la connexion");
+      setFormError(handleAuthError(error));
       setLoginInProgress(false);
-    } finally {
       setLoading(false);
     }
+  };
+
+  const handleAuthError = (error: any): string => {
+    // Network related errors
+    if (error.message === "Failed to fetch" || 
+        error.name === "TypeError" || 
+        error.message?.includes("network") ||
+        error.message?.includes("ERR_NAME_NOT_RESOLVED")) {
+      setNetworkError(true);
+      return "Problème de connexion au serveur. Veuillez vérifier votre connexion internet.";
+    }
+    
+    // Database errors
+    if (error.message?.includes("Database error") || error.code === "unexpected_failure") {
+      setNetworkError(true);
+      return "Problème temporaire avec notre service. Veuillez réessayer dans quelques instants.";
+    }
+    
+    // Check specific error messages
+    if (error.message?.includes("Invalid login credentials") || 
+        error.message?.includes("Email ou mot de passe incorrect") ||
+        error.message?.includes("Identifiants incorrects")) {
+      return "Email ou mot de passe incorrect. Veuillez réessayer.";
+    }
+    
+    if (error.message?.includes("Email not confirmed") || 
+        error.message?.includes("confirmer votre email")) {
+      return "Veuillez confirmer votre email avant de vous connecter.";
+    }
+    
+    // Default error message
+    return error.message || "Une erreur s'est produite lors de la connexion. Veuillez réessayer.";
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,6 +177,7 @@ export default function Connexion() {
     
     if (formError) {
       setFormError(null);
+      setNetworkError(false);
     }
   };
 
@@ -141,8 +193,8 @@ export default function Connexion() {
         
         <CardContent>
           {formError && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
+            <Alert variant={networkError ? "default" : "destructive"} className="mb-4">
+              {networkError ? <WifiOff className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
               <AlertDescription>{formError}</AlertDescription>
             </Alert>
           )}
