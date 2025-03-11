@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -8,6 +7,7 @@ import { Navigate } from "react-router-dom";
 import ProfilStagiaire from "./pages/ProfilStagiaire";
 import ProfilEntreprise from "./pages/ProfilEntreprise";
 import ProfilEnrichi from "./pages/ProfilEnrichi";
+import MesCandidatures from "./pages/MesCandidatures";
 
 function App() {
   return (
@@ -20,6 +20,7 @@ function App() {
           <Route path="/stagiaires/:id" element={<ProfilStagiaire />} />
           <Route path="/entreprises/:id" element={<ProfilEntreprise />} />
           <Route path="/profil-enrichi" element={<ProfilEnrichi />} />
+          <Route path="/mes-candidatures" element={<MesCandidatures />} />
         </Routes>
       </Router>
       <Toaster position="top-center" />

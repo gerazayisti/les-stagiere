@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -6,12 +5,14 @@ import { AboutTab } from '@/components/profile/AboutTab';
 import { CVTab } from '@/components/profile/CVTab';
 import { Recommendations } from '@/components/profile/Recommendations';
 import Portfolio from '@/components/profile/Portfolio';
+import { ProfilCandidatures } from '@/components/candidatures/ProfilCandidatures';
 import { useStagiaire } from '@/hooks/useStagiaire';
 import { useParams, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FileSearch } from 'lucide-react';
 
 export default function ProfilStagiaire() {
   const { id } = useParams<{ id: string }>();
@@ -59,11 +60,12 @@ export default function ProfilStagiaire() {
         </div>
         
         <Tabs defaultValue="about" className="mt-8">
-          <TabsList className="grid grid-cols-4 mb-8">
+          <TabsList className="grid grid-cols-5 mb-8">
             <TabsTrigger value="about">À propos</TabsTrigger>
             <TabsTrigger value="cv">CV & Documents</TabsTrigger>
             <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
             <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
+            <TabsTrigger value="candidatures">Candidatures</TabsTrigger>
           </TabsList>
           <TabsContent value="about">
             <div className="space-y-4">
@@ -120,11 +122,16 @@ export default function ProfilStagiaire() {
       />
       
       <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-8">
-        <TabsList className="grid grid-cols-4 mb-8">
+        <TabsList className="grid grid-cols-5 mb-8">
           <TabsTrigger value="about">À propos</TabsTrigger>
           <TabsTrigger value="cv">CV & Documents</TabsTrigger>
           <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
           <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
+          {isCurrentUser && (
+            <TabsTrigger value="candidatures">
+              <FileSearch className="mr-2 h-4 w-4" /> Candidatures
+            </TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="about">
           <AboutTab 
@@ -152,6 +159,11 @@ export default function ProfilStagiaire() {
             isPremium={stagiaire.is_premium}
           />
         </TabsContent>
+        {isCurrentUser && (
+          <TabsContent value="candidatures">
+            <ProfilCandidatures />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

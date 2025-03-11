@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { AboutTab } from '@/components/profile/AboutTab';
@@ -15,6 +15,34 @@ import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EditEntrepriseDialog } from '@/components/profile/EditEntrepriseDialog';
+import { EntrepriseCandidatures } from '@/components/candidatures/EntrepriseCandidatures';
+
+// Fonction de mise en cache améliorée
+const cacheCompanyProfile = (id: string, data: any) => {
+  try {
+    localStorage.setItem(`cachedCompanyProfile_${id}`, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Erreur de mise en cache:', error);
+  }
+};
+
+// Fonction de récupération du cache améliorée
+const getCachedCompanyProfile = (id: string) => {
+  try {
+    const cachedData = localStorage.getItem(`cachedCompanyProfile_${id}`);
+    if (cachedData) {
+      const { data, timestamp } = JSON.parse(cachedData);
+      // Cache valide pendant 15 minutes
+      return (Date.now() - timestamp < 15 * 60 * 1000) ? data : null;
+    }
+  } catch (error) {
+    console.warn('Erreur de lecture du cache:', error);
+  }
+  return null;
+};
 
 export default function ProfilEntreprise() {
   const { id } = useParams<{ id: string }>();
@@ -28,123 +56,101 @@ export default function ProfilEntreprise() {
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   
-  // Nouveaux états pour la gestion des stages
   const [stages, setStages] = useState<any[]>([]);
   const [selectedStage, setSelectedStage] = useState<any | null>(null);
   const [isStageDetailsModalOpen, setIsStageDetailsModalOpen] = useState(false);
 
-  // Chargement progressif - charger d'abord les données de base
-  useEffect(() => {
-    async function loadBasicData() {
-      try {
-        if (!id) return;
-        
-        console.log("Charging basic entreprise data for ID:", id);
-        
-        // Essayer d'abord d'obtenir depuis le cache pour une réponse UI immédiate
-        const cachedData = localStorage.getItem(`cachedCompanyProfile_${id}`);
-        if (cachedData) {
-          const { data, timestamp } = JSON.parse(cachedData);
-          // Utiliser le cache s'il a moins de 5 minutes
-          if (Date.now() - timestamp < 300000) {
-            console.log("Using cached company profile");
-            setEntreprise(data);
-            setHeaderLoaded(true);
-          }
-        }
-        
-        // Peu importe si nous avons chargé depuis le cache, charger depuis la DB
-        fetchEnterpriseData();
-      } catch (err) {
-        console.error('Erreur initiale:', err);
-      }
-    }
-    
-    loadBasicData();
-  }, [id]);
-  
-  async function fetchEnterpriseData() {
+  // Fonction de chargement des données de l'entreprise avec optimisation
+  const fetchEnterpriseData = useCallback(async () => {
+    if (!id) return;
+
+    setLoading(true);
+    setError(null);
+
     try {
-      if (!id) return;
-      
-      // Vérifier si l'utilisateur connecté est cette entreprise
-      const isCurrentUserCompany = user && user.id === id && user.role === 'entreprise';
-      
-      console.log("Fetching full entreprise data with ID:", id);
-      
-      // Correction du bug: utiliser .eq() au lieu de passer un paramètre id dans select()
-      let { data, error: fetchError } = await supabase
+      // Vérifier d'abord le cache
+      const cachedProfile = getCachedCompanyProfile(id);
+      if (cachedProfile) {
+        setEntreprise(cachedProfile);
+        setHeaderLoaded(true);
+        setLoading(false);
+        return;
+      }
+
+      // Requête Supabase avec sélection optimisée
+      const { data, error: fetchError } = await supabase
         .from('entreprises')
-        .select('*')
+        .select(`
+          *,
+          stages (
+            id,
+            title,
+            description,
+            location,
+            type,
+            status,
+            is_urgent,
+            start_date,
+            created_at
+          )
+        `)
         .eq('id', id)
         .single();
-      
+
       if (fetchError) {
-        console.error("Fetch error:", fetchError);
+        console.error("Erreur de chargement:", fetchError);
+        setError(fetchError.message);
         
-        // Si l'entreprise n'existe pas et que l'utilisateur connecté est cette entreprise
-        if (isCurrentUserCompany) {
-          console.log("Creating company profile for user:", user.id);
-          setIsCreatingProfile(true);
-          
-          // Créer le profil de l'entreprise
-          const { error: createError } = await supabase
-            .from('entreprises')
-            .upsert({
-              id: user.id,
-              name: user.name || 'Entreprise',
-              email: user.email,
-              logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'E')}&background=random`,
-              is_verified: false,
-              created_at: new Date().toISOString()
-            });
-            
-          if (createError) {
-            throw createError;
-          }
-          
-          // Récupérer le profil nouvellement créé
-          const { data: newData, error: newFetchError } = await supabase
-            .from('entreprises')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-            
-          if (newFetchError) {
-            throw newFetchError;
-          }
-          
-          data = newData;
-          
-          // Mettre en cache le profil
-          localStorage.setItem(`cachedCompanyProfile_${id}`, JSON.stringify({
-            data,
-            timestamp: Date.now()
-          }));
-          
-          setIsCreatingProfile(false);
-        } else {
-          throw fetchError;
+        // Gérer la création de profil pour l'utilisateur connecté
+        if (user?.id === id && user?.role === 'entreprise') {
+          await createCompanyProfile();
         }
       } else if (data) {
-        // Mettre en cache le profil
-        localStorage.setItem(`cachedCompanyProfile_${id}`, JSON.stringify({
-          data,
-          timestamp: Date.now()
-        }));
+        // Mise en cache du profil
+        cacheCompanyProfile(id, data);
+        setEntreprise(data);
+        setHeaderLoaded(true);
       }
-      
-      setEntreprise(data);
-      setHeaderLoaded(true);
-      setLoading(false);
     } catch (err: any) {
-      console.error('Erreur lors du chargement de l\'entreprise:', err);
-      setError(err.message);
+      console.error('Erreur lors du chargement:', err);
+      setError(err.message || 'Erreur de chargement');
+      toast.error('Impossible de charger le profil');
+    } finally {
       setLoading(false);
-      toast.error('Impossible de charger le profil de l\'entreprise');
     }
-  }
-  
+  }, [id, user]);
+
+  // Création du profil d'entreprise
+  const createCompanyProfile = async () => {
+    try {
+      const { error: createError } = await supabase
+        .from('entreprises')
+        .upsert({
+          id: user?.id,
+          name: user?.name || 'Entreprise',
+          email: user?.email,
+          logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'E')}&background=random`,
+          is_verified: false,
+          created_at: new Date().toISOString()
+        });
+
+      if (createError) {
+        throw createError;
+      }
+
+      // Rechargement des données après création
+      await fetchEnterpriseData();
+    } catch (error) {
+      console.error('Erreur de création de profil:', error);
+      toast.error('Impossible de créer le profil');
+    }
+  };
+
+  // Effet pour charger les données
+  useEffect(() => {
+    fetchEnterpriseData();
+  }, [fetchEnterpriseData]);
+
   // Charger les stages de l'entreprise
   useEffect(() => {
     if (entreprise?.id) {
@@ -247,10 +253,13 @@ export default function ProfilEntreprise() {
       />
       
       <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-8">
-        <TabsList className="grid grid-cols-3 mb-8">
+        <TabsList className="grid grid-cols-4 mb-8">
           <TabsTrigger value="about">À propos</TabsTrigger>
           <TabsTrigger value="offers">Offres de stage</TabsTrigger>
           <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
+          {isCurrentUser && (
+            <TabsTrigger value="candidatures">Candidatures</TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="about">
           <div className="flex justify-end mb-4">
@@ -322,6 +331,11 @@ export default function ProfilEntreprise() {
             isPremium={entreprise.is_premium}
           />
         </TabsContent>
+        {isCurrentUser && (
+          <TabsContent value="candidatures">
+            <EntrepriseCandidatures />
+          </TabsContent>
+        )}
       </Tabs>
       
       {selectedStage && (

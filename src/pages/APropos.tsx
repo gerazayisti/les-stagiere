@@ -16,7 +16,7 @@ export default function APropos() {
   return (
     <div className="container mx-auto px-4 py-8 space-y-10">
       <section className="text-center max-w-3xl mx-auto">
-        <h1 className="text-4xl font-bold mb-6">À propos de StageConnect</h1>
+        <h1 className="text-4xl font-bold mb-6">À propos de Les_Stagieres</h1>
         <p className="text-xl text-muted-foreground mb-8">
           Nous connectons les étudiants talentueux avec les entreprises qui
           cherchent à innover et à grandir.
@@ -28,7 +28,7 @@ export default function APropos() {
         <div>
           <h2 className="text-3xl font-bold mb-4">Notre Mission</h2>
           <p className="text-lg mb-4">
-            StageConnect est né d'une simple observation : le processus de
+            Les_Stagieres est né d'une simple observation : le processus de
             recherche de stage est souvent fastidieux, tant pour les étudiants
             que pour les entreprises. Notre mission est de simplifier cette
             expérience en créant une plateforme qui valorise le potentiel de
@@ -47,7 +47,7 @@ export default function APropos() {
         <div className="relative">
           <img
             src="/hero1.webp"
-            alt="L'équipe StageConnect en réunion"
+            alt="L'équipe Les_Stagieres en réunion"
             className="rounded-lg shadow-xl"
           />
           <div className="absolute -bottom-6 -right-6 bg-primary text-primary-foreground p-4 rounded-lg shadow-lg">
@@ -84,7 +84,7 @@ export default function APropos() {
 
       <section>
         <h2 className="text-3xl font-bold text-center mb-8">
-          Pour Qui Est StageConnect?
+          Pour Qui Est Les_Stagieres?
         </h2>
         <p className="text-xl text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
           Notre plateforme s'adresse à tous ceux qui cherchent à transformer
@@ -119,7 +119,7 @@ export default function APropos() {
         <h2 className="text-3xl font-bold text-center mb-8">Notre Histoire</h2>
         <div className="max-w-3xl mx-auto">
           <p className="text-lg mb-4">
-            StageConnect a été fondé en 2020 par une équipe d'anciens étudiants
+            Les_Stagieres a été fondé en 2020 par une équipe d'anciens étudiants
             qui ont eux-mêmes vécu les défis de la recherche de stage. Frustrés
             par le manque d'outils adaptés, ils ont décidé de créer la
             plateforme qu'ils auraient aimé avoir pendant leurs études.
@@ -127,7 +127,7 @@ export default function APropos() {
           <p className="text-lg mb-4">
             Ce qui a commencé comme un petit projet est rapidement devenu une
             plateforme nationale, connectant des milliers d'étudiants à des
-            entreprises innovantes chaque année. Aujourd'hui, StageConnect
+            entreprises innovantes chaque année. Aujourd'hui, Les_Stagieres
             continue d'évoluer en intégrant de nouvelles technologies et en
             répondant aux besoins changeants du marché du travail.
           </p>
@@ -145,7 +145,7 @@ export default function APropos() {
         <h2 className="text-3xl font-bold mb-6">Rejoignez-nous</h2>
         <p className="text-xl text-muted-foreground mb-8">
           Que vous soyez étudiant à la recherche d'un stage ou une entreprise
-          cherchant à recruter, StageConnect est là pour vous aider à réussir.
+          cherchant à recruter, Les_Stagieres est là pour vous aider à réussir.
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Button size="lg" variant="default">

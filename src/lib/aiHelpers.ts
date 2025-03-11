@@ -2,8 +2,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
 
-console.log('GEMINI_API_KEY:', import.meta.env.VITE_GEMINI_API_KEY);
-
 const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
 export type StageType = 'temps_plein' | 'temps_partiel' | 'alternance' | 'remote';

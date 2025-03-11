@@ -1,9 +1,12 @@
-
-import { useEffect, useState } from 'react';
-import { Search, MapPin, Building2, Calendar, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { Search, MapPin, Building2, Calendar, ArrowRight, X } from "lucide-react";
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/useAuth';
+import { useCandidatures } from '@/hooks/useCandidatures';
+import { PostulerModal } from '@/components/candidatures/PostulerModal';
 
 interface Stage {
   id: string;
@@ -17,6 +20,14 @@ interface Stage {
   entreprise_id: string;
   status: 'active' | 'expired' | 'draft';
   created_at: string;
+  entreprises?: {
+    name: string;
+    logo_url?: string;
+  };
+  compensation?: {
+    amount: number;
+    currency: string;
+  };
 }
 
 const OffresStages = () => {
@@ -24,6 +35,10 @@ const OffresStages = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
+  const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
+  const [isPostulerModalOpen, setIsPostulerModalOpen] = useState(false);
+  const { user } = useAuth();
+  const { createCandidature } = useCandidatures();
 
   useEffect(() => {
     fetchStages();
@@ -32,20 +47,16 @@ const OffresStages = () => {
   const fetchStages = async () => {
     try {
       setLoading(true);
-      console.log("Récupération des stages actifs...");
-      
       const { data, error } = await supabase
         .from('stages')
-        .select('*')
+        .select(`
+          *,
+          entreprises (name, logo_url)
+        `)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error("Erreur lors de la requête:", error);
-        throw error;
-      }
-
-      console.log("Stages récupérés:", data);
+      if (error) throw error;
       setStages(data || []);
     } catch (error) {
       console.error('Erreur lors de la récupération des stages:', error);
@@ -62,6 +73,37 @@ const OffresStages = () => {
                            stage.location.toLowerCase().includes(locationFilter.toLowerCase());
     return matchesSearch && matchesLocation;
   });
+
+  const handlePostuler = async () => {
+    if (!user) {
+      toast.error('Vous devez être connecté pour postuler');
+      return;
+    }
+
+    if (!selectedStage) {
+      toast.error('Aucun stage sélectionné');
+      return;
+    }
+
+    try {
+      const result = await createCandidature({
+        stage_id: selectedStage.id,
+        stagiaire_id: user.id,
+        status: 'en_attente'
+      });
+
+      if (result) {
+        toast.success('Candidature envoyée avec succès');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la candidature:', error);
+      toast.error('Impossible d\'envoyer la candidature');
+    }
+  };
+
+  const handleOpenPostulerModal = () => {
+    setIsPostulerModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -94,80 +136,110 @@ const OffresStages = () => {
           </div>
         </div>
 
-        {/* Liste des stages */}
-        <div className="grid gap-6">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-              <p className="mt-2 text-gray-600">Chargement des stages...</p>
-            </div>
-          ) : filteredStages.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-              <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun stage trouvé</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Aucun stage ne correspond à vos critères de recherche.
-              </p>
-            </div>
-          ) : (
-            filteredStages.map((stage) => (
-              <div
-                key={stage.id}
-                className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <Link
-                      to={`/stages/${stage.id}`}
-                      className="text-xl font-semibold text-gray-900 hover:text-primary transition-colors"
-                    >
-                      {stage.title}
-                    </Link>
-                    <div className="flex flex-wrap items-center gap-4 mt-2 text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <Building2 size={16} />
-                        {stage.type}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin size={16} />
-                        {stage.location}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar size={16} />
-                        {stage.duration}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-gray-600 line-clamp-2">{stage.description}</p>
-                    {stage.required_skills && stage.required_skills.length > 0 && (
-                      <div className="mt-4">
-                        <div className="flex flex-wrap gap-2">
-                          {stage.required_skills.map((skill, index) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded-full"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+        {/* Conteneur principal avec liste et détails */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Liste des stages */}
+          <div className="md:col-span-1 space-y-4">
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+                <p className="mt-2 text-gray-600">Chargement des stages...</p>
+              </div>
+            ) : filteredStages.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                <Building2 className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun stage trouvé</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Aucun stage ne correspond à vos critères de recherche.
+                </p>
+              </div>
+            ) : (
+              filteredStages.map((stage) => (
+                <div
+                  key={stage.id}
+                  onClick={() => setSelectedStage(stage)}
+                  className={`bg-white p-4 rounded-lg shadow-sm cursor-pointer transition-all 
+                    ${selectedStage?.id === stage.id ? 'ring-2 ring-primary' : 'hover:shadow-md'}
+                  `}
+                >
+                  <h3 className="text-lg font-semibold">{stage.title}</h3>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                    <Building2 size={16} />
+                    <span>{stage.entreprises?.name || 'Entreprise'}</span>
                   </div>
-                  <div className="flex items-center">
-                    <Link
-                      to={`/stages/${stage.id}`}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
-                    >
-                      Voir l'offre
-                      <ArrowRight size={16} />
-                    </Link>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                    <MapPin size={16} />
+                    <span>{stage.location}</span>
                   </div>
                 </div>
+              ))
+            )}
+          </div>
+
+          {/* Détails du stage */}
+          <div className="md:col-span-2 bg-white rounded-lg shadow-sm p-6">
+            {selectedStage ? (
+              <div className="relative">
+                <button 
+                  onClick={() => setSelectedStage(null)} 
+                  className="absolute top-0 right-0 p-2 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="h-6 w-6 text-gray-600" />
+                </button>
+                <h2 className="text-2xl font-bold mb-4">{selectedStage.title}</h2>
+                
+                <div className="flex items-center gap-4 mb-4">
+                  <Badge variant="outline">
+                    <Building2 className="mr-2 h-4 w-4" />
+                    {selectedStage.type}
+                  </Badge>
+                  <Badge variant="outline">
+                    <MapPin className="mr-2 h-4 w-4" />
+                    {selectedStage.location}
+                  </Badge>
+                </div>
+
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold mb-2">Description</h3>
+                  <p className="text-gray-600">{selectedStage.description}</p>
+                </div>
+
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold mb-2">Compétences requises</h3>
+                  {selectedStage.required_skills && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedStage.required_skills.map((skill, index) => (
+                        <Badge key={index} variant="secondary">{skill}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6">
+                  <Button 
+                    onClick={handleOpenPostulerModal} 
+                    disabled={!user}
+                    className="w-full"
+                  >
+                    {user ? 'Postuler' : 'Connectez-vous pour postuler'}
+                  </Button>
+                </div>
               </div>
-            ))
-          )}
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                Sélectionnez un stage pour voir les détails
+              </div>
+            )}
+          </div>
         </div>
       </div>
+      {selectedStage && (
+        <PostulerModal 
+          open={isPostulerModalOpen} 
+          onOpenChange={setIsPostulerModalOpen}
+          stageId={selectedStage.id}
+        />
+      )}
     </div>
   );
 };

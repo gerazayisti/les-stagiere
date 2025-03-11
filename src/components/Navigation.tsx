@@ -1,4 +1,3 @@
-
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
@@ -196,6 +195,17 @@ export default function Navigation() {
                   >
                     Mon profil
                   </DropdownMenuItem>
+                  {userRole === 'stagiaire' && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        navigate("/mes-candidatures");
+                        setIsOpen(false);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      Mes candidatures
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={() => {
                       navigate("/messagerie");
@@ -327,6 +337,18 @@ export default function Navigation() {
                       >
                         Mon profil
                       </Button>
+                      {userRole === 'stagiaire' && (
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            navigate("/mes-candidatures");
+                            setIsOpen(false);
+                          }}
+                        >
+                          Mes candidatures
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         className="w-full justify-start"
