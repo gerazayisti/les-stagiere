@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -8,7 +7,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import AddInternshipOfferForm from '@/components/profile/AddInternshipOfferForm';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { InternshipOffersList } from '@/components/profile/InternshipOffersList';
 import { CompanyRecommendations } from '@/components/profile/CompanyRecommendations';
 import { supabase } from '@/lib/supabase';
@@ -28,7 +27,6 @@ export default function ProfilEntreprise() {
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   
-  // Chargement progressif - charger d'abord les données de base
   useEffect(() => {
     async function loadBasicData() {
       try {
@@ -36,11 +34,9 @@ export default function ProfilEntreprise() {
         
         console.log("Charging basic entreprise data for ID:", id);
         
-        // Essayer d'abord d'obtenir depuis le cache pour une réponse UI immédiate
         const cachedData = localStorage.getItem(`cachedCompanyProfile_${id}`);
         if (cachedData) {
           const { data, timestamp } = JSON.parse(cachedData);
-          // Utiliser le cache s'il a moins de 5 minutes
           if (Date.now() - timestamp < 300000) {
             console.log("Using cached company profile");
             setEntreprise(data);
@@ -48,7 +44,6 @@ export default function ProfilEntreprise() {
           }
         }
         
-        // Peu importe si nous avons chargé depuis le cache, charger depuis la DB
         fetchEnterpriseData();
       } catch (err) {
         console.error('Erreur initiale:', err);
@@ -62,12 +57,10 @@ export default function ProfilEntreprise() {
     try {
       if (!id) return;
       
-      // Vérifier si l'utilisateur connecté est cette entreprise
       const isCurrentUserCompany = user && user.id === id && user.role === 'entreprise';
       
       console.log("Fetching full entreprise data with ID:", id);
       
-      // Correction du bug: utiliser .eq() au lieu de passer un paramètre id dans select()
       let { data, error: fetchError } = await supabase
         .from('entreprises')
         .select('*')
@@ -77,12 +70,10 @@ export default function ProfilEntreprise() {
       if (fetchError) {
         console.error("Fetch error:", fetchError);
         
-        // Si l'entreprise n'existe pas et que l'utilisateur connecté est cette entreprise
         if (isCurrentUserCompany) {
           console.log("Creating company profile for user:", user.id);
           setIsCreatingProfile(true);
           
-          // Créer le profil de l'entreprise
           const { error: createError } = await supabase
             .from('entreprises')
             .upsert({
@@ -98,7 +89,6 @@ export default function ProfilEntreprise() {
             throw createError;
           }
           
-          // Récupérer le profil nouvellement créé
           const { data: newData, error: newFetchError } = await supabase
             .from('entreprises')
             .select('*')
@@ -111,7 +101,6 @@ export default function ProfilEntreprise() {
           
           data = newData;
           
-          // Mettre en cache le profil
           localStorage.setItem(`cachedCompanyProfile_${id}`, JSON.stringify({
             data,
             timestamp: Date.now()
@@ -122,7 +111,6 @@ export default function ProfilEntreprise() {
           throw fetchError;
         }
       } else if (data) {
-        // Mettre en cache le profil
         localStorage.setItem(`cachedCompanyProfile_${id}`, JSON.stringify({
           data,
           timestamp: Date.now()
@@ -140,7 +128,6 @@ export default function ProfilEntreprise() {
     }
   }
   
-  // Rendu d'un squelette pendant le chargement des données de base
   if (!headerLoaded) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -206,14 +193,6 @@ export default function ProfilEntreprise() {
           <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
         </TabsList>
         <TabsContent value="about">
-          <div className="flex justify-end mb-4">
-            {isCurrentUser && (
-              <Button variant="outline" size="sm" onClick={() => setIsEditProfileModalOpen(true)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Modifier le profil
-              </Button>
-            )}
-          </div>
           <AboutTab 
             bio={entreprise.description || ""}
             education={entreprise.industry || ""}
@@ -227,6 +206,8 @@ export default function ProfilEntreprise() {
             ]}
             culture={entreprise.company_culture}
             benefits={entreprise.benefits}
+            isEditable={isCurrentUser}
+            onEdit={() => setIsEditProfileModalOpen(true)}
           />
         </TabsContent>
         <TabsContent value="offers">
