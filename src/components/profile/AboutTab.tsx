@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,7 +43,6 @@ export function AboutTab({
   isEditable = false,
   onEdit
 }: AboutTabProps) {
-  // Convert education to a displayable format
   const renderEducation = () => {
     if (!education) {
       return (
@@ -91,7 +89,7 @@ export function AboutTab({
         <CardContent className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold">Biographie</h3>
-            {isEditable && onEdit && (
+            {isEditable && (
               <Button variant="outline" size="sm" onClick={onEdit}>
                 <Edit className="h-4 w-4 mr-2" />
                 Modifier
