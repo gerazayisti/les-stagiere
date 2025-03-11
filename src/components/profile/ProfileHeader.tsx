@@ -38,7 +38,8 @@ export function ProfileHeader({
     if (onEdit) {
       onEdit();
     } else if (userId) {
-      navigate(`/edit-profile/${userId}`);
+      // Navigate to the settings page instead of a non-existent edit-profile route
+      navigate(`/settings`, { state: { tab: 'profile' } });
     }
   };
 
