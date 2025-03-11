@@ -40,18 +40,15 @@ const NotFound = () => {
         if (isAuthRelated) {
           console.log("This appears to be an auth-related redirect that failed or homepage issue");
           
-          // IMPROVED: If access token is in hash but URL is incorrect, fix the path
-          if (location.hash.includes("access_token=")) {
-            console.log("Found access token in hash, redirecting to proper email confirmation path");
-            
-            // For homepage 404 with hash token, redirect to email confirmation
-            if (location.pathname === "/" || location.pathname === "") {
-              navigate("/email-confirmation" + location.search + location.hash, { replace: true });
-              return;
-            }
-            
-            // For other paths, ensure proper format for email confirmation
-            if (!location.pathname.includes("/email-confirmation")) {
+          // AMÉLIORÉ: Extraction du token d'accès du hash pour toute URL
+          let accessToken = '';
+          if (location.hash) {
+            const match = location.hash.match(/access_token=([^&]*)/);
+            if (match && match[1]) {
+              accessToken = match[1];
+              console.log("Found access token in hash, redirecting to proper path");
+              
+              // Pour toute URL avec un token d'accès, rediriger vers la confirmation d'email
               const fullPath = `/email-confirmation${location.search}${location.hash}`;
               navigate(fullPath, { replace: true });
               return;
@@ -66,7 +63,7 @@ const NotFound = () => {
             // User is authenticated, redirect based on role
             const role = data.session.user.user_metadata?.role || 'stagiaire';
             
-            // Cache navigation state for faster loading
+            // Cache navigation state for faster loading with timestamp
             localStorage.setItem('navigation_state', JSON.stringify({ 
               user: {
                 id: data.session.user.id,
@@ -76,11 +73,9 @@ const NotFound = () => {
                 email_confirmed_at: data.session.user.email_confirmed_at,
                 user_metadata: data.session.user.user_metadata
               }, 
-              userRole: role
+              userRole: role,
+              timestamp: Date.now()  // Ajouté pour la fraîcheur du cache
             }));
-            
-            // Set timestamp for cache to facilitate fresh checking
-            localStorage.setItem('nav_state_timestamp', Date.now().toString());
             
             // Clear any stale error state
             sessionStorage.removeItem('auth_error');
@@ -99,13 +94,12 @@ const NotFound = () => {
               return;
             }
           } else if (location.pathname === "/") {
-            // If we're on homepage with no session, redirect to proper index page
-            navigate('/', { replace: true, state: { noRedirect: true } });
+            // Si nous sommes sur la page d'accueil sans session, mieux gérer la redirection
+            navigate('/', { replace: true, state: { noRedirect: true, timestamp: Date.now() } });
             return;
-          } else if (location.pathname.includes("/email-confirmation")) {
-            // If we're on email confirmation page but no session, redirect to the proper page
-            // The email confirmation component will handle the token extraction
-            navigate('/email-confirmation', { replace: true });
+          } else if (location.hash.includes("access_token=")) {
+            // Si nous avons un token d'accès dans le hash mais pas de session, rediriger vers la confirmation
+            navigate('/email-confirmation' + location.search + location.hash, { replace: true });
             return;
           }
         }
@@ -117,9 +111,7 @@ const NotFound = () => {
       }
     };
 
-    // Only attempt redirect if:
-    // 1. We haven't tried already in this render cycle
-    // 2. We don't have a noRedirect state flag
+    // Only attempt redirect if we haven't tried already in this render cycle
     if (!redirectAttempted && !location.state?.noRedirect) {
       checkAndRedirect();
     }

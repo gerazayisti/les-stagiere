@@ -13,43 +13,47 @@ export default function EmailConfirmation() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Nouvelle fonction d'extraction de token plus robuste
+  const extractAccessToken = () => {
+    // Vérifier le hash URL (format standard Supabase)
+    if (location.hash) {
+      const match = location.hash.match(/access_token=([^&]*)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    
+    // Vérifier les paramètres de requête
+    const searchParams = new URLSearchParams(location.search);
+    const queryToken = searchParams.get('access_token');
+    if (queryToken) {
+      return queryToken;
+    }
+    
+    return null;
+  };
+
   useEffect(() => {
     const handleEmailConfirmation = async () => {
       try {
-        // Check both hash and query parameters to be more resilient
-        const hash = window.location.hash;
-        const searchParams = new URLSearchParams(location.search);
-        const queryToken = searchParams.get('access_token');
-        const type = searchParams.get('type') || '';
+        setProgress(5);
+        
+        // Utiliser notre fonction d'extraction de token plus robuste
+        const accessToken = extractAccessToken();
         
         console.log("Email confirmation - URL details:", { 
-          hash, 
+          hash: location.hash, 
           search: location.search,
           pathname: location.pathname,
-          type
+          token: accessToken ? "Found" : "Not found"
         });
         
-        // First try to get token from hash (Supabase default format)
-        let accessToken = '';
-        if (hash) {
-          // Handle full hash format "#access_token=xxx&refresh_token=xxx"
-          const match = hash.match(/access_token=([^&]*)/);
-          if (match && match[1]) {
-            accessToken = match[1];
-          }
-        }
-        
-        // If not found in hash, try query parameter
-        if (!accessToken && queryToken) {
-          accessToken = queryToken;
-        }
-        
         if (!accessToken) {
-          console.error('No access token found in URL:', { hash, search: location.search });
+          console.error('No access token found in URL');
           
-          // Check for error message in hash
-          const errorMatch = hash.match(/error=([^&]*)/);
-          const errorMsgMatch = hash.match(/error_description=([^&]*)/);
+          // Vérifier les erreurs dans le hash
+          const errorMatch = location.hash.match(/error=([^&]*)/);
+          const errorMsgMatch = location.hash.match(/error_description=([^&]*)/);
           
           if (errorMatch && errorMatch[1]) {
             const errorDescription = errorMsgMatch && errorMsgMatch[1] 
@@ -63,9 +67,9 @@ export default function EmailConfirmation() {
         }
 
         setStatus('processing');
-        setProgress(10);
+        setProgress(20);
         
-        // Get the user information from token
+        // Obtenir les informations utilisateur à partir du token
         const { data: { user }, error: sessionError } = await supabase.auth.getUser(accessToken);
 
         if (sessionError || !user) {
@@ -73,9 +77,9 @@ export default function EmailConfirmation() {
           throw sessionError || new Error('Utilisateur non trouvé');
         }
         
-        setProgress(30);
+        setProgress(40);
         
-        // Extract user metadata
+        // Extraire les métadonnées utilisateur
         const role = user.user_metadata?.role || 'stagiaire';
         const name = user.user_metadata?.name || 'Utilisateur';
         
@@ -87,7 +91,7 @@ export default function EmailConfirmation() {
           metadata: user.user_metadata
         });
         
-        // Create basic user record first
+        // Création ou mise à jour de l'enregistrement utilisateur
         const { error: userError } = await supabase
           .from('users')
           .upsert({
@@ -102,12 +106,12 @@ export default function EmailConfirmation() {
           console.error("Error creating user record:", userError);
         }
         
-        setProgress(50);
+        setProgress(60);
         
-        // Prepare redirection path with fallback options
+        // Chemin de redirection avec options de secours
         let redirectPath = '/';
         
-        // Execute profile creations in parallel for better performance
+        // Exécuter les créations de profil en parallèle pour de meilleures performances
         if (role === 'entreprise') {
           const { error: enterpriseError } = await supabase
             .from('entreprises')
@@ -119,7 +123,6 @@ export default function EmailConfirmation() {
               is_verified: false,
               description: `${name} est une entreprise qui recherche des stagiaires.`,
               created_at: new Date().toISOString(),
-              // Add more required fields to prevent null constraints
               industry: '',
               location: '',
               website: ''
@@ -142,7 +145,6 @@ export default function EmailConfirmation() {
               is_verified: false,
               bio: `${name} est à la recherche d'un stage.`,
               created_at: new Date().toISOString(),
-              // Add more required fields to prevent null constraints
               education: [],
               skills: [],
               languages: [],
@@ -153,7 +155,6 @@ export default function EmailConfirmation() {
             
           if (stagiaireError) {
             console.error("Error creating intern profile:", stagiaireError);
-            // Try to get specifics of the error
             console.error("Error details:", stagiaireError.details, stagiaireError.hint, stagiaireError.message);
           }
             
@@ -164,11 +165,11 @@ export default function EmailConfirmation() {
         }
 
         console.log("Will redirect to:", redirectPath);
-        setProgress(90);
+        setProgress(80);
         setStatus('success');
         toast.success('Email confirmé avec succès');
         
-        // Cache user info for faster loading
+        // Mettre en cache les informations utilisateur pour un chargement plus rapide
         localStorage.setItem(`cachedUserProfile_${user.id}`, JSON.stringify({
           user: {
             id: user.id,
@@ -181,7 +182,7 @@ export default function EmailConfirmation() {
           timestamp: Date.now()
         }));
         
-        // Cache navigation state too for immediate UI feedback - IMPORTANT FOR SPEEDING UP PAGE LOADS
+        // Mettre en cache l'état de navigation pour un retour visuel immédiat de l'interface
         localStorage.setItem('navigation_state', JSON.stringify({ 
           user: {
             id: user.id,
@@ -191,33 +192,31 @@ export default function EmailConfirmation() {
             email_confirmed_at: user.email_confirmed_at,
             user_metadata: user.user_metadata
           }, 
-          userRole: role
+          userRole: role,
+          timestamp: Date.now()  // Ajouté pour la fraîcheur du cache
         }));
-        
-        // Add timestamp for cache checking
-        localStorage.setItem('nav_state_timestamp', Date.now().toString());
         
         setProgress(100);
         
-        // Set a short timeout to ensure toast is seen
+        // Court délai pour assurer que le toast est vu
         setTimeout(() => {
           navigate(redirectPath, { replace: true });
-        }, 800);
+        }, 500);
       } catch (error: any) {
         console.error('Erreur lors de la confirmation de l\'email:', error);
         setStatus('error');
         toast.error(error.message || 'Erreur lors de la confirmation de l\'email');
         
-        // Store error in session storage
+        // Stocker l'erreur dans le sessionStorage
         sessionStorage.setItem('auth_error', JSON.stringify({
           message: error.message || 'Erreur lors de la confirmation de l\'email',
           timestamp: Date.now()
         }));
         
-        // Short timeout to ensure error is seen
+        // Court délai pour assurer que l'erreur est vue
         setTimeout(() => {
           navigate('/connexion?error=confirmation_failed', { replace: true });
-        }, 1500);
+        }, 1000);
       } finally {
         setLoading(false);
       }

@@ -16,8 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-// Fix: Specify default export in the import type
-const ThemeToggle = lazy(() => import("./ThemeToggle").then(module => ({ default: module.default })));
+// Importation corrigée du ThemeToggle
+const ThemeToggle = lazy(() => import("./ThemeToggle"));
 
 export default function Navigation() {
   const navigate = useNavigate();
