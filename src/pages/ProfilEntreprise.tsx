@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -7,7 +8,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import AddInternshipOfferForm from '@/components/profile/AddInternshipOfferForm';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Edit } from 'lucide-react';
 import { InternshipOffersList } from '@/components/profile/InternshipOffersList';
 import { CompanyRecommendations } from '@/components/profile/CompanyRecommendations';
 import { supabase } from '@/lib/supabase';
@@ -186,7 +187,20 @@ export default function ProfilEntreprise() {
         onEdit={() => setIsEditProfileModalOpen(true)}
       />
       
-      <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-8">
+      <div className="flex justify-end mt-4 mb-4">
+        {isCurrentUser && (
+          <Button 
+            variant="outline" 
+            onClick={() => setIsEditProfileModalOpen(true)}
+            className="mr-2"
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            Modifier le profil
+          </Button>
+        )}
+      </div>
+      
+      <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-4">
         <TabsList className="grid grid-cols-3 mb-8">
           <TabsTrigger value="about">À propos</TabsTrigger>
           <TabsTrigger value="offers">Offres de stage</TabsTrigger>
