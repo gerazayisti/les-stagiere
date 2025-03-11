@@ -58,6 +58,32 @@ DROP POLICY IF EXISTS "Enable select for own documents" ON public.documents;
 DROP POLICY IF EXISTS "Enable update for own documents" ON public.documents;
 DROP POLICY IF EXISTS "Enable delete for own documents" ON public.documents;
 
+-- Skills policies
+DROP POLICY IF EXISTS "Anyone can view skills" ON public.skills;
+DROP POLICY IF EXISTS "Admin can manage skills" ON public.skills;
+
+-- Recommendations policies
+DROP POLICY IF EXISTS "Entreprises can create recommendations" ON public.recommendations;
+DROP POLICY IF EXISTS "Entreprises can update their recommendations" ON public.recommendations;
+DROP POLICY IF EXISTS "Anyone can view public recommendations" ON public.recommendations;
+
+-- Stagiaire_skills policies
+DROP POLICY IF EXISTS "Stagiaires can manage their skills" ON public.stagiaire_skills;
+DROP POLICY IF EXISTS "Anyone can view stagiaire skills" ON public.stagiaire_skills;
+
+-- Tags and Stage_tags policies
+DROP POLICY IF EXISTS "Anyone can view tags" ON public.tags;
+DROP POLICY IF EXISTS "Admin can manage tags" ON public.tags;
+DROP POLICY IF EXISTS "Anyone can view stage_tags" ON public.stage_tags;
+DROP POLICY IF EXISTS "Entreprises can manage stage_tags for their stages" ON public.stage_tags;
+
+-- Login_history policies
+DROP POLICY IF EXISTS "Users can view their own login history" ON public.login_history;
+DROP POLICY IF EXISTS "Admin can view all login history" ON public.login_history;
+
+-- User_settings policies
+DROP POLICY IF EXISTS "Users can manage their own settings" ON public.user_settings;
+
 -- Contact messages policies
 DROP POLICY IF EXISTS "Anyone can view contact messages" ON public.contact_messages;
 DROP POLICY IF EXISTS "Anyone can create contact messages" ON public.contact_messages;
