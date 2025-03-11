@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GlobeIcon, MapPin, Briefcase, Mail, Linkedin, Github, Globe } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export interface ProfileHeaderProps {
   name: string;
@@ -17,6 +18,7 @@ export interface ProfileHeaderProps {
   };
   editable?: boolean;
   onEdit?: () => void;
+  userId?: string;
 }
 
 export function ProfileHeader({
@@ -26,9 +28,19 @@ export function ProfileHeader({
   location,
   socials,
   editable = false,
-  onEdit
+  onEdit,
+  userId
 }: ProfileHeaderProps) {
+  const navigate = useNavigate();
   const avatarFallback = name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
+
+  const handleEditClick = () => {
+    if (onEdit) {
+      onEdit();
+    } else if (userId) {
+      navigate(`/edit-profile/${userId}`);
+    }
+  };
 
   return (
     <Card className="relative p-6 overflow-hidden">
@@ -55,7 +67,7 @@ export function ProfileHeader({
             </div>
             
             {editable && (
-              <Button onClick={onEdit} variant="outline" className="sm:self-start">
+              <Button onClick={handleEditClick} variant="outline" className="sm:self-start">
                 Modifier le profil
               </Button>
             )}

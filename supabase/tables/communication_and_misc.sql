@@ -23,6 +23,15 @@ BEGIN
 END
 $$;
 
+-- Define document type enum if it doesn't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'document_type') THEN
+        CREATE TYPE document_type AS ENUM ('cv', 'cover_letter', 'certificate', 'other');
+    END IF;
+END
+$$;
+
 -- Contact messages
 CREATE TABLE IF NOT EXISTS contact_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -66,6 +75,20 @@ CREATE TABLE IF NOT EXISTS notifications (
     link TEXT,
     is_read BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Documents (CVs, Cover Letters, etc.)
+CREATE TABLE IF NOT EXISTS documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    stagiaire_id UUID REFERENCES stagiaires(id) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    url TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    size INTEGER,
+    format VARCHAR(50),
+    is_public BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP
 );
 
 -- Projects (Portfolio)
@@ -125,6 +148,8 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_activities_user ON user_activities(user_id);
 CREATE INDEX IF NOT EXISTS idx_uploads_user ON uploads(user_id);
 CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status);
+CREATE INDEX IF NOT EXISTS idx_documents_stagiaire ON documents(stagiaire_id);
+CREATE INDEX IF NOT EXISTS idx_projects_stagiaire ON projects(stagiaire_id);
 
 -- Enable Row Level Security on tables
 ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
@@ -134,6 +159,7 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE uploads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 
 -- Set up RLS policies
 
@@ -169,6 +195,14 @@ CREATE POLICY "Users can send messages" ON messages
 CREATE POLICY "Users can view their notifications" ON notifications
     FOR SELECT USING (auth.uid() = user_id);
 
+-- Documents policies
+CREATE POLICY "Users can manage their documents" ON documents
+    USING (auth.uid() = stagiaire_id)
+    WITH CHECK (auth.uid() = stagiaire_id);
+
+CREATE POLICY "Users can view their documents or public documents" ON documents
+    FOR SELECT USING (auth.uid() = stagiaire_id OR is_public = true);
+
 -- Projects policies
 CREATE POLICY "Stagiaires can manage their projects" ON projects
     USING (auth.uid() = stagiaire_id)
@@ -195,6 +229,7 @@ COMMENT ON TABLE contact_messages IS 'Messages de contact envoyés par les utili
 COMMENT ON TABLE conversations IS 'Conversations entre stagiaires et entreprises';
 COMMENT ON TABLE messages IS 'Messages échangés dans les conversations';
 COMMENT ON TABLE notifications IS 'Notifications pour les utilisateurs';
+COMMENT ON TABLE documents IS 'Documents téléchargés par les stagiaires (CV, lettres de motivation, etc.)';
 COMMENT ON TABLE projects IS 'Projets dans le portfolio des stagiaires';
 COMMENT ON TABLE user_activities IS 'Activités des utilisateurs pour l''analytique';
 COMMENT ON TABLE uploads IS 'Fichiers uploadés par les utilisateurs';

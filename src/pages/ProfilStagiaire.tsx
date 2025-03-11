@@ -116,7 +116,7 @@ export default function ProfilStagiaire() {
         location={stagiaire.location || ""}
         socials={socials}
         editable={isCurrentUser}
-        onEdit={() => {}}
+        userId={stagiaire.id}
       />
       
       <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-8">
