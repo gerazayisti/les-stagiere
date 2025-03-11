@@ -1,4 +1,3 @@
-
 import { 
   Card, 
   CardContent, 
@@ -13,7 +12,13 @@ import { CalendarDays, MapPin, Clock, Briefcase, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInternshipOffers } from "@/hooks/useInternshipOffers";
 
-export function InternshipOffersList({ companyId }: { companyId: string }) {
+export function InternshipOffersList({ 
+  companyId, 
+  onStageSelect 
+}: { 
+  companyId: string, 
+  onStageSelect?: (stage: any) => void 
+}) {
   const { offers, loading, error } = useInternshipOffers(companyId);
 
   if (loading) {
@@ -119,7 +124,11 @@ export function InternshipOffersList({ companyId }: { companyId: string }) {
               <Users className="h-4 w-4 inline mr-1" /> 
               0 candidatures
             </div>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onStageSelect && onStageSelect(offer)}
+            >
               Voir les détails
             </Button>
           </CardFooter>

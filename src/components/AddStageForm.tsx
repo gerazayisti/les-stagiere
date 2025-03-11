@@ -516,10 +516,10 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
                       <SelectValue placeholder="Sélectionner une devise" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="CAD">CAD (C$)</SelectItem>
                       <SelectItem value="XAF">XAF (FCFA)</SelectItem>
+                      <SelectItem value="USD">USD ($)</SelectItem>
+                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                      <SelectItem value="CAD">CAD (C$)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

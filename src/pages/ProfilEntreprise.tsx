@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -7,6 +6,7 @@ import { useParams, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import AddInternshipOfferForm from '@/components/profile/AddInternshipOfferForm';
+import { StageDetailsModal } from '@/components/profile/StageDetailsModal';
 import { Button } from '@/components/ui/button';
 import { Plus, Edit } from 'lucide-react';
 import { InternshipOffersList } from '@/components/profile/InternshipOffersList';
@@ -28,6 +28,11 @@ export default function ProfilEntreprise() {
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   
+  // Nouveaux états pour la gestion des stages
+  const [stages, setStages] = useState<any[]>([]);
+  const [selectedStage, setSelectedStage] = useState<any | null>(null);
+  const [isStageDetailsModalOpen, setIsStageDetailsModalOpen] = useState(false);
+
   // Chargement progressif - charger d'abord les données de base
   useEffect(() => {
     async function loadBasicData() {
@@ -140,6 +145,48 @@ export default function ProfilEntreprise() {
     }
   }
   
+  // Charger les stages de l'entreprise
+  useEffect(() => {
+    if (entreprise?.id) {
+      fetchCompanyStages();
+    }
+  }, [entreprise?.id]);
+
+  const fetchCompanyStages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('stages')
+        .select('*')
+        .eq('entreprise_id', entreprise.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setStages(data || []);
+    } catch (error) {
+      console.error('Erreur lors du chargement des stages:', error);
+      toast.error('Impossible de charger les offres de stage');
+    }
+  };
+
+  const handleStageDetailsOpen = (stage: any) => {
+    setSelectedStage(stage);
+    setIsStageDetailsModalOpen(true);
+  };
+
+  const handleStageUpdate = (updatedStage: any) => {
+    // Mettre à jour la liste des stages
+    const updatedStages = stages.map(stage => 
+      stage.id === updatedStage.id ? updatedStage : stage
+    );
+    setStages(updatedStages);
+    
+    // Fermer le modal
+    setIsStageDetailsModalOpen(false);
+  };
+
   // Rendu d'un squelette pendant le chargement des données de base
   if (!headerLoaded) {
     return (
@@ -239,7 +286,24 @@ export default function ProfilEntreprise() {
             )}
           </div>
           
-          <InternshipOffersList companyId={entreprise.id} />
+          <div className="mt-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Offres de stage</h2>
+              {isCurrentUser && (
+                <Button 
+                  onClick={() => setIsAddOfferModalOpen(true)} 
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" /> Ajouter une offre
+                </Button>
+              )}
+            </div>
+            
+            <InternshipOffersList 
+              companyId={entreprise.id} 
+              onStageSelect={handleStageDetailsOpen}
+            />
+          </div>
           
           {isAddOfferModalOpen && (
             <AddInternshipOfferForm
@@ -259,6 +323,15 @@ export default function ProfilEntreprise() {
           />
         </TabsContent>
       </Tabs>
+      
+      {selectedStage && (
+        <StageDetailsModal
+          isOpen={isStageDetailsModalOpen}
+          onClose={() => setIsStageDetailsModalOpen(false)}
+          stage={selectedStage}
+          onUpdate={handleStageUpdate}
+        />
+      )}
       
       {isEditProfileModalOpen && (
         <EditEntrepriseDialog
