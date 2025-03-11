@@ -16,6 +16,8 @@ const NotFound = () => {
 
   useEffect(() => {
     const checkAndRedirect = async () => {
+      if (loading) return; // Prevent multiple simultaneous checks
+      
       setLoading(true);
       
       try {
@@ -61,80 +63,85 @@ const NotFound = () => {
             }
           }
           
-          // Attempt to get session - this can help with email confirmation redirects
-          const { data, error } = await supabase.auth.getSession();
-          console.log("Current session check:", data?.session ? "Has session" : "No session", error ? `Error: ${error.message}` : "No error");
-          
-          if (data.session?.user) {
-            // User is authenticated, redirect based on role
-            const role = data.session.user.user_metadata?.role || 'stagiaire';
-            const userId = data.session.user.id;
+          try {
+            // Attempt to get session - this can help with email confirmation redirects
+            const { data, error } = await supabase.auth.getSession();
+            console.log("Current session check:", data?.session ? "Has session" : "No session", error ? `Error: ${error.message}` : "No error");
             
-            // Cache navigation state for faster loading with timestamp
-            localStorage.setItem('navigation_state', JSON.stringify({ 
-              user: {
-                id: userId,
-                email: data.session.user.email,
-                role: role,
-                name: data.session.user.user_metadata?.name || 'Utilisateur', 
-                email_confirmed_at: data.session.user.email_confirmed_at,
-                user_metadata: data.session.user.user_metadata
-              }, 
-              userRole: role,
-              timestamp: Date.now()
-            }));
-            
-            // Clear any stale error state
-            sessionStorage.removeItem('auth_error');
-            
-            // If on a profile page, check if it's for the correct user
-            if (isProfilePage) {
-              const pathSegments = location.pathname.split('/');
-              const pathId = pathSegments[pathSegments.length - 1];
+            if (data?.session?.user) {
+              // User is authenticated, redirect based on role
+              const role = data.session.user.user_metadata?.role || 'stagiaire';
+              const userId = data.session.user.id;
               
-              // If we're on a profile page for the wrong user, redirect to their actual profile
-              if (pathId !== userId) {
-                if (role === 'entreprise') {
-                  console.log(`Redirecting to correct enterprise profile: ${userId}`);
-                  navigate(`/entreprises/${userId}`, { replace: true });
-                  return;
-                } else if (role === 'stagiaire') {
-                  console.log(`Redirecting to correct intern profile: ${userId}`);
-                  navigate(`/stagiaires/${userId}`, { replace: true });
-                  return;
-                }
-              } else {
-                // We're on the right profile page but it's not loading, retry fetching data
-                if (retryCount < 3) {
-                  setRetryCount(prevCount => prevCount + 1);
-                  // Try to force refresh the profile data by reloading the page
-                  window.location.reload();
-                  return;
+              // Cache navigation state for faster loading with timestamp
+              localStorage.setItem('navigation_state', JSON.stringify({ 
+                user: {
+                  id: userId,
+                  email: data.session.user.email,
+                  role: role,
+                  name: data.session.user.user_metadata?.name || 'Utilisateur', 
+                  email_confirmed_at: data.session.user.email_confirmed_at,
+                  user_metadata: data.session.user.user_metadata
+                }, 
+                userRole: role,
+                timestamp: Date.now()
+              }));
+              
+              // Clear any stale error state
+              sessionStorage.removeItem('auth_error');
+              
+              // If on a profile page, check if it's for the correct user
+              if (isProfilePage) {
+                const pathSegments = location.pathname.split('/');
+                const pathId = pathSegments[pathSegments.length - 1];
+                
+                // If we're on a profile page for the wrong user, redirect to their actual profile
+                if (pathId !== userId) {
+                  if (role === 'entreprise') {
+                    console.log(`Redirecting to correct enterprise profile: ${userId}`);
+                    navigate(`/entreprises/${userId}`, { replace: true });
+                    return;
+                  } else if (role === 'stagiaire') {
+                    console.log(`Redirecting to correct intern profile: ${userId}`);
+                    navigate(`/stagiaires/${userId}`, { replace: true });
+                    return;
+                  }
+                } else {
+                  // We're on the right profile page but it's not loading, retry fetching data
+                  if (retryCount < 3) {
+                    setRetryCount(prevCount => prevCount + 1);
+                    // Try to force refresh the profile data by reloading the page
+                    window.location.reload();
+                    return;
+                  }
                 }
               }
+              
+              if (role === 'entreprise') {
+                toast.success("Authentification réussie");
+                navigate(`/entreprises/${userId}`, { replace: true });
+                return;
+              } else if (role === 'stagiaire') {
+                toast.success("Authentification réussie");
+                navigate(`/stagiaires/${userId}`, { replace: true });
+                return;
+              } else {
+                toast.success("Authentification réussie");
+                navigate('/complete-profile', { replace: true });
+                return;
+              }
+            } else if (location.pathname === "/") {
+              // Si nous sommes sur la page d'accueil sans session, mieux gérer la redirection
+              navigate('/', { replace: true, state: { noRedirect: true, timestamp: Date.now() } });
+              return;
+            } else if (location.hash.includes("access_token=")) {
+              // Si nous avons un token d'accès dans le hash mais pas de session, rediriger vers la confirmation
+              navigate('/email-confirmation' + location.search + location.hash, { replace: true });
+              return;
             }
-            
-            if (role === 'entreprise') {
-              toast.success("Authentification réussie");
-              navigate(`/entreprises/${userId}`, { replace: true });
-              return;
-            } else if (role === 'stagiaire') {
-              toast.success("Authentification réussie");
-              navigate(`/stagiaires/${userId}`, { replace: true });
-              return;
-            } else {
-              toast.success("Authentification réussie");
-              navigate('/complete-profile', { replace: true });
-              return;
-            }
-          } else if (location.pathname === "/") {
-            // Si nous sommes sur la page d'accueil sans session, mieux gérer la redirection
-            navigate('/', { replace: true, state: { noRedirect: true, timestamp: Date.now() } });
-            return;
-          } else if (location.hash.includes("access_token=")) {
-            // Si nous avons un token d'accès dans le hash mais pas de session, rediriger vers la confirmation
-            navigate('/email-confirmation' + location.search + location.hash, { replace: true });
-            return;
+          } catch (sessionError) {
+            console.error("Session check error:", sessionError);
+            // Continue with normal 404 handling if session check fails
           }
         }
       } catch (error) {
@@ -149,7 +156,7 @@ const NotFound = () => {
     if (!redirectAttempted && !location.state?.noRedirect && retryCount < 3) {
       checkAndRedirect();
     }
-  }, [location, navigate, redirectAttempted, retryCount]);
+  }, [location, navigate, redirectAttempted, retryCount, loading]);
 
   const handleRetry = () => {
     setRedirectAttempted(false);
