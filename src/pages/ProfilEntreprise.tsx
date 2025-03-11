@@ -8,12 +8,13 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import AddInternshipOfferForm from '@/components/profile/AddInternshipOfferForm';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Edit } from 'lucide-react';
 import { InternshipOffersList } from '@/components/profile/InternshipOffersList';
 import { CompanyRecommendations } from '@/components/profile/CompanyRecommendations';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EditEntrepriseDialog } from '@/components/profile/EditEntrepriseDialog';
 
 export default function ProfilEntreprise() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,7 @@ export default function ProfilEntreprise() {
   const [headerLoaded, setHeaderLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAddOfferModalOpen, setIsAddOfferModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   
   // Chargement progressif - charger d'abord les données de base
@@ -177,6 +179,10 @@ export default function ProfilEntreprise() {
     setIsAddOfferModalOpen(false);
   };
   
+  const handleProfileUpdate = () => {
+    fetchEnterpriseData();
+  };
+  
   return (
     <div className="container mx-auto py-8 px-4">
       <ProfileHeader 
@@ -186,11 +192,11 @@ export default function ProfilEntreprise() {
         location={entreprise.location || ""}
         socials={{
           website: entreprise.website || "",
-          github: entreprise.github || "",
-          linkedin: entreprise.linkedin || ""
+          github: entreprise.social_media?.github || "",
+          linkedin: entreprise.social_media?.linkedin || ""
         }}
         editable={isCurrentUser}
-        onEdit={() => {}}
+        onEdit={() => setIsEditProfileModalOpen(true)}
       />
       
       <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-8">
@@ -200,11 +206,27 @@ export default function ProfilEntreprise() {
           <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
         </TabsList>
         <TabsContent value="about">
+          <div className="flex justify-end mb-4">
+            {isCurrentUser && (
+              <Button variant="outline" size="sm" onClick={() => setIsEditProfileModalOpen(true)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Modifier le profil
+              </Button>
+            )}
+          </div>
           <AboutTab 
             bio={entreprise.description || ""}
             education={entreprise.industry || ""}
             isPremium={entreprise.is_premium}
             userId={entreprise.id}
+            extraInfos={[
+              { label: "Secteur", value: entreprise.industry || "Non spécifié" },
+              { label: "Taille", value: entreprise.size || "Non spécifiée" },
+              { label: "Fondée en", value: entreprise.founded_year || "Non spécifié" },
+              { label: "Site web", value: entreprise.website || "Non spécifié", isLink: true },
+            ]}
+            culture={entreprise.company_culture}
+            benefits={entreprise.benefits}
           />
         </TabsContent>
         <TabsContent value="offers">
@@ -237,6 +259,15 @@ export default function ProfilEntreprise() {
           />
         </TabsContent>
       </Tabs>
+      
+      {isEditProfileModalOpen && (
+        <EditEntrepriseDialog
+          isOpen={isEditProfileModalOpen}
+          onClose={() => setIsEditProfileModalOpen(false)}
+          entrepriseId={entreprise.id}
+          onUpdate={handleProfileUpdate}
+        />
+      )}
     </div>
   );
 }
