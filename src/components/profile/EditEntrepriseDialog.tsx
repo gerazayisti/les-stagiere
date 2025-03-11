@@ -177,7 +177,7 @@ export function EditEntrepriseDialog({
         github: values.github || null,
       };
       
-      // Update the enterprise record
+      // Update the enterprise record - removed updated_at field
       const { error } = await supabase
         .from('entreprises')
         .update({
@@ -192,7 +192,6 @@ export function EditEntrepriseDialog({
           social_media,
           company_culture: values.company_culture,
           benefits: benefitsList,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', entrepriseId);
       

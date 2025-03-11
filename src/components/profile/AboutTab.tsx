@@ -11,15 +11,33 @@ export interface Education {
   description: string | null;
 }
 
+export interface ExtraInfo {
+  label: string;
+  value: any;
+  isLink?: boolean;
+}
+
 export interface AboutTabProps {
   bio?: string;
   education?: Education[] | string;
   disponibility?: "immediate" | "upcoming";
   isPremium?: boolean;
   userId?: string;
+  extraInfos?: ExtraInfo[];
+  culture?: string;
+  benefits?: string[];
 }
 
-export function AboutTab({ bio, education, disponibility = "upcoming", isPremium = false, userId }: AboutTabProps) {
+export function AboutTab({ 
+  bio, 
+  education, 
+  disponibility = "upcoming", 
+  isPremium = false, 
+  userId,
+  extraInfos = [],
+  culture,
+  benefits = []
+}: AboutTabProps) {
   // Convert education to a displayable format
   const renderEducation = () => {
     if (!education) {
@@ -76,12 +94,63 @@ export function AboutTab({ bio, education, disponibility = "upcoming", isPremium
         </CardContent>
       </Card>
 
+      {extraInfos && extraInfos.length > 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-xl font-semibold mb-4">Informations</h3>
+            <dl className="space-y-2">
+              {extraInfos.map((info, index) => (
+                <div key={index} className="grid grid-cols-3 gap-4">
+                  <dt className="col-span-1 font-medium text-muted-foreground">{info.label}</dt>
+                  <dd className="col-span-2">
+                    {info.isLink && info.value && info.value !== 'Non spécifié' ? (
+                      <a 
+                        href={info.value.startsWith('http') ? info.value : `https://${info.value}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {info.value}
+                      </a>
+                    ) : (
+                      <span>{info.value}</span>
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-6">
           <h3 className="text-xl font-semibold mb-4">Formation</h3>
           {renderEducation()}
         </CardContent>
       </Card>
+
+      {culture && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-xl font-semibold mb-4">Culture d'entreprise</h3>
+            <p className="text-muted-foreground whitespace-pre-line">{culture}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {benefits && benefits.length > 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-xl font-semibold mb-4">Avantages</h3>
+            <div className="flex flex-wrap gap-2">
+              {benefits.map((benefit, index) => (
+                <Badge key={index} variant="secondary">{benefit}</Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-6">
