@@ -318,52 +318,31 @@ export const auth = {
 
   async signIn({ email, password }: SignInData) {
     try {
-      console.log("Attempting to sign in with:", email);
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        console.error("Supabase auth error:", error);
-        
         if (error.message.includes("Email not confirmed")) {
           throw new Error("Veuillez confirmer votre email avant de vous connecter");
         }
-        
-        // Handle invalid credentials more explicitly
-        if (error.message.includes("Invalid login credentials")) {
-          throw new Error("Email ou mot de passe incorrect");
-        }
-        
         throw error;
       }
       
-      console.log("Sign in successful, user:", data.user);
-      
       if (data.user) {
-        try {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('id', data.user.id)
-            .maybeSingle();
-            
-          if (userError) {
-            console.warn("Error checking user data after login:", userError);
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+          
+        if (!userData && !userError) {
+          const storedProfileData = localStorage.getItem(`userProfile_${data.user.id}`);
+          
+          if (storedProfileData) {
+            await this.createProfileAfterConfirmation(data.user.id);
           }
-            
-          if (!userData && !userError) {
-            const storedProfileData = localStorage.getItem(`userProfile_${data.user.id}`);
-            
-            if (storedProfileData) {
-              await this.createProfileAfterConfirmation(data.user.id);
-            }
-          }
-        } catch (profileError) {
-          console.error("Error checking/creating profile after login:", profileError);
-          // Continue with login anyway, don't block the user
         }
       }
       
@@ -377,17 +356,10 @@ export const auth = {
       
       let message = "Identifiants incorrects";
       
-      // More specific error handling
-      if (error.message?.includes("Invalid login credentials") || 
-          error.message?.includes("mot de passe incorrect")) {
+      if (error.message.includes("Invalid login credentials")) {
         message = "Email ou mot de passe incorrect";
-      } else if (error.message?.includes("Email not confirmed") || 
-                error.message?.includes("confirmer votre email")) {
+      } else if (error.message.includes("Email not confirmed") || error.message.includes("confirmer votre email")) {
         message = "Veuillez confirmer votre email avant de vous connecter";
-      } else if (error.message === "Failed to fetch" || 
-                error.name === "TypeError" || 
-                error.message?.includes("network")) {
-        message = "Problème de connexion au serveur. Veuillez vérifier votre connexion internet.";
       }
       
       toast.error("Échec de connexion", {

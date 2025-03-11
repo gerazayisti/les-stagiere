@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Loader2, Eye, EyeOff, WifiOff, ServerOff } from "lucide-react";
+import { AlertCircle, Loader2, Eye, EyeOff, WifiOff } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -32,7 +32,6 @@ interface RegistrationFormProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRoleChange: (value: UserRole) => void;
   networkError?: boolean;
-  databaseError?: boolean;
 }
 
 export function RegistrationForm({
@@ -45,28 +44,15 @@ export function RegistrationForm({
   onSubmit,
   onInputChange,
   onRoleChange,
-  networkError = false,
-  databaseError = false
+  networkError = false
 }: RegistrationFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-
-  const getAlertVariant = () => {
-    if (databaseError) return "warning";
-    if (networkError) return "default";
-    return "destructive";
-  };
-
-  const getAlertIcon = () => {
-    if (databaseError) return <ServerOff className="h-4 w-4" />;
-    if (networkError) return <WifiOff className="h-4 w-4" />;
-    return <AlertCircle className="h-4 w-4" />;
-  };
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {formError && (
-        <Alert variant={getAlertVariant()}>
-          {getAlertIcon()}
+        <Alert variant={networkError ? "default" : "destructive"}>
+          {networkError ? <WifiOff className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
@@ -183,13 +169,6 @@ export function RegistrationForm({
           "S'inscrire"
         )}
       </Button>
-
-      {databaseError && (
-        <div className="text-xs text-amber-600 text-center mt-2">
-          Nous rencontrons actuellement des problèmes de connexion à notre base de données. 
-          Si l'inscription échoue, veuillez réessayer dans quelques minutes.
-        </div>
-      )}
     </form>
   );
 }

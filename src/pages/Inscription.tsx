@@ -18,7 +18,6 @@ export default function Inscription() {
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [networkError, setNetworkError] = useState(false);
-  const [databaseError, setDatabaseError] = useState(false); 
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [formData, setFormData] = useState({
@@ -27,8 +26,6 @@ export default function Inscription() {
     name: "",
     role: "stagiaire" as UserRole,
   });
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 2;
 
   const getRedirectPath = () => {
     const params = new URLSearchParams(location.search);
@@ -64,25 +61,9 @@ export default function Inscription() {
         setEmailAvailable(null);
         
         try {
-          // Add debounce to avoid too many requests
           const timeoutId = setTimeout(async () => {
             try {
-              // Implement retry logic for email check
-              const attemptEmailCheck = async (attempt: number): Promise<boolean> => {
-                try {
-                  return await auth.checkEmailExists(formData.email);
-                } catch (error: any) {
-                  if (error.message?.includes('Database error') && attempt < MAX_RETRIES) {
-                    // Exponential backoff
-                    const delay = Math.pow(2, attempt) * 300;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    return attemptEmailCheck(attempt + 1);
-                  }
-                  throw error;
-                }
-              };
-              
-              const exists = await attemptEmailCheck(0);
+              const exists = await auth.checkEmailExists(formData.email);
               setEmailAvailable(!exists);
             } catch (error) {
               console.warn("Vérification d'email échouée:", error);
@@ -103,7 +84,7 @@ export default function Inscription() {
     };
     
     checkEmail();
-  }, [formData.email, MAX_RETRIES]);
+  }, [formData.email]);
 
   const checkPasswordStrength = (password: string) => {
     if (password.length < 6) {
@@ -129,7 +110,6 @@ export default function Inscription() {
     if (formError) {
       setFormError(null);
       setNetworkError(false);
-      setDatabaseError(false);
     }
   };
 
@@ -138,8 +118,6 @@ export default function Inscription() {
     setLoading(true);
     setFormError(null);
     setNetworkError(false);
-    setDatabaseError(false);
-    setRetryCount(0);
 
     try {
       if (!formData.email.includes('@') || !formData.email.includes('.')) {
@@ -162,101 +140,32 @@ export default function Inscription() {
         return;
       }
       
-      // Add toast with longer duration for registration process
-      toast.loading("Inscription en cours... Cela peut prendre quelques instants.", { 
-        id: "signup-toast",
-        duration: 10000 // 10 seconds
-      });
-      
-      // Implement retry logic for database issues
-      const attemptSignUp = async (attempt: number): Promise<any> => {
-        try {
-          return await auth.signUp(formData);
-        } catch (error: any) {
-          if (error.code === 'unexpected_failure' && 
-              error.message?.includes('Database error') && 
-              attempt < MAX_RETRIES) {
-            setRetryCount(attempt + 1);
-            
-            // Exponential backoff
-            const delay = Math.pow(2, attempt) * 1000;
-            console.log(`Database error during signup, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
-            
-            toast.loading(`Problème temporaire, nouvelle tentative en cours... (${attempt + 1}/${MAX_RETRIES})`, { 
-              id: "signup-toast" 
-            });
-            
-            await new Promise(resolve => setTimeout(resolve, delay));
-            return attemptSignUp(attempt + 1);
-          }
-          throw error;
-        }
-      };
-      
-      const result = await attemptSignUp(0);
+      const result = await auth.signUp(formData);
       
       if (result.success) {
         setEmailSent(true);
         toast.success("Inscription réussie !", {
-          id: "signup-toast",
           description: "Veuillez vérifier votre email pour confirmer votre compte"
         });
       } else if (result.error) {
         setFormError(result.error.message);
-        
-        // Check if it's a database error
-        if (result.error.code === 'unexpected_failure' && 
-            result.error.message?.includes('Database error')) {
-          setDatabaseError(true);
-          toast.error("Problème temporaire avec notre base de données", {
-            id: "signup-toast",
-            description: "Veuillez réessayer dans quelques instants"
-          });
-        } 
         // Check if it's a network error
-        else if (result.error.isNetworkError) {
+        if (result.error.isNetworkError) {
           setNetworkError(true);
-          toast.error("Problème de connexion", {
-            id: "signup-toast",
-            description: "Veuillez vérifier votre connexion internet"
-          });
-        } else {
-          toast.error("Échec de l'inscription", {
-            id: "signup-toast",
-            description: result.error.message
-          });
         }
       }
     } catch (error: any) {
       console.error("Exception lors de la soumission du formulaire:", error);
       
-      // Check for database errors
-      if (error.code === 'unexpected_failure' && 
-          error.message?.includes('Database error')) {
-        setFormError("Problème temporaire avec notre base de données. Veuillez réessayer dans quelques instants.");
-        setDatabaseError(true);
-        toast.error("Problème temporaire avec notre base de données", {
-          id: "signup-toast",
-          description: "Veuillez réessayer dans quelques instants"
-        });
-      }
       // Check for network errors
-      else if (error.message === "Failed to fetch" || 
+      if (error.message === "Failed to fetch" || 
           error.name === "TypeError" || 
           error.message?.includes("network") ||
           error.message?.includes("ERR_NAME_NOT_RESOLVED")) {
         setFormError("Problème de connexion à notre serveur. Veuillez vérifier votre connexion internet et réessayer.");
         setNetworkError(true);
-        toast.error("Problème de connexion", {
-          id: "signup-toast",
-          description: "Veuillez vérifier votre connexion internet"
-        });
       } else {
         setFormError(error.message || "Erreur lors de l'inscription");
-        toast.error("Échec de l'inscription", {
-          id: "signup-toast",
-          description: error.message || "Une erreur inconnue s'est produite"
-        });
       }
     } finally {
       setLoading(false);
@@ -271,44 +180,15 @@ export default function Inscription() {
     
     try {
       setLoading(true);
-      toast.loading("Envoi de l'email en cours...", { id: "resend-toast" });
-      
-      // Implement retry logic for database issues
-      const attemptResend = async (attempt: number): Promise<boolean> => {
-        try {
-          return await auth.resendConfirmationEmail(formData.email);
-        } catch (error: any) {
-          if (error.code === 'unexpected_failure' && 
-              error.message?.includes('Database error') && 
-              attempt < MAX_RETRIES) {
-            // Exponential backoff
-            const delay = Math.pow(2, attempt) * 1000;
-            console.log(`Database error during email resend, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
-            
-            await new Promise(resolve => setTimeout(resolve, delay));
-            return attemptResend(attempt + 1);
-          }
-          throw error;
-        }
-      };
-      
-      await attemptResend(0);
-      
+      await auth.resendConfirmationEmail(formData.email);
       toast.success("Email de confirmation renvoyé", {
-        id: "resend-toast",
         description: "Veuillez vérifier votre boîte mail"
       });
     } catch (error: any) {
       console.error("Erreur lors du renvoi de l'email:", error);
       
-      // Check if it's a database error
-      if (error.code === 'unexpected_failure' && 
-          error.message?.includes('Database error')) {
-        setFormError("Problème temporaire avec notre base de données. Veuillez réessayer dans quelques instants.");
-        setDatabaseError(true);
-      }
       // Check if it's a network error
-      else if (error.message === "Failed to fetch" || 
+      if (error.message === "Failed to fetch" || 
           error.name === "TypeError" || 
           error.message?.includes("network") ||
           error.message?.includes("ERR_NAME_NOT_RESOLVED")) {
@@ -317,11 +197,6 @@ export default function Inscription() {
       } else {
         setFormError("Impossible de renvoyer l'email de confirmation");
       }
-      
-      toast.error("Échec de l'envoi", {
-        id: "resend-toast",
-        description: "Impossible de renvoyer l'email de confirmation"
-      });
     } finally {
       setLoading(false);
     }
@@ -361,7 +236,6 @@ export default function Inscription() {
               onInputChange={handleInputChange}
               onRoleChange={(value) => setFormData({ ...formData, role: value })}
               networkError={networkError}
-              databaseError={databaseError}
             />
           </ScrollArea>
         </CardContent>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { auth } from "@/lib/auth";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Eye, EyeOff, Loader2, Mail, Lock, AlertCircle, WifiOff, ServerOff } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -18,15 +17,11 @@ export default function Connexion() {
   const [loading, setLoading] = useState(false);
   const [loginInProgress, setLoginInProgress] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [networkError, setNetworkError] = useState(false);
-  const [databaseError, setDatabaseError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 2;
 
   const getRedirectPath = () => {
     const params = new URLSearchParams(location.search);
@@ -78,128 +73,48 @@ export default function Connexion() {
     setLoading(true);
     setLoginInProgress(true);
     setFormError(null);
-    setNetworkError(false);
-    setDatabaseError(false);
 
     try {
       toast.loading("Connexion en cours...", { id: "login-toast" });
       
-      console.log("Starting login attempt with:", formData.email);
+      const { user } = await auth.signIn(formData);
       
-      // Add a small delay to ensure database connections are ready
-      setTimeout(async () => {
-        try {
-          // Attempt to sign in with exponential backoff
-          const attemptSignIn = async (attempt: number): Promise<any> => {
-            try {
-              console.log(`Login attempt ${attempt + 1} for ${formData.email}`);
-              return await auth.signIn(formData);
-            } catch (error: any) {
-              console.error(`Login attempt ${attempt + 1} failed:`, error);
-              
-              // Handle database errors by retrying
-              if ((error.code === 'unexpected_failure' || error.status === 500) && 
-                  error.message?.includes('Database error') && 
-                  attempt < MAX_RETRIES) {
-                // Exponential backoff
-                const delay = Math.pow(2, attempt) * 500;
-                console.log(`Database error, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
-                
-                await new Promise(resolve => setTimeout(resolve, delay));
-                return attemptSignIn(attempt + 1);
-              }
-              throw error;
-            }
-          };
-          
-          const { user } = await attemptSignIn(0);
-          
-          console.log("Login successful, user:", user);
-          
-          toast.success("Connexion réussie", {
-            id: "login-toast",
-            description: `Bienvenue, ${user.user_metadata?.name || user.email}`
-          });
-          
-          if (refreshUser) {
-            await refreshUser();
-          }
-          
-          const redirectPath = getRedirectPath();
-          
-          localStorage.setItem('preAuthUserRole', user.user_metadata?.role || 'inconnu');
-          localStorage.setItem('preAuthUserName', user.user_metadata?.name || user.email);
-          
-          if (redirectPath) {
-            navigate(redirectPath);
-          } else if (user.user_metadata?.role === 'entreprise') {
-            navigate(`/entreprises/${user.id}`);
-          } else if (user.user_metadata?.role === 'stagiaire') {
-            navigate(`/stagiaires/${user.id}`);
-          } else {
-            navigate('/complete-profile');
-          }
-        } catch (error: any) {
-          console.error("Erreur de connexion détaillée:", error);
-          
-          toast.error("Échec de connexion", {
-            id: "login-toast",
-            description: handleAuthError(error)
-          });
-          
-          setFormError(handleAuthError(error));
-          setLoginInProgress(false);
-        } finally {
-          setLoading(false);
-        }
-      }, 500);
+      toast.success("Connexion réussie", {
+        id: "login-toast",
+        description: `Bienvenue, ${user.user_metadata?.name || user.email}`
+      });
+      
+      if (refreshUser) {
+        await refreshUser();
+      }
+      
+      const redirectPath = getRedirectPath();
+      
+      localStorage.setItem('preAuthUserRole', user.user_metadata?.role || 'inconnu');
+      localStorage.setItem('preAuthUserName', user.user_metadata?.name || user.email);
+      
+      if (redirectPath) {
+        navigate(redirectPath);
+      } else if (user.user_metadata?.role === 'entreprise') {
+        navigate(`/entreprises/${user.id}`);
+      } else if (user.user_metadata?.role === 'stagiaire') {
+        navigate(`/stagiaires/${user.id}`);
+      } else {
+        navigate('/complete-profile');
+      }
     } catch (error: any) {
-      console.error("Erreur de connexion globale:", error);
+      console.error("Erreur de connexion:", error);
       
       toast.error("Échec de connexion", {
         id: "login-toast",
-        description: handleAuthError(error)
+        description: error.message || "Une erreur s'est produite lors de la connexion"
       });
       
-      setFormError(handleAuthError(error));
+      setFormError(error.message || "Une erreur s'est produite lors de la connexion");
       setLoginInProgress(false);
+    } finally {
       setLoading(false);
     }
-  };
-
-  const handleAuthError = (error: any): string => {
-    console.log("Handling auth error:", error);
-    
-    // Database related errors
-    if ((error.code === 'unexpected_failure' || error.status === 500) &&
-        error.message?.includes("Database error")) {
-      setDatabaseError(true);
-      return "Problème temporaire avec notre base de données. Veuillez réessayer dans quelques instants.";
-    }
-    
-    // Network related errors
-    if (error.message === "Failed to fetch" || 
-        error.name === "TypeError" || 
-        error.message?.includes("network") ||
-        error.message?.includes("ERR_NAME_NOT_RESOLVED")) {
-      setNetworkError(true);
-      return "Problème de connexion au serveur. Veuillez vérifier votre connexion internet.";
-    }
-    
-    // Check specific error messages
-    if (error.message?.includes("Invalid login credentials") || 
-        error.message?.includes("Email ou mot de passe incorrect") ||
-        error.message?.includes("Identifiants incorrects")) {
-      return "Email ou mot de passe incorrect. Veuillez réessayer.";
-    }
-    
-    if (error.message?.includes("Email not confirmed") || 
-        error.message?.includes("confirmer votre email")) {
-      return "Veuillez confirmer votre email avant de vous connecter.";
-    }
-    
-    // Default error message
-    return error.message || "Une erreur s'est produite lors de la connexion. Veuillez réessayer.";
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,8 +126,6 @@ export default function Connexion() {
     
     if (formError) {
       setFormError(null);
-      setNetworkError(false);
-      setDatabaseError(false);
     }
   };
 
@@ -228,8 +141,8 @@ export default function Connexion() {
         
         <CardContent>
           {formError && (
-            <Alert variant={databaseError ? "warning" : networkError ? "default" : "destructive"} className="mb-4">
-              {databaseError ? <ServerOff className="h-4 w-4" /> : networkError ? <WifiOff className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
               <AlertDescription>{formError}</AlertDescription>
             </Alert>
           )}

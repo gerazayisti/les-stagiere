@@ -1,93 +1,42 @@
 
 
+-- Politiques de sécurité RLS pour Supabase
+
 -- First, make sure we enable uuid-ossp extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Disable RLS on all tables for testing
-ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.stagiaires DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.entreprises DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.documents DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.stages DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.candidatures DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.recommendations DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.projects DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subscriptions DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.conversations DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.messages DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notifications DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.skills DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tags DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.stage_tags DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_activities DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.certifications DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.experiences DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.articles DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.comments DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.events DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.event_registrations DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.stagiaire_skills DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.favorites DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.contact_messages DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.password_resets DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.email_verifications DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.reports DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_settings DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.login_history DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.uploads DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.newsletter_subscriptions DISABLE ROW LEVEL SECURITY;
+-- Set up basic RLS policies
+CREATE POLICY "Enable insert for registration" ON users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable select for own user" ON users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Enable update for own user" ON users FOR UPDATE USING (auth.uid() = id);
 
--- Delete all existing policies for testing
--- Users policies
-DROP POLICY IF EXISTS "Enable read access for all users" ON public.users;
-DROP POLICY IF EXISTS "Enable insert for registration" ON public.users;
-DROP POLICY IF EXISTS "Enable update for own user" ON public.users;
+CREATE POLICY "Enable insert for stagiaires" ON stagiaires FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable select for stagiaires" ON stagiaires FOR SELECT USING (true);
+CREATE POLICY "Enable update for own stagiaire" ON stagiaires FOR UPDATE USING (auth.uid() = id);
 
--- Stagiaires policies
-DROP POLICY IF EXISTS "Enable insert for stagiaires" ON public.stagiaires;
-DROP POLICY IF EXISTS "Enable select for stagiaires" ON public.stagiaires;
-DROP POLICY IF EXISTS "Enable update for own stagiaire" ON public.stagiaires;
-
--- Entreprises policies
-DROP POLICY IF EXISTS "Enable insert for entreprises" ON public.entreprises;
-DROP POLICY IF EXISTS "Enable select for entreprises" ON public.entreprises;
-DROP POLICY IF EXISTS "Enable update for own entreprise" ON public.entreprises;
+CREATE POLICY "Enable insert for entreprises" ON entreprises FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable select for entreprises" ON entreprises FOR SELECT USING (true);
+CREATE POLICY "Enable update for own entreprise" ON entreprises FOR UPDATE USING (auth.uid() = id);
 
 -- Documents policies
-DROP POLICY IF EXISTS "Enable insert for documents" ON public.documents;
-DROP POLICY IF EXISTS "Enable select for own documents" ON public.documents;
-DROP POLICY IF EXISTS "Enable update for own documents" ON public.documents;
-DROP POLICY IF EXISTS "Enable delete for own documents" ON public.documents;
+CREATE POLICY "Enable insert for documents" ON documents FOR INSERT WITH CHECK (auth.uid() = stagiaire_id);
+CREATE POLICY "Enable select for own documents" ON documents FOR SELECT USING (auth.uid() = stagiaire_id OR is_public = true);
+CREATE POLICY "Enable update for own documents" ON documents FOR UPDATE USING (auth.uid() = stagiaire_id);
+CREATE POLICY "Enable delete for own documents" ON documents FOR DELETE USING (auth.uid() = stagiaire_id);
 
--- Skills policies
-DROP POLICY IF EXISTS "Anyone can view skills" ON public.skills;
-DROP POLICY IF EXISTS "Admin can manage skills" ON public.skills;
+-- Enable RLS on main tables
+ALTER TABLE auth.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stagiaires ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entreprises ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 
--- Recommendations policies
-DROP POLICY IF EXISTS "Entreprises can create recommendations" ON public.recommendations;
-DROP POLICY IF EXISTS "Entreprises can update their recommendations" ON public.recommendations;
-DROP POLICY IF EXISTS "Anyone can view public recommendations" ON public.recommendations;
+-- Politique pour la table contact_messages
+CREATE POLICY "Anyone can view contact messages" ON contact_messages
+    FOR SELECT 
+    USING (true);
 
--- Stagiaire_skills policies
-DROP POLICY IF EXISTS "Stagiaires can manage their skills" ON public.stagiaire_skills;
-DROP POLICY IF EXISTS "Anyone can view stagiaire skills" ON public.stagiaire_skills;
+CREATE POLICY "Anyone can create contact messages" ON contact_messages
+    FOR INSERT 
+    WITH CHECK (true);
 
--- Tags and Stage_tags policies
-DROP POLICY IF EXISTS "Anyone can view tags" ON public.tags;
-DROP POLICY IF EXISTS "Admin can manage tags" ON public.tags;
-DROP POLICY IF EXISTS "Anyone can view stage_tags" ON public.stage_tags;
-DROP POLICY IF EXISTS "Entreprises can manage stage_tags for their stages" ON public.stage_tags;
-
--- Login_history policies
-DROP POLICY IF EXISTS "Users can view their own login history" ON public.login_history;
-DROP POLICY IF EXISTS "Admin can view all login history" ON public.login_history;
-
--- User_settings policies
-DROP POLICY IF EXISTS "Users can manage their own settings" ON public.user_settings;
-
--- Contact messages policies
-DROP POLICY IF EXISTS "Anyone can view contact messages" ON public.contact_messages;
-DROP POLICY IF EXISTS "Anyone can create contact messages" ON public.contact_messages;
-
--- Comment to explain what was done
-COMMENT ON SCHEMA public IS 'All RLS policies have been temporarily disabled for debugging authentication issues.';

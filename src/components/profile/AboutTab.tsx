@@ -1,7 +1,6 @@
+
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Edit } from "lucide-react";
 
 export interface Education {
   school: string;
@@ -27,8 +26,6 @@ export interface AboutTabProps {
   extraInfos?: ExtraInfo[];
   culture?: string;
   benefits?: string[];
-  isEditable?: boolean;
-  onEdit?: () => void;
 }
 
 export function AboutTab({ 
@@ -39,10 +36,9 @@ export function AboutTab({
   userId,
   extraInfos = [],
   culture,
-  benefits = [],
-  isEditable = false,
-  onEdit
+  benefits = []
 }: AboutTabProps) {
+  // Convert education to a displayable format
   const renderEducation = () => {
     if (!education) {
       return (
@@ -87,15 +83,7 @@ export function AboutTab({
     <div className="space-y-6">
       <Card>
         <CardContent className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold">Biographie</h3>
-            {isEditable && (
-              <Button variant="outline" size="sm" onClick={onEdit}>
-                <Edit className="h-4 w-4 mr-2" />
-                Modifier
-              </Button>
-            )}
-          </div>
+          <h3 className="text-xl font-semibold mb-4">Biographie</h3>
           {bio ? (
             <p className="text-muted-foreground whitespace-pre-line">{bio}</p>
           ) : (
