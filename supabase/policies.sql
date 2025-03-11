@@ -75,4 +75,3 @@ CREATE POLICY "Anyone can view contact messages"
 CREATE POLICY "Anyone can create contact messages"
     ON public.contact_messages FOR INSERT
     WITH CHECK (true);
-

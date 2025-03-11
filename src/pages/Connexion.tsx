@@ -84,16 +84,21 @@ export default function Connexion() {
     try {
       toast.loading("Connexion en cours...", { id: "login-toast" });
       
+      console.log("Starting login attempt with:", formData.email);
+      
       // Add a small delay to ensure database connections are ready
       setTimeout(async () => {
         try {
           // Attempt to sign in with exponential backoff
           const attemptSignIn = async (attempt: number): Promise<any> => {
             try {
+              console.log(`Login attempt ${attempt + 1} for ${formData.email}`);
               return await auth.signIn(formData);
             } catch (error: any) {
+              console.error(`Login attempt ${attempt + 1} failed:`, error);
+              
               // Handle database errors by retrying
-              if (error.code === 'unexpected_failure' && 
+              if ((error.code === 'unexpected_failure' || error.status === 500) && 
                   error.message?.includes('Database error') && 
                   attempt < MAX_RETRIES) {
                 // Exponential backoff
@@ -108,6 +113,8 @@ export default function Connexion() {
           };
           
           const { user } = await attemptSignIn(0);
+          
+          console.log("Login successful, user:", user);
           
           toast.success("Connexion réussie", {
             id: "login-toast",
@@ -133,7 +140,7 @@ export default function Connexion() {
             navigate('/complete-profile');
           }
         } catch (error: any) {
-          console.error("Erreur de connexion:", error);
+          console.error("Erreur de connexion détaillée:", error);
           
           toast.error("Échec de connexion", {
             id: "login-toast",
@@ -147,7 +154,7 @@ export default function Connexion() {
         }
       }, 500);
     } catch (error: any) {
-      console.error("Erreur de connexion:", error);
+      console.error("Erreur de connexion globale:", error);
       
       toast.error("Échec de connexion", {
         id: "login-toast",
@@ -161,8 +168,10 @@ export default function Connexion() {
   };
 
   const handleAuthError = (error: any): string => {
+    console.log("Handling auth error:", error);
+    
     // Database related errors
-    if (error.code === 'unexpected_failure' &&
+    if ((error.code === 'unexpected_failure' || error.status === 500) &&
         error.message?.includes("Database error")) {
       setDatabaseError(true);
       return "Problème temporaire avec notre base de données. Veuillez réessayer dans quelques instants.";
