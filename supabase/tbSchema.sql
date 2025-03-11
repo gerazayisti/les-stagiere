@@ -12,6 +12,21 @@ CREATE TABLE IF NOT EXISTS public.skills (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Création de la table tags si elle n'existe pas (déplacée avant stage_tags)
+CREATE TABLE IF NOT EXISTS public.tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) UNIQUE NOT NULL,
+    category VARCHAR(255),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Création de la table stage_tags si elle n'existe pas
+CREATE TABLE IF NOT EXISTS public.stage_tags (
+    stage_id UUID REFERENCES stages(id),
+    tag_id UUID REFERENCES tags(id),
+    PRIMARY KEY (stage_id, tag_id)
+);
+
 -- Création de la table recommendations si elle n'existe pas
 CREATE TABLE IF NOT EXISTS public.recommendations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -41,21 +56,6 @@ CREATE TABLE IF NOT EXISTS public.stagiaire_skills (
     last_used_date DATE,
     created_at TIMESTAMP DEFAULT NOW(),
     PRIMARY KEY (stagiaire_id, skill_id)
-);
-
--- Création de la table stage_tags si elle n'existe pas
-CREATE TABLE IF NOT EXISTS public.stage_tags (
-    stage_id UUID REFERENCES stages(id),
-    tag_id UUID REFERENCES tags(id),
-    PRIMARY KEY (stage_id, tag_id)
-);
-
--- Création de la table tags si elle n'existe pas
-CREATE TABLE IF NOT EXISTS public.tags (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) UNIQUE NOT NULL,
-    category VARCHAR(255),
-    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Ajout des index pour améliorer les performances
