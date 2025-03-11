@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Eye, EyeOff, Loader2, Mail, Lock, AlertCircle, WifiOff } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock, AlertCircle, WifiOff, ServerOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -19,11 +19,14 @@ export default function Connexion() {
   const [loginInProgress, setLoginInProgress] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [networkError, setNetworkError] = useState(false);
+  const [databaseError, setDatabaseError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
 
   const getRedirectPath = () => {
     const params = new URLSearchParams(location.search);
@@ -76,6 +79,7 @@ export default function Connexion() {
     setLoginInProgress(true);
     setFormError(null);
     setNetworkError(false);
+    setDatabaseError(false);
 
     try {
       toast.loading("Connexion en cours...", { id: "login-toast" });
@@ -83,7 +87,27 @@ export default function Connexion() {
       // Add a small delay to ensure database connections are ready
       setTimeout(async () => {
         try {
-          const { user } = await auth.signIn(formData);
+          // Attempt to sign in with exponential backoff
+          const attemptSignIn = async (attempt: number): Promise<any> => {
+            try {
+              return await auth.signIn(formData);
+            } catch (error: any) {
+              // Handle database errors by retrying
+              if (error.code === 'unexpected_failure' && 
+                  error.message?.includes('Database error') && 
+                  attempt < MAX_RETRIES) {
+                // Exponential backoff
+                const delay = Math.pow(2, attempt) * 500;
+                console.log(`Database error, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+                
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return attemptSignIn(attempt + 1);
+              }
+              throw error;
+            }
+          };
+          
+          const { user } = await attemptSignIn(0);
           
           toast.success("Connexion réussie", {
             id: "login-toast",
@@ -137,6 +161,13 @@ export default function Connexion() {
   };
 
   const handleAuthError = (error: any): string => {
+    // Database related errors
+    if (error.code === 'unexpected_failure' &&
+        error.message?.includes("Database error")) {
+      setDatabaseError(true);
+      return "Problème temporaire avec notre base de données. Veuillez réessayer dans quelques instants.";
+    }
+    
     // Network related errors
     if (error.message === "Failed to fetch" || 
         error.name === "TypeError" || 
@@ -144,12 +175,6 @@ export default function Connexion() {
         error.message?.includes("ERR_NAME_NOT_RESOLVED")) {
       setNetworkError(true);
       return "Problème de connexion au serveur. Veuillez vérifier votre connexion internet.";
-    }
-    
-    // Database errors
-    if (error.message?.includes("Database error") || error.code === "unexpected_failure") {
-      setNetworkError(true);
-      return "Problème temporaire avec notre service. Veuillez réessayer dans quelques instants.";
     }
     
     // Check specific error messages
@@ -178,6 +203,7 @@ export default function Connexion() {
     if (formError) {
       setFormError(null);
       setNetworkError(false);
+      setDatabaseError(false);
     }
   };
 
@@ -193,8 +219,8 @@ export default function Connexion() {
         
         <CardContent>
           {formError && (
-            <Alert variant={networkError ? "default" : "destructive"} className="mb-4">
-              {networkError ? <WifiOff className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+            <Alert variant={databaseError ? "warning" : networkError ? "default" : "destructive"} className="mb-4">
+              {databaseError ? <ServerOff className="h-4 w-4" /> : networkError ? <WifiOff className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
               <AlertDescription>{formError}</AlertDescription>
             </Alert>
           )}
