@@ -12,6 +12,7 @@ const NotFound = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [redirectAttempted, setRedirectAttempted] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const checkAndRedirect = async () => {
@@ -28,19 +29,22 @@ const NotFound = () => {
           location.hash
         );
         
-        // Check if this might be a failed auth redirect
+        // Check if this might be a failed auth redirect or a profile page
         const isAuthRelated = 
           location.pathname.includes("/email-confirmation") || 
           location.search.includes("type=recovery") || 
           location.search.includes("type=signup") ||
           location.hash.includes("access_token=") ||
-          location.hash.includes("error=") ||
           location.pathname === "/";  // Add homepage to auth check
         
-        if (isAuthRelated) {
-          console.log("This appears to be an auth-related redirect that failed or homepage issue");
+        const isProfilePage = 
+          location.pathname.includes("/entreprises/") || 
+          location.pathname.includes("/stagiaires/");
+        
+        if (isAuthRelated || isProfilePage) {
+          console.log("This appears to be an auth-related or profile page redirect");
           
-          // AMÉLIORÉ: Extraction du token d'accès du hash pour toute URL
+          // Extraction du token d'accès du hash pour toute URL
           let accessToken = '';
           if (location.hash) {
             const match = location.hash.match(/access_token=([^&]*)/);
@@ -49,9 +53,11 @@ const NotFound = () => {
               console.log("Found access token in hash, redirecting to proper path");
               
               // Pour toute URL avec un token d'accès, rediriger vers la confirmation d'email
-              const fullPath = `/email-confirmation${location.search}${location.hash}`;
-              navigate(fullPath, { replace: true });
-              return;
+              if (!location.pathname.includes("/email-confirmation")) {
+                const fullPath = `/email-confirmation${location.search}${location.hash}`;
+                navigate(fullPath, { replace: true });
+                return;
+              }
             }
           }
           
@@ -62,11 +68,12 @@ const NotFound = () => {
           if (data.session?.user) {
             // User is authenticated, redirect based on role
             const role = data.session.user.user_metadata?.role || 'stagiaire';
+            const userId = data.session.user.id;
             
             // Cache navigation state for faster loading with timestamp
             localStorage.setItem('navigation_state', JSON.stringify({ 
               user: {
-                id: data.session.user.id,
+                id: userId,
                 email: data.session.user.email,
                 role: role,
                 name: data.session.user.user_metadata?.name || 'Utilisateur', 
@@ -74,19 +81,46 @@ const NotFound = () => {
                 user_metadata: data.session.user.user_metadata
               }, 
               userRole: role,
-              timestamp: Date.now()  // Ajouté pour la fraîcheur du cache
+              timestamp: Date.now()
             }));
             
             // Clear any stale error state
             sessionStorage.removeItem('auth_error');
             
+            // If on a profile page, check if it's for the correct user
+            if (isProfilePage) {
+              const pathSegments = location.pathname.split('/');
+              const pathId = pathSegments[pathSegments.length - 1];
+              
+              // If we're on a profile page for the wrong user, redirect to their actual profile
+              if (pathId !== userId) {
+                if (role === 'entreprise') {
+                  console.log(`Redirecting to correct enterprise profile: ${userId}`);
+                  navigate(`/entreprises/${userId}`, { replace: true });
+                  return;
+                } else if (role === 'stagiaire') {
+                  console.log(`Redirecting to correct intern profile: ${userId}`);
+                  navigate(`/stagiaires/${userId}`, { replace: true });
+                  return;
+                }
+              } else {
+                // We're on the right profile page but it's not loading, retry fetching data
+                if (retryCount < 3) {
+                  setRetryCount(prevCount => prevCount + 1);
+                  // Try to force refresh the profile data by reloading the page
+                  window.location.reload();
+                  return;
+                }
+              }
+            }
+            
             if (role === 'entreprise') {
               toast.success("Authentification réussie");
-              navigate(`/entreprises/${data.session.user.id}`, { replace: true });
+              navigate(`/entreprises/${userId}`, { replace: true });
               return;
             } else if (role === 'stagiaire') {
               toast.success("Authentification réussie");
-              navigate(`/stagiaires/${data.session.user.id}`, { replace: true });
+              navigate(`/stagiaires/${userId}`, { replace: true });
               return;
             } else {
               toast.success("Authentification réussie");
@@ -112,10 +146,15 @@ const NotFound = () => {
     };
 
     // Only attempt redirect if we haven't tried already in this render cycle
-    if (!redirectAttempted && !location.state?.noRedirect) {
+    if (!redirectAttempted && !location.state?.noRedirect && retryCount < 3) {
       checkAndRedirect();
     }
-  }, [location, navigate, redirectAttempted]);
+  }, [location, navigate, redirectAttempted, retryCount]);
+
+  const handleRetry = () => {
+    setRedirectAttempted(false);
+    setRetryCount(0);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -153,6 +192,16 @@ const NotFound = () => {
                 Se connecter
               </Link>
             </Button>
+            {!loading && redirectAttempted && (
+              <Button 
+                variant="ghost" 
+                className="w-full" 
+                onClick={handleRetry}
+              >
+                <Loader2 className="mr-2 h-4 w-4" />
+                Réessayer la redirection
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

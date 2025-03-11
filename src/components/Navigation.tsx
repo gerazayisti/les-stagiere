@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Menu, X, LogOut, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -11,13 +10,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-
-// Importation corrigée du ThemeToggle
-const ThemeToggle = lazy(() => import("./ThemeToggle"));
+import ThemeToggle from "./ThemeToggle";
 
 export default function Navigation() {
   const navigate = useNavigate();

@@ -13,6 +13,8 @@ additional_redirect_urls = [
   "https://les-stagiere.vercel.app/entreprises/*",
   "https://les-stagiere.vercel.app/*",
   "https://les-stagiere.vercel.app/connexion?error=confirmation_failed",
+  "https://les-stagiere.vercel.app/entreprises",
+  "https://les-stagiere.vercel.app/stagiaires",
   "http://localhost:5173",
   "http://localhost:5173/email-confirmation",
   "http://localhost:5173/email-confirmation?type=signup",
@@ -22,12 +24,16 @@ additional_redirect_urls = [
   "http://localhost:5173/entreprises/*",
   "http://localhost:5173/connexion?error=confirmation_failed",
   "http://localhost:5173/*",
+  "http://localhost:5173/entreprises",
+  "http://localhost:5173/stagiaires",
   "http://localhost:3000",
   "http://localhost:3000/email-confirmation",
   "http://localhost:3000/connexion",
   "http://localhost:3000/stagiaires/*",
   "http://localhost:3000/entreprises/*",
-  "http://localhost:3000/*"
+  "http://localhost:3000/*",
+  "http://localhost:3000/entreprises",
+  "http://localhost:3000/stagiaires"
 ]
 jwt_expiry = 3600
 enable_signup = true

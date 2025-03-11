@@ -10,6 +10,7 @@ export default function EmailConfirmation() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [progress, setProgress] = useState<number>(0);
+  const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -61,6 +62,26 @@ export default function EmailConfirmation() {
               : 'Erreur lors de la confirmation';
               
             throw new Error(`${decodeURIComponent(errorMatch[1])}: ${errorDescription}`);
+          }
+          
+          // Si nous n'avons pas de token, mais que nous sommes sur la page de confirmation,
+          // essayons de vérifier si l'utilisateur est déjà authentifié
+          const { data } = await supabase.auth.getSession();
+          if (data?.session?.user) {
+            // L'utilisateur est déjà authentifié, rediriger vers son profil
+            const user = data.session.user;
+            const role = user.user_metadata?.role || 'stagiaire';
+            
+            if (role === 'entreprise') {
+              navigate(`/entreprises/${user.id}`, { replace: true });
+              return;
+            } else if (role === 'stagiaire') {
+              navigate(`/stagiaires/${user.id}`, { replace: true });
+              return;
+            } else {
+              navigate('/complete-profile', { replace: true });
+              return;
+            }
           }
           
           throw new Error('Lien de confirmation invalide. Veuillez réessayer ou contacter le support.');
@@ -171,7 +192,7 @@ export default function EmailConfirmation() {
         
         // Mettre en cache les informations utilisateur pour un chargement plus rapide
         localStorage.setItem(`cachedUserProfile_${user.id}`, JSON.stringify({
-          user: {
+          data: {
             id: user.id,
             email: user.email,
             role: role,
@@ -193,7 +214,7 @@ export default function EmailConfirmation() {
             user_metadata: user.user_metadata
           }, 
           userRole: role,
-          timestamp: Date.now()  // Ajouté pour la fraîcheur du cache
+          timestamp: Date.now()
         }));
         
         setProgress(100);
@@ -213,7 +234,20 @@ export default function EmailConfirmation() {
           timestamp: Date.now()
         }));
         
-        // Court délai pour assurer que l'erreur est vue
+        // Si nous avons échoué mais que nous n'avons pas encore trop réessayé
+        if (retryCount < 3) {
+          setRetryCount(prev => prev + 1);
+          toast.info("Nouvelle tentative de confirmation...");
+          setTimeout(() => {
+            setStatus('processing');
+            setProgress(0);
+            setLoading(true);
+            handleEmailConfirmation();
+          }, 1500);
+          return;
+        }
+        
+        // Si trop d'échecs, rediriger vers la connexion
         setTimeout(() => {
           navigate('/connexion?error=confirmation_failed', { replace: true });
         }, 1000);
@@ -223,7 +257,7 @@ export default function EmailConfirmation() {
     };
 
     handleEmailConfirmation();
-  }, [navigate, location]);
+  }, [navigate, location, retryCount]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -241,6 +275,9 @@ export default function EmailConfirmation() {
                 {progress >= 30 && progress < 60 && "Création de votre profil..."}
                 {progress >= 60 && "Presque terminé..."}
               </p>
+              {retryCount > 0 && (
+                <p className="text-xs text-muted-foreground">Tentative {retryCount}/3</p>
+              )}
             </>
           ) : status === 'success' ? (
             <>
@@ -261,6 +298,9 @@ export default function EmailConfirmation() {
               </div>
               <p className="text-center">Erreur lors de la confirmation de l'email</p>
               <p className="text-sm text-muted-foreground text-center">Vous allez être redirigé vers la page de connexion...</p>
+              {retryCount > 0 && (
+                <p className="text-xs text-muted-foreground">Tentatives échouées: {retryCount}/3</p>
+              )}
             </>
           )}
         </div>
