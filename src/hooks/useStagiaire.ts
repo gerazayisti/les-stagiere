@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -83,9 +82,16 @@ export function useStagiaire(stagiaireId: string) {
           .from('stagiaires')
           .select('*')
           .eq('id', stagiaireId)
-          .single();
+          .maybeSingle();
 
         if (stagiaireError) {
+          console.error('Erreur lors de la récupération du stagiaire:', stagiaireError);
+          
+          // Improved error handling with more specific logging
+          if (stagiaireError.code === 'PGRST116') {
+            console.error(`Stagiaire avec ID ${stagiaireId} non trouvé dans la base de données`);
+          }
+          
           throw stagiaireError;
         }
 
@@ -122,9 +128,15 @@ export function useStagiaire(stagiaireId: string) {
         console.error('Erreur lors de la récupération du stagiaire:', error);
         setError(error.message || 'Une erreur est survenue');
         
-        // Si le stagiaire n'existe pas, rediriger vers la page 404
-        if (error.code === 'PGRST116' || error.message.includes('non trouvé')) {
-          navigate('/404', { replace: true });
+        // If the stagiaire doesn't exist, redirect to home page instead of 404
+        // This prevents the 404 error when the page doesn't exist
+        if (error.code === 'PGRST116' || error.message?.includes('non trouvé')) {
+          toast({
+            title: "Profil non trouvé",
+            description: "Le profil demandé n'existe pas ou n'est pas accessible",
+            variant: "destructive",
+          });
+          navigate('/', { replace: true });
         }
       } finally {
         setLoading(false);

@@ -1,4 +1,3 @@
-
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -54,13 +53,32 @@ const NotFound = () => {
           console.log("This appears to be an auth-related or profile page redirect");
           
           try {
-            // Vérification de la session actuelle
-            const { data, error } = await supabase.auth.getSession();
-            console.log("Current session check:", data?.session ? "Has session" : "No session", error ? `Error: ${error.message}` : "No error");
+            // Vérification de la session actuelle - utiliser le cache si disponible pour améliorer les performances
+            const cachedSession = localStorage.getItem('app_session_cache');
+            let session = null;
             
-            if (data?.session?.user) {
-              const role = data.session.user.user_metadata?.role || 'stagiaire';
-              const userId = data.session.user.id;
+            if (cachedSession) {
+              try {
+                const parsedCache = JSON.parse(cachedSession);
+                if (parsedCache.expiry > Date.now()) {
+                  session = parsedCache.data;
+                  console.log("Using cached session for redirection");
+                }
+              } catch (e) {
+                console.error("Error parsing cached session:", e);
+              }
+            }
+            
+            // Si pas de session en cache, faire l'appel API
+            if (!session) {
+              const { data, error } = await supabase.auth.getSession();
+              console.log("Current session check:", data?.session ? "Has session" : "No session", error ? `Error: ${error.message}` : "No error");
+              session = data?.session;
+            }
+            
+            if (session?.user) {
+              const role = session.user.user_metadata?.role || 'stagiaire';
+              const userId = session.user.id;
               
               // Si nous avons une session valide, rediriger vers la page de profil appropriée
               try {
@@ -71,93 +89,27 @@ const NotFound = () => {
                   
                   if (pathId !== userId) {
                     // L'utilisateur essaie d'accéder à un profil inexistant ou incorrect
-                    if (retryCount < 2) {
-                      // Rediriger vers son propre profil
-                      const correctPath = role === 'entreprise' 
-                        ? `/entreprises/${userId}` 
-                        : `/stagiaires/${userId}`;
-                      
-                      toast.info("Redirection vers votre profil...");
-                      navigate(correctPath, { replace: true });
-                      return;
-                    } else {
-                      // Après plusieurs tentatives, rediriger vers l'accueil
-                      setErrorDetails("Impossible d'accéder au profil demandé après plusieurs tentatives");
-                      navigate('/', { replace: true });
-                      return;
-                    }
+                    // Rediriger vers son propre profil immédiatement
+                    const correctPath = role === 'entreprise' 
+                      ? `/entreprises/${userId}` 
+                      : `/stagiaires/${userId}`;
+                    
+                    toast.info("Redirection vers votre profil...");
+                    navigate(correctPath, { replace: true });
+                    return;
                   }
                 }
                 
-                // Vérifier si le profil existe réellement dans la base de données
-                try {
-                  if (role === 'entreprise') {
-                    const { data: entrepriseData, error: entrepriseError } = await supabase
-                      .from('entreprises')
-                      .select('id')
-                      .eq('id', userId)
-                      .single();
-                    
-                    if (entrepriseError) {
-                      // Si l'erreur est due à une table manquante
-                      if (entrepriseError.code === '42P01') {
-                        setErrorType("db");
-                        setErrorDetails("La base de données semble être mal configurée. Veuillez contacter l'administrateur.");
-                        return;
-                      }
-                      
-                      if (entrepriseError.code === 'PGRST116') {
-                        // Profil non trouvé, rediriger vers la page de complétion de profil
-                        navigate('/complete-profile', { replace: true });
-                        return;
-                      }
-                      
-                      throw entrepriseError;
-                    }
-                    
-                    navigate(`/entreprises/${userId}`, { replace: true });
-                    return;
-                  } else if (role === 'stagiaire') {
-                    const { data: stagiaireData, error: stagiaireError } = await supabase
-                      .from('stagiaires')
-                      .select('id')
-                      .eq('id', userId)
-                      .single();
-                    
-                    if (stagiaireError) {
-                      // Si l'erreur est due à une table manquante
-                      if (stagiaireError.code === '42P01') {
-                        setErrorType("db");
-                        setErrorDetails("La base de données semble être mal configurée. Veuillez contacter l'administrateur.");
-                        return;
-                      }
-                      
-                      if (stagiaireError.code === 'PGRST116') {
-                        // Profil non trouvé, rediriger vers la page de complétion de profil
-                        navigate('/complete-profile', { replace: true });
-                        return;
-                      }
-                      
-                      throw stagiaireError;
-                    }
-                    
-                    navigate(`/stagiaires/${userId}`, { replace: true });
-                    return;
-                  } else {
-                    navigate('/complete-profile', { replace: true });
-                    return;
-                  }
-                } catch (profileError: any) {
-                  console.error("Error during profile check:", profileError);
-                  
-                  // Si l'erreur est due à une table manquante dans la base de données
-                  if (profileError.code === '42P01') {
-                    setErrorType("db");
-                    setErrorDetails("La base de données semble être mal configurée. Veuillez contacter l'administrateur.");
-                  } else {
-                    setErrorDetails("Erreur lors de la vérification de votre profil: " + (profileError.message || "Une erreur inconnue s'est produite"));
-                  }
+                // Optimisation: Rediriger directement vers le profil sans vérifier dans la base de données
+                // Cela accélère considérablement le chargement sur mobile
+                if (role === 'entreprise') {
+                  navigate(`/entreprises/${userId}`, { replace: true });
+                } else if (role === 'stagiaire') {
+                  navigate(`/stagiaires/${userId}`, { replace: true });
+                } else {
+                  navigate('/complete-profile', { replace: true });
                 }
+                return;
               } catch (profileError) {
                 console.error("Error during profile redirect:", profileError);
                 setErrorDetails("Erreur lors de la redirection vers votre profil");

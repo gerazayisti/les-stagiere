@@ -8,6 +8,7 @@ import ProfilStagiaire from "./pages/ProfilStagiaire";
 import ProfilEntreprise from "./pages/ProfilEntreprise";
 import ProfilEnrichi from "./pages/ProfilEnrichi";
 import MesCandidatures from "./pages/MesCandidatures";
+import NotFound from "./pages/NotFound";
 
 function App() {
   return (
@@ -21,6 +22,8 @@ function App() {
           <Route path="/entreprises/:id" element={<ProfilEntreprise />} />
           <Route path="/profil-enrichi" element={<ProfilEnrichi />} />
           <Route path="/mes-candidatures" element={<MesCandidatures />} />
+          <Route path="/404" element={<NotFound />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
       <Toaster position="top-center" />
