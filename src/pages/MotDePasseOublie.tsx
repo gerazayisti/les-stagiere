@@ -40,9 +40,7 @@ const MotDePasseOublie = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      
-      <div className="max-w-6xl mx-auto pt-32 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto pt-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-md mx-auto">
           <Link to="/connexion" className="inline-flex items-center text-gray hover:text-primary mb-8">
             <ArrowLeft size={20} className="mr-2" />

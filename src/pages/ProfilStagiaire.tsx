@@ -10,9 +10,10 @@ import { useStagiaire } from '@/hooks/useStagiaire';
 import { useParams, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileSearch } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileSearch } from 'lucide-react';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function ProfilStagiaire() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +21,7 @@ export default function ProfilStagiaire() {
   const { stagiaire, loading, error } = useStagiaire(id || '');
   const { user } = useAuth();
   const [headerLoaded, setHeaderLoaded] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
   
   // Simuler un chargement plus rapide pour les données basiques
   useEffect(() => {
@@ -59,22 +61,37 @@ export default function ProfilStagiaire() {
           <Skeleton className="h-4 w-48" />
         </div>
         
-        <Tabs defaultValue="about" className="mt-8">
-          <TabsList className="grid grid-cols-5 mb-8">
-            <TabsTrigger value="about">À propos</TabsTrigger>
-            <TabsTrigger value="cv">CV & Documents</TabsTrigger>
-            <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-            <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
-            <TabsTrigger value="candidatures">Candidatures</TabsTrigger>
-          </TabsList>
-          <TabsContent value="about">
-            <div className="space-y-4">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-16 w-3/4" />
-              <Skeleton className="h-16 w-1/2" />
-            </div>
-          </TabsContent>
-        </Tabs>
+        {isMobile ? (
+          <Accordion type="single" collapsible className="mt-8">
+            <AccordionItem value="about">
+              <AccordionTrigger>À propos</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4">
+                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-16 w-3/4" />
+                  <Skeleton className="h-16 w-1/2" />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        ) : (
+          <Tabs defaultValue="about" className="mt-8">
+            <TabsList className="grid grid-cols-5 mb-8">
+              <TabsTrigger value="about">À propos</TabsTrigger>
+              <TabsTrigger value="cv">CV & Documents</TabsTrigger>
+              <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+              <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
+              <TabsTrigger value="candidatures">Candidatures</TabsTrigger>
+            </TabsList>
+            <TabsContent value="about">
+              <div className="space-y-4">
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-16 w-3/4" />
+                <Skeleton className="h-16 w-1/2" />
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     );
   }
@@ -121,50 +138,109 @@ export default function ProfilStagiaire() {
         userId={stagiaire.id}
       />
       
-      <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-8">
-        <TabsList className="grid grid-cols-5 mb-8">
-          <TabsTrigger value="about">À propos</TabsTrigger>
-          <TabsTrigger value="cv">CV & Documents</TabsTrigger>
-          <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
+      {isMobile ? (
+        <Accordion type="single" collapsible className="mt-8">
+          <AccordionItem value="about">
+            <AccordionTrigger>À propos</AccordionTrigger>
+            <AccordionContent>
+              <AboutTab 
+                bio={stagiaire.bio || ""}
+                disponibility={disponibility}
+                education={educationData}
+                isPremium={stagiaire.is_premium}
+                userId={stagiaire.id}
+              />
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="cv">
+            <AccordionTrigger>CV & Documents</AccordionTrigger>
+            <AccordionContent>
+              <CVTab 
+                userId={stagiaire.id}
+                isPremium={stagiaire.is_premium}
+              />
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="portfolio">
+            <AccordionTrigger>Portfolio</AccordionTrigger>
+            <AccordionContent>
+              <Portfolio />
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="recommendations">
+            <AccordionTrigger>Recommandations</AccordionTrigger>
+            <AccordionContent>
+              <Recommendations 
+                recommendations={stagiaire.recommendations || []}
+                isOwner={isCurrentUser}
+                stagiaireId={stagiaire.id}
+                isPremium={stagiaire.is_premium}
+              />
+            </AccordionContent>
+          </AccordionItem>
+          
           {isCurrentUser && (
-            <TabsTrigger value="candidatures">
-              <FileSearch className="mr-2 h-4 w-4" /> Candidatures
-            </TabsTrigger>
+            <AccordionItem value="candidatures">
+              <AccordionTrigger>
+                <div className="flex items-center">
+                  <FileSearch className="mr-2 h-4 w-4" /> Candidatures
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <ProfilCandidatures />
+              </AccordionContent>
+            </AccordionItem>
           )}
-        </TabsList>
-        <TabsContent value="about">
-          <AboutTab 
-            bio={stagiaire.bio || ""}
-            disponibility={disponibility}
-            education={educationData}
-            isPremium={stagiaire.is_premium}
-            userId={stagiaire.id}
-          />
-        </TabsContent>
-        <TabsContent value="cv">
-          <CVTab 
-            userId={stagiaire.id}
-            isPremium={stagiaire.is_premium}
-          />
-        </TabsContent>
-        <TabsContent value="portfolio">
-          <Portfolio />
-        </TabsContent>
-        <TabsContent value="recommendations">
-          <Recommendations 
-            recommendations={stagiaire.recommendations || []}
-            isOwner={isCurrentUser}
-            stagiaireId={stagiaire.id}
-            isPremium={stagiaire.is_premium}
-          />
-        </TabsContent>
-        {isCurrentUser && (
-          <TabsContent value="candidatures">
-            <ProfilCandidatures />
+        </Accordion>
+      ) : (
+        <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-8">
+          <TabsList className="grid grid-cols-5 mb-8">
+            <TabsTrigger value="about">À propos</TabsTrigger>
+            <TabsTrigger value="cv">CV & Documents</TabsTrigger>
+            <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+            <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
+            {isCurrentUser && (
+              <TabsTrigger value="candidatures">
+                <FileSearch className="mr-2 h-4 w-4" /> Candidatures
+              </TabsTrigger>
+            )}
+          </TabsList>
+          <TabsContent value="about">
+            <AboutTab 
+              bio={stagiaire.bio || ""}
+              disponibility={disponibility}
+              education={educationData}
+              isPremium={stagiaire.is_premium}
+              userId={stagiaire.id}
+            />
           </TabsContent>
-        )}
-      </Tabs>
+          <TabsContent value="cv">
+            <CVTab 
+              userId={stagiaire.id}
+              isPremium={stagiaire.is_premium}
+            />
+          </TabsContent>
+          <TabsContent value="portfolio">
+            <Portfolio />
+          </TabsContent>
+          <TabsContent value="recommendations">
+            <Recommendations 
+              recommendations={stagiaire.recommendations || []}
+              isOwner={isCurrentUser}
+              stagiaireId={stagiaire.id}
+              isPremium={stagiaire.is_premium}
+            />
+          </TabsContent>
+          {isCurrentUser && (
+            <TabsContent value="candidatures">
+              <ProfilCandidatures />
+            </TabsContent>
+          )}
+        </Tabs>
+      )}
     </div>
   );
 }
