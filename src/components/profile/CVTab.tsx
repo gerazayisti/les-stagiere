@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 export interface Document {
   id: string;
   name: string;
-  url: string;
+  file_url: string;
   type: string;
   created_at: string;
   version: number;
@@ -38,6 +38,7 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [showAnalyzer, setShowAnalyzer] = useState(false);
   const [activeTab, setActiveTab] = useState('cv');
+  const [isUploading, setIsUploading] = useState(false);
   const { user } = useAuth();
   const isOwner = user?.id === userId;
   
@@ -52,7 +53,7 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('cvdocuments')
+        .from('documents')
         .select('*')
         .eq('stagiaire_id', userId)
         .order('created_at', { ascending: false });
@@ -124,10 +125,21 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       
-      // Vérification du type de fichier
+      await handleFileUpload(file);
+    };
+    
+    input.click();
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setIsUploading(true);
+    toast.loading("Téléchargement en cours...", { id: "upload-toast" });
+    
+    try {
+      // Check file type
       const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       if (!allowedTypes.includes(file.type)) {
-        toast.error("Type de fichier non supporté. Veuillez télécharger un PDF ou un document Word.");
+        toast.error("Type de fichier non supporté. Veuillez télécharger un PDF ou un document Word.", { id: "upload-toast" });
         return;
       }
       
@@ -138,35 +150,34 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
         if (error) throw error;
         
         // Get public URL
-        const { data: { publicUrl } } = FileService.getPublicUrl(`cv/${userId}/${data.path.split('/').pop()}`);
+        const filePath = data.path.split('/').pop() || '';
+        const { data: { publicUrl } } = FileService.getPublicUrl(`cv/${userId}/${filePath}`);
         
         // Insert document record
         const { data: docData, error: docError } = await supabase
-          .from('cvdocuments')
+          .from('documents')
           .insert({
             stagiaire_id: userId,
-            name: file.name,
-            url: publicUrl,
-            type: type,
-            is_public: true,
-            version: 1 // Version initiale
-          })
-          .select()
-          .single();
-          
+            name: file.name, // Keep original filename for display
+            file_url: publicUrl,
+            type: 'cv',
+            version: 1,
+            created_at: new Date().toISOString()
+          });
+        
         if (docError) throw docError;
         
-        toast.success(`${type === 'cv' ? 'CV' : 'Lettre de motivation'} téléchargé avec succès`);
-        fetchDocuments();
-      } catch (error) {
-        console.error('Error uploading document:', error);
-        toast.error("Erreur lors du téléchargement du document");
+        toast.success("Document téléchargé avec succès", { id: "upload-toast" });
+        fetchDocuments(); // Refresh document list
+      } catch (uploadError: any) {
+        console.error("Error uploading document:", uploadError);
+        toast.error(`Erreur lors du téléchargement: ${uploadError.message || "Erreur inconnue"}`, { id: "upload-toast" });
       }
-    };
-    
-    input.click();
+    } finally {
+      setIsUploading(false);
+    }
   };
-  
+
   const handleDeleteDocument = async (documentId: string) => {
     try {
       const { error } = await supabase
@@ -235,13 +246,13 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => handlePreviewDocument(doc.url)}
+                  onClick={() => handlePreviewDocument(doc.file_url)}
                 >
                   <Eye className="h-4 w-4 mr-1" />
                   Prévisualiser
                 </Button>
                 <Button variant="outline" asChild size="sm">
-                  <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
                     Télécharger
                   </a>
                 </Button>
@@ -410,7 +421,7 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
           
           {isPremium && cv && (
             <TabsContent value="interactive">
-              <InteractiveCV cvUrl={cv.url} />
+              <InteractiveCV cvUrl={cv.file_url} />
               <div className="flex justify-center mt-6">
                 <Button 
                   variant="outline" 

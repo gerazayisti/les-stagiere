@@ -3,8 +3,13 @@ import { supabase } from '@/lib/supabase';
 
 export const FileService = {
   uploadCV: async (userId: string, file: File) => {
+    // Sanitize filename - remove special characters and spaces
+    const sanitizedName = file.name
+      .replace(/[^\w\d.-]/g, '_') // Replace special chars with underscore
+      .replace(/\s+/g, '_');      // Replace spaces with underscore
+    
     // Versioning : ajout timestamp au nom
-    const versionedName = `${Date.now()}_${file.name}`;
+    const versionedName = `${Date.now()}_${sanitizedName}`;
     const filePath = `cv/${userId}/${versionedName}`;
     
     // Vérification type de fichier
