@@ -70,7 +70,6 @@ export async function createUserProfile(userData: {
         const stagiaireData: any = {
           id: id,
           name,
-          email,
           avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
           is_verified: false,
           bio: `${name} est à la recherche d'un stage.`
