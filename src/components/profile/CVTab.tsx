@@ -1,8 +1,7 @@
-
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { InteractiveCV } from "./InteractiveCV";
-import { Plus, Upload, Lock, FileText, Trash2 } from "lucide-react";
+import { Plus, Upload, Lock, FileText, Trash2, Eye, History, ChevronDown ,} from "lucide-react";
 import { CVAnalyzer } from "@/components/CVAnalyzer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -12,6 +11,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+//import { Document as PDFDocument, Page, pdfjs } from 'react-pdf';
+import { FileService } from "@/services/fileService";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+
+// Initialiser le worker PDF.js
+//pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
 export interface Document {
   id: string;
@@ -19,6 +25,7 @@ export interface Document {
   url: string;
   type: string;
   created_at: string;
+  version: number;
 }
 
 export interface CVTabProps {
@@ -34,11 +41,18 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
   const { user } = useAuth();
   const isOwner = user?.id === userId;
   
+  // États pour la prévisualisation et le versioning
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [documentVersions, setDocumentVersions] = useState<any[]>([]);
+  const [selectedDocumentName, setSelectedDocumentName] = useState<string | null>(null);
+  
   const fetchDocuments = async () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('documents')
+        .from('cvdocuments')
         .select('*')
         .eq('stagiaire_id', userId)
         .order('created_at', { ascending: false });
@@ -64,6 +78,32 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
   const cv = documents.find(doc => doc.type === 'cv');
   const coverLetter = documents.find(doc => doc.type === 'cover_letter');
   
+  // Fonction pour prévisualiser un document
+  const handlePreviewDocument = (url: string) => {
+    setPreviewUrl(url);
+    setCurrentPage(1);
+  };
+  
+  // Fonction pour charger les versions d'un document
+  const handleLoadVersions = async (documentName: string) => {
+    try {
+      setIsLoading(true);
+      setSelectedDocumentName(documentName);
+      
+      // Extraire le nom de base sans la date
+      const baseFileName = documentName.replace(/^\d+_/, '');
+      
+      // Récupérer les versions via le service
+      const versions = await FileService.getDocumentVersions(userId, baseFileName);
+      setDocumentVersions(versions || []);
+    } catch (error) {
+      console.error('Error loading document versions:', error);
+      toast.error("Erreur lors du chargement des versions");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Document upload handler
   const handleDocumentUpload = async (type: 'cv' | 'cover_letter') => {
     // Check premium status
@@ -84,37 +124,37 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       
+      // Vérification du type de fichier
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error("Type de fichier non supporté. Veuillez télécharger un PDF ou un document Word.");
+        return;
+      }
+      
       try {
-        // Upload file to storage
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${type}_${Date.now()}.${fileExt}`;
-        const filePath = `documents/${userId}/${fileName}`;
+        // Utiliser le service de fichiers pour le téléchargement avec versioning
+        const { data, error } = await FileService.uploadCV(userId, file);
         
-        const { error: uploadError } = await supabase.storage
-          .from('public')
-          .upload(filePath, file);
-          
-        if (uploadError) throw uploadError;
+        if (error) throw error;
         
         // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('public')
-          .getPublicUrl(filePath);
-          
+        const { data: { publicUrl } } = FileService.getPublicUrl(`cv/${userId}/${data.path.split('/').pop()}`);
+        
         // Insert document record
-        const { data, error } = await supabase
-          .from('documents')
+        const { data: docData, error: docError } = await supabase
+          .from('cvdocuments')
           .insert({
             stagiaire_id: userId,
             name: file.name,
             url: publicUrl,
             type: type,
-            is_public: true
+            is_public: true,
+            version: 1 // Version initiale
           })
           .select()
           .single();
           
-        if (error) throw error;
+        if (docError) throw docError;
         
         toast.success(`${type === 'cv' ? 'CV' : 'Lettre de motivation'} téléchargé avec succès`);
         fetchDocuments();
@@ -130,7 +170,7 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
   const handleDeleteDocument = async (documentId: string) => {
     try {
       const { error } = await supabase
-        .from('documents')
+        .from('cvdocuments')
         .delete()
         .eq('id', documentId);
         
@@ -187,28 +227,84 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
                   <h4 className="font-medium">{doc.name}</h4>
                   <p className="text-sm text-muted-foreground">
                     Ajouté le {new Date(doc.created_at).toLocaleDateString()}
+                    {doc.version && <Badge variant="outline" className="ml-2">v{doc.version}</Badge>}
                   </p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handlePreviewDocument(doc.url)}
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  Prévisualiser
+                </Button>
+                <Button variant="outline" asChild size="sm">
                   <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                    Voir
+                    Télécharger
                   </a>
                 </Button>
                 {isOwner && (
-                  <Button 
-                    variant="destructive" 
-                    size="icon"
-                    onClick={() => handleDeleteDocument(doc.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleLoadVersions(doc.name)}
+                    >
+                      <History className="h-4 w-4 mr-1" />
+                      Versions
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="icon"
+                      onClick={() => handleDeleteDocument(doc.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
                 )}
               </div>
             </CardContent>
           </Card>
         ))}
+        
+        {/* Affichage des versions */}
+        {documentVersions.length > 0 && selectedDocumentName && (
+          <Accordion type="single" collapsible className="mt-4">
+            <AccordionItem value="versions">
+              <AccordionTrigger>
+                Versions de {selectedDocumentName} ({documentVersions.length})
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2 p-2">
+                  {documentVersions.map((version, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 border rounded-md">
+                      <div>
+                        <p className="text-sm font-medium">Version {documentVersions.length - index}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(version.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const url = FileService.getPublicUrl(`cv/${userId}/${version.name}`).data.publicUrl;
+                            handlePreviewDocument(url);
+                          }}
+                        >
+                          Prévisualiser
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        )}
         
         {isOwner && (
           <div className="flex justify-end mt-4">
@@ -238,12 +334,70 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
 
   return (
     <ScrollArea className="h-full max-h-[calc(100vh-200px)]">
+      {/* Modal de prévisualisation PDF */}
+      <Dialog open={!!previewUrl} onOpenChange={(open) => !open && setPreviewUrl(null)}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Prévisualisation du document</DialogTitle>
+          </DialogHeader>
+          <div className="h-full overflow-auto">
+            {/*previewUrl?.endsWith('.pdf') ? (
+              <div className="flex flex-col items-center">
+                <PDFDocument
+                  file={previewUrl}
+                  onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                >
+                  <Page 
+                    pageNumber={currentPage} 
+                    width={window.innerWidth > 768 ? 600 : 300}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                  />
+                </PDFDocument>
+                {numPages > 1 && (
+                  <div className="flex items-center gap-4 mt-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage <= 1}
+                    >
+                      Précédent
+                    </Button>
+                    <span>
+                      Page {currentPage} sur {numPages}
+                    </span>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
+                      disabled={currentPage >= numPages}
+                    >
+                      Suivant
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <p className="mb-4">Ce document ne peut pas être prévisualisé directement.</p>
+                <Button asChild>
+                  <a href={previewUrl} target="_blank" rel="noopener noreferrer">
+                    Ouvrir le document
+                  </a>
+                </Button>
+              </div>
+            )*/}
+          </div>
+        </DialogContent>
+      </Dialog>
+      
       <div className="space-y-6 p-1">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="cv">CV</TabsTrigger>
             <TabsTrigger value="cover_letter">Lettres de motivation</TabsTrigger>
-            {isPremium && cv && <TabsTrigger value="interactive">CV Interactif</TabsTrigger>}
+            {isPremium && cv && (
+              <TabsTrigger value="interactive">CV Interactif</TabsTrigger>
+            )}
           </TabsList>
           
           <TabsContent value="cv">
