@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 import { toast } from 'sonner';
 import { AuthError, AuthResponse, SignInData, SignUpData, SupabaseAuthError, User } from '@/types/auth';
@@ -6,24 +7,15 @@ export type UserRole = 'stagiaire' | 'entreprise' | 'admin';
 
 async function checkEmailExists(email: string): Promise<boolean> {
   try {
-    // Vérification dans la table users
-    const { data: userData } = await supabase
+    const { data } = await supabase
       .from('users')
       .select('email')
       .eq('email', email)
       .maybeSingle();
       
-    if (userData) return true;
-    
-    // Nous ne pouvons pas facilement vérifier dans auth.users via l'API
-    // car listUsers ne permet pas de filtrer par email
-    // Nous allons donc nous fier uniquement à la vérification dans la table users
-    
-    return false;
+    return !!data;
   } catch (error) {
     console.error(`Erreur lors de la vérification de l'email:`, error);
-    // En cas d'erreur, on renvoie false pour permettre à l'utilisateur de continuer
-    // Les vérifications ultérieures dans le processus d'inscription détecteront les doublons
     return false;
   }
 }
@@ -34,11 +26,10 @@ export async function createUserProfile(userData: {
   role: UserRole, 
   name: string 
 }): Promise<AuthResponse> {
-  const { id, email, role, name } = userData;
-  
   try {
-    console.log("Création du profil pour:", userData);
+    const { id, email, role, name } = userData;
     
+    // Insertion dans la table users
     const { error: userError } = await supabase
       .from('users')
       .upsert({
@@ -47,6 +38,8 @@ export async function createUserProfile(userData: {
         role,
         name,
         is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
 
     if (userError) {
@@ -55,98 +48,41 @@ export async function createUserProfile(userData: {
     }
     
     if (role === 'stagiaire') {
-      try {
-        // Récupérer la structure actuelle de la table stagiaires
-        const { data: tableInfo, error: tableError } = await supabase
-          .from('stagiaires')
-          .select('*')
-          .limit(1);
-        
-        if (tableError) {
-          console.error("Erreur lors de la récupération de la structure de la table stagiaires:", tableError);
-        }
-        
-        // Construire un objet avec seulement les champs valides
-        const stagiaireData: any = {
-          id: id,
+      const { error: stagiaireError } = await supabase
+        .from('stagiaires')
+        .upsert({
+          id,
           name,
-          avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
-          is_verified: false,
-          bio: `${name} est à la recherche d'un stage.`
-        };
-        
-        // Ajouter des champs optionnels s'ils existent dans la table
-        if (!tableError && tableInfo && tableInfo.length > 0) {
-          const sampleRow = tableInfo[0];
-          if ('skills' in sampleRow) stagiaireData.skills = [];
-          if ('languages' in sampleRow) stagiaireData.languages = [];
-          if ('social_links' in sampleRow) stagiaireData.social_links = {};
-          if ('is_premium' in sampleRow) stagiaireData.is_premium = false;
-          if ('disponibility' in sampleRow) stagiaireData.disponibility = "upcoming";
-          if ('education' in sampleRow) stagiaireData.education = [];
-          if ('created_at' in sampleRow) stagiaireData.created_at = new Date().toISOString();
-        }
-        
-        console.log("Tentative d'insertion dans stagiaires avec les données:", stagiaireData);
-        
-        const { error: stagiaireError } = await supabase
-          .from('stagiaires')
-          .upsert(stagiaireData, { onConflict: 'id' });
-        
-        if (stagiaireError) {
-          console.error("Error creating intern profile:", stagiaireError);
-          console.error("Error details:", stagiaireError.details, stagiaireError.hint, stagiaireError.message);
-          throw stagiaireError;
-        }
-      } catch (error) {
-        console.error("Exception lors de la création du profil stagiaire:", error);
-        // Continuer malgré l'erreur pour que l'utilisateur puisse au moins se connecter
+          avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+          skills: [],
+          languages: [],
+          preferred_locations: [],
+          preferred_domains: [],
+          created_at: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD for date type
+          last_active: new Date().toISOString()
+        }, { onConflict: 'id' });
+
+      if (stagiaireError) {
+        console.error("Erreur lors de l'insertion dans stagiaires:", stagiaireError);
+        throw stagiaireError;
       }
     } 
     else if (role === 'entreprise') {
-      try {
-        // Récupérer la structure actuelle de la table entreprises
-        const { data: tableInfo, error: tableError } = await supabase
-          .from('entreprises')
-          .select('*')
-          .limit(1);
-        
-        if (tableError) {
-          console.error("Erreur lors de la récupération de la structure de la table entreprises:", tableError);
-        }
-        
-        // Construire un objet avec seulement les champs valides
-        const entrepriseData: any = {
-          id: id,
+      const { error: entrepriseError } = await supabase
+        .from('entreprises')
+        .upsert({
+          id,
           name,
-          logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
-          is_verified: false,
-          description: `${name} est une entreprise qui recherche des stagiaires.`
-        };
-        
-        // Ajouter des champs optionnels s'ils existent dans la table
-        if (!tableError && tableInfo && tableInfo.length > 0) {
-          const sampleRow = tableInfo[0];
-          if ('industry' in sampleRow) entrepriseData.industry = '';
-          if ('location' in sampleRow) entrepriseData.location = '';
-          if ('website' in sampleRow) entrepriseData.website = '';
-          if ('created_at' in sampleRow) entrepriseData.created_at = new Date().toISOString();
-        }
-        
-        console.log("Tentative d'insertion dans entreprises avec les données:", entrepriseData);
-        
-        const { error: entrepriseError } = await supabase
-          .from('entreprises')
-          .upsert(entrepriseData, { onConflict: 'id' });
-        
-        if (entrepriseError) {
-          console.error("Error creating company profile:", entrepriseError);
-          console.error("Error details:", entrepriseError.details, entrepriseError.hint, entrepriseError.message);
-          throw entrepriseError;
-        }
-      } catch (error) {
-        console.error("Exception lors de la création du profil entreprise:", error);
-        // Continuer malgré l'erreur pour que l'utilisateur puisse au moins se connecter
+          logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+          benefits: [],
+          created_at: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD for date type
+          rating: 0,
+          number_of_reviews: 0
+        }, { onConflict: 'id' });
+
+      if (entrepriseError) {
+        console.error("Erreur lors de l'insertion dans entreprises:", entrepriseError);
+        throw entrepriseError;
       }
     }
     
@@ -183,15 +119,13 @@ export const auth = {
         };
       }
       
-      // Vérification plus stricte de l'email
       try {
         const emailExists = await checkEmailExists(email);
         if (emailExists) {
-          console.log("Email déjà utilisé détecté lors de la vérification préalable:", email);
           return {
             success: false,
             error: {
-              message: "Cette adresse email est déjà utilisée. Veuillez vous connecter ou utiliser la récupération de mot de passe.",
+              message: "Cette adresse email est déjà utilisée",
               status: 409,
               isRetryable: false
             }
@@ -199,15 +133,6 @@ export const auth = {
         }
       } catch (emailCheckError) {
         console.warn("Erreur lors de la vérification d'email:", emailCheckError);
-        // Ne pas continuer si on ne peut pas vérifier l'email
-        return {
-          success: false,
-          error: {
-            message: "Impossible de vérifier la disponibilité de l'email. Veuillez réessayer.",
-            status: 500,
-            isRetryable: true
-          }
-        };
       }
       
       console.log("Tentative d'inscription avec email/password:", {
@@ -238,14 +163,11 @@ export const auth = {
         if (signUpError) {
           console.error("Erreur Supabase lors de l'inscription:", signUpError);
           
-          if (signUpError.message?.includes("already registered") || 
-              signUpError.message?.includes("already exists") ||
-              signUpError.message?.includes("duplicate key") ||
-              signUpError.status === 409) {
+          if (signUpError.message?.includes("already registered")) {
             return {
               success: false,
               error: {
-                message: "Cette adresse email est déjà utilisée. Veuillez vous connecter ou utiliser la récupération de mot de passe.",
+                message: "Cette adresse email est déjà utilisée",
                 status: 409,
                 isRetryable: false
               }
@@ -264,124 +186,38 @@ export const auth = {
 
         if (authData?.user) {
           try {
-            // Vérifier à nouveau si l'utilisateur existe déjà avant d'insérer
-            const { data: existingUser } = await supabase
-              .from('users')
-              .select('id')
-              .eq('email', email)
-              .maybeSingle();
-              
-            if (existingUser) {
-              console.log("Utilisateur déjà existant détecté avant insertion:", email);
-              return {
-                success: true,
-                data: authData
-              };
-            }
-            
             await supabase.from('users').upsert({
               id: authData.user.id,
               email: email,
               role: role,
               name: name,
-              is_active: true
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             }, { onConflict: 'id' });
             
             if (role === 'stagiaire') {
-              try {
-                // Récupérer la structure actuelle de la table stagiaires
-                const { data: tableInfo, error: tableError } = await supabase
-                  .from('stagiaires')
-                  .select('*')
-                  .limit(1);
-                
-                if (tableError) {
-                  console.error("Erreur lors de la récupération de la structure de la table stagiaires:", tableError);
-                }
-                
-                // Construire un objet avec seulement les champs valides
-                const stagiaireData: any = {
-                  id: authData.user.id,
-                  name,
-                  email,
-                  avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
-                  is_verified: false,
-                  bio: `${name} est à la recherche d'un stage.`
-                };
-                
-                // Ajouter des champs optionnels s'ils existent dans la table
-                if (!tableError && tableInfo && tableInfo.length > 0) {
-                  const sampleRow = tableInfo[0];
-                  if ('skills' in sampleRow) stagiaireData.skills = [];
-                  if ('languages' in sampleRow) stagiaireData.languages = [];
-                  if ('social_links' in sampleRow) stagiaireData.social_links = {};
-                  if ('is_premium' in sampleRow) stagiaireData.is_premium = false;
-                  if ('disponibility' in sampleRow) stagiaireData.disponibility = "upcoming";
-                  if ('education' in sampleRow) stagiaireData.education = [];
-                  if ('created_at' in sampleRow) stagiaireData.created_at = new Date().toISOString();
-                }
-                
-                console.log("Tentative d'insertion dans stagiaires avec les données:", stagiaireData);
-                
-                const { error: stagiaireError } = await supabase
-                  .from('stagiaires')
-                  .upsert(stagiaireData, { onConflict: 'id' });
-                
-                if (stagiaireError) {
-                  console.error("Error creating intern profile:", stagiaireError);
-                  console.error("Error details:", stagiaireError.details, stagiaireError.hint, stagiaireError.message);
-                  throw stagiaireError;
-                }
-              } catch (error) {
-                console.error("Exception lors de la création du profil stagiaire:", error);
-                // Continuer malgré l'erreur pour que l'utilisateur puisse au moins se connecter
-              }
+              await supabase.from('stagiaires').upsert({
+                id: authData.user.id,
+                name,
+                avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
+                skills: [],
+                languages: [],
+                preferred_locations: [],
+                preferred_domains: [],
+                created_at: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD for date type
+                last_active: new Date().toISOString()
+              }, { onConflict: 'id' });
             } else if (role === 'entreprise') {
-              try {
-                // Récupérer la structure actuelle de la table entreprises
-                const { data: tableInfo, error: tableError } = await supabase
-                  .from('entreprises')
-                  .select('*')
-                  .limit(1);
-                
-                if (tableError) {
-                  console.error("Erreur lors de la récupération de la structure de la table entreprises:", tableError);
-                }
-                
-                // Construire un objet avec seulement les champs valides
-                const entrepriseData: any = {
-                  id: authData.user.id,
-                  name,
-                  email,
-                  logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
-                  is_verified: false,
-                  description: `${name} est une entreprise qui recherche des stagiaires.`
-                };
-                
-                // Ajouter des champs optionnels s'ils existent dans la table
-                if (!tableError && tableInfo && tableInfo.length > 0) {
-                  const sampleRow = tableInfo[0];
-                  if ('industry' in sampleRow) entrepriseData.industry = '';
-                  if ('location' in sampleRow) entrepriseData.location = '';
-                  if ('website' in sampleRow) entrepriseData.website = '';
-                  if ('created_at' in sampleRow) entrepriseData.created_at = new Date().toISOString();
-                }
-                
-                console.log("Tentative d'insertion dans entreprises avec les données:", entrepriseData);
-                
-                const { error: entrepriseError } = await supabase
-                  .from('entreprises')
-                  .upsert(entrepriseData, { onConflict: 'id' });
-                
-                if (entrepriseError) {
-                  console.error("Error creating company profile:", entrepriseError);
-                  console.error("Error details:", entrepriseError.details, entrepriseError.hint, entrepriseError.message);
-                  throw entrepriseError;
-                }
-              } catch (error) {
-                console.error("Exception lors de la création du profil entreprise:", error);
-                // Continuer malgré l'erreur pour que l'utilisateur puisse au moins se connecter
-              }
+              await supabase.from('entreprises').upsert({
+                id: authData.user.id,
+                name,
+                logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
+                benefits: [],
+                created_at: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD for date type
+                rating: 0,
+                number_of_reviews: 0
+              }, { onConflict: 'id' });
             }
             
             localStorage.setItem(`userProfile_${authData.user.id}`, JSON.stringify({
@@ -412,19 +248,6 @@ export const auth = {
         };
       } catch (signUpError: any) {
         console.error("Exception lors de l'inscription:", signUpError);
-        
-        // Gestion spécifique des erreurs de clé dupliquée
-        if (signUpError.code === '23505' || 
-            (signUpError.message && signUpError.message.includes("duplicate key"))) {
-          return {
-            success: false,
-            error: {
-              message: "Cette adresse email est déjà utilisée. Veuillez vous connecter ou utiliser la récupération de mot de passe.",
-              status: 409,
-              isRetryable: false
-            }
-          };
-        }
         
         if (signUpError.message === "Failed to fetch" || 
             signUpError.name === "TypeError" || 
@@ -731,140 +554,19 @@ export const auth = {
       }
       
       const profileData = JSON.parse(storedProfileData);
-      console.log("Création de profil après confirmation pour:", profileData);
       
-      try {
-        // D'abord, insérer dans la table users
-        const { error: userError } = await supabase
-          .from('users')
-          .upsert({
-            id: userId,
-            email: profileData.email,
-            role: profileData.role,
-            name: profileData.name,
-            is_active: true
-          }, { onConflict: 'id' });
-
-        if (userError) {
-          console.error("Erreur lors de l'insertion dans users:", userError);
-          if (userError.code === '23505') {
-            console.log("L'utilisateur existe déjà, on continue...");
-          } else {
-            throw userError;
-          }
-        }
-        
-        // Ensuite, créer le profil spécifique selon le rôle
-        if (profileData.role === 'stagiaire') {
-          try {
-            // Récupérer la structure actuelle de la table stagiaires
-            const { data: tableInfo, error: tableError } = await supabase
-              .from('stagiaires')
-              .select('*')
-              .limit(1);
-            
-            if (tableError) {
-              console.error("Erreur lors de la récupération de la structure de la table stagiaires:", tableError);
-            }
-            
-            // Construire un objet avec seulement les champs valides
-            const stagiaireData: any = {
-              id: userId,
-              name: profileData.name,
-              email: profileData.email,
-              avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name.charAt(0))}&size=128&background=random&format=.png`,
-              is_verified: false,
-              bio: `${profileData.name} est à la recherche d'un stage.`
-            };
-            
-            // Ajouter des champs optionnels s'ils existent dans la table
-            if (!tableError && tableInfo && tableInfo.length > 0) {
-              const sampleRow = tableInfo[0];
-              if ('skills' in sampleRow) stagiaireData.skills = [];
-              if ('languages' in sampleRow) stagiaireData.languages = [];
-              if ('social_links' in sampleRow) stagiaireData.social_links = {};
-              if ('is_premium' in sampleRow) stagiaireData.is_premium = false;
-              if ('disponibility' in sampleRow) stagiaireData.disponibility = "upcoming";
-              if ('education' in sampleRow) stagiaireData.education = [];
-              if ('created_at' in sampleRow) stagiaireData.created_at = new Date().toISOString();
-            }
-            
-            console.log("Tentative d'insertion dans stagiaires avec les données:", stagiaireData);
-            
-            const { error: stagiaireError } = await supabase
-              .from('stagiaires')
-              .upsert(stagiaireData, { onConflict: 'id' });
-            
-            if (stagiaireError) {
-              console.error("Error creating intern profile:", stagiaireError);
-              console.error("Error details:", stagiaireError.details, stagiaireError.hint, stagiaireError.message);
-              throw stagiaireError;
-            }
-          } catch (error) {
-            console.error("Exception lors de la création du profil stagiaire:", error);
-            // Continuer malgré l'erreur pour que l'utilisateur puisse au moins se connecter
-          }
-        } else if (profileData.role === 'entreprise') {
-          try {
-            // Récupérer la structure actuelle de la table entreprises
-            const { data: tableInfo, error: tableError } = await supabase
-              .from('entreprises')
-              .select('*')
-              .limit(1);
-            
-            if (tableError) {
-              console.error("Erreur lors de la récupération de la structure de la table entreprises:", tableError);
-            }
-            
-            // Construire un objet avec seulement les champs valides
-            const entrepriseData: any = {
-              id: userId,
-              name: profileData.name,
-              email: profileData.email,
-              logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name.charAt(0))}&size=128&background=random&format=.png`,
-              is_verified: false,
-              description: `${profileData.name} est une entreprise qui recherche des stagiaires.`
-            };
-            
-            // Ajouter des champs optionnels s'ils existent dans la table
-            if (!tableError && tableInfo && tableInfo.length > 0) {
-              const sampleRow = tableInfo[0];
-              if ('industry' in sampleRow) entrepriseData.industry = '';
-              if ('location' in sampleRow) entrepriseData.location = '';
-              if ('website' in sampleRow) entrepriseData.website = '';
-              if ('created_at' in sampleRow) entrepriseData.created_at = new Date().toISOString();
-            }
-            
-            console.log("Tentative d'insertion dans entreprises avec les données:", entrepriseData);
-            
-            const { error: entrepriseError } = await supabase
-              .from('entreprises')
-              .upsert(entrepriseData, { onConflict: 'id' });
-            
-            if (entrepriseError) {
-              console.error("Error creating company profile:", entrepriseError);
-              console.error("Error details:", entrepriseError.details, entrepriseError.hint, entrepriseError.message);
-              throw entrepriseError;
-            }
-          } catch (error) {
-            console.error("Exception lors de la création du profil entreprise:", error);
-            // Continuer malgré l'erreur pour que l'utilisateur puisse au moins se connecter
-          }
-        }
-        
+      const result = await createUserProfile({
+        id: userId,
+        email: profileData.email,
+        role: profileData.role,
+        name: profileData.name
+      });
+      
+      if (result.success) {
         localStorage.removeItem(`userProfile_${userId}`);
-        return { success: true };
-      } catch (error: any) {
-        console.error('Erreur lors de la création du profil après confirmation:', error);
-        return {
-          success: false,
-          error: {
-            message: error.message || "Erreur lors de la création du profil",
-            status: error.code === '23505' ? 409 : 500,
-            isRetryable: true
-          }
-        };
       }
+      
+      return result;
     } catch (error: any) {
       console.error('Erreur lors de la création du profil après confirmation:', error);
       return {

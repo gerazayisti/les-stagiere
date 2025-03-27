@@ -130,7 +130,6 @@ export default function ProfilEntreprise() {
           name: user?.name || 'Entreprise',
           email: user?.email,
           logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'E')}&background=random`,
-          is_verified: false,
           created_at: new Date().toISOString()
         });
 
