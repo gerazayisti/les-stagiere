@@ -119,7 +119,6 @@ export async function createUserProfile(userData: {
         const entrepriseData: any = {
           id: id,
           name,
-          email,
           logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
           is_verified: false,
           description: `${name} est une entreprise qui recherche des stagiaires.`
