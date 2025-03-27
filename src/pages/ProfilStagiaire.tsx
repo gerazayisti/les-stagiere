@@ -10,19 +10,22 @@ import { useStagiaire } from '@/hooks/useStagiaire';
 import { useParams, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, FileSearch } from 'lucide-react';
+import { Loader2, FileSearch, Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { EditStagiaireDialog, StagiaireFormValues } from '@/components/profile/EditStagiaireDialog';
+import { Button } from '@/components/ui/button';
 
 export default function ProfilStagiaire() {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("about");
-  const { stagiaire, loading, error } = useStagiaire(id || '');
+  const { stagiaire, loading, error, refetch } = useStagiaire(id || '');
   const { user } = useAuth();
   const [headerLoaded, setHeaderLoaded] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
-  
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+
   // Simuler un chargement plus rapide pour les données basiques
   useEffect(() => {
     if (stagiaire) {
@@ -35,7 +38,7 @@ export default function ProfilStagiaire() {
       return () => clearTimeout(timer);
     }
   }, [stagiaire]);
-  
+
   // Rendu d'un squelette pendant le chargement des données de base
   if (loading && !headerLoaded) {
     return (
@@ -51,7 +54,7 @@ export default function ProfilStagiaire() {
       </div>
     );
   }
-  
+
   if (loading && headerLoaded) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -60,7 +63,7 @@ export default function ProfilStagiaire() {
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-48" />
         </div>
-        
+
         {isMobile ? (
           <Accordion type="single" collapsible className="mt-8">
             <AccordionItem value="about">
@@ -95,40 +98,56 @@ export default function ProfilStagiaire() {
       </div>
     );
   }
-  
+
   if (error) {
     toast.error("Erreur lors du chargement du profil");
     return <Navigate to="/" />;
   }
-  
+
   if (!stagiaire) {
     return <Navigate to="/" />;
   }
-  
+
   const isCurrentUser = user?.id === stagiaire.id;
-  
+
   // Build social objects from available data
   const socials = {
     website: stagiaire.social_links?.website || "",
     github: stagiaire.social_links?.github || "",
     linkedin: stagiaire.social_links?.linkedin || ""
   };
-  
+
   // Ensure proper types for disponibility
-  const disponibility = stagiaire.disponibility && 
-    (stagiaire.disponibility === "upcoming" || stagiaire.disponibility === "immediate") 
-      ? stagiaire.disponibility 
-      : "upcoming";
-      
+  const disponibility = stagiaire.disponibility &&
+    (stagiaire.disponibility === "upcoming" || stagiaire.disponibility === "immediate")
+    ? stagiaire.disponibility
+    : "upcoming";
+
   // Fix for education type issue - ensure it's handled properly with the AboutTab component
   // Convert string to array format if needed
-  const educationData = Array.isArray(stagiaire.education) 
-    ? stagiaire.education 
+  const educationData = Array.isArray(stagiaire.education)
+    ? stagiaire.education
     : [];
-  
+
+  // Prepare initial form data for the edit profile modal
+  const initialFormData: StagiaireFormValues = {
+    name: stagiaire.name || "",
+    bio: stagiaire.bio || "",
+    education: stagiaire.education || "",
+    phone: stagiaire.phone || "",
+    website: socials.website || "",
+    github: socials.github || "",
+    linkedin: socials.linkedin || ""
+  };
+
+  const handleProfileUpdate = () => {
+    refetch(); // Refresh stagiaire data after update
+    toast.success("Profil mis à jour avec succès");
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
-      <ProfileHeader 
+      <ProfileHeader
         name={stagiaire.name}
         avatarUrl={stagiaire.avatar_url}
         bio={stagiaire.bio || ""}
@@ -136,14 +155,23 @@ export default function ProfilStagiaire() {
         socials={socials}
         editable={isCurrentUser}
         userId={stagiaire.id}
+        onEdit={() => setIsEditProfileModalOpen(true)}
       />
-      
+
       {isMobile ? (
         <Accordion type="single" collapsible className="mt-8">
           <AccordionItem value="about">
             <AccordionTrigger>À propos</AccordionTrigger>
             <AccordionContent>
-              <AboutTab 
+              {isCurrentUser && (
+                <div className="flex justify-end mb-4">
+                  <Button variant="outline" size="sm" onClick={() => setIsEditProfileModalOpen(true)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Modifier le profil
+                  </Button>
+                </div>
+              )}
+              <AboutTab
                 bio={stagiaire.bio || ""}
                 disponibility={disponibility}
                 education={educationData}
@@ -152,28 +180,28 @@ export default function ProfilStagiaire() {
               />
             </AccordionContent>
           </AccordionItem>
-          
+
           <AccordionItem value="cv">
             <AccordionTrigger>CV & Documents</AccordionTrigger>
             <AccordionContent>
-              <CVTab 
+              <CVTab
                 userId={stagiaire.id}
                 isPremium={stagiaire.is_premium}
               />
             </AccordionContent>
           </AccordionItem>
-          
+
           <AccordionItem value="portfolio">
             <AccordionTrigger>Portfolio</AccordionTrigger>
             <AccordionContent>
               <Portfolio />
             </AccordionContent>
           </AccordionItem>
-          
+
           <AccordionItem value="recommendations">
             <AccordionTrigger>Recommandations</AccordionTrigger>
             <AccordionContent>
-              <Recommendations 
+              <Recommendations
                 recommendations={stagiaire.recommendations || []}
                 isOwner={isCurrentUser}
                 stagiaireId={stagiaire.id}
@@ -181,7 +209,7 @@ export default function ProfilStagiaire() {
               />
             </AccordionContent>
           </AccordionItem>
-          
+
           {isCurrentUser && (
             <AccordionItem value="candidatures">
               <AccordionTrigger>
@@ -209,7 +237,15 @@ export default function ProfilStagiaire() {
             )}
           </TabsList>
           <TabsContent value="about">
-            <AboutTab 
+            {isCurrentUser && (
+              <div className="flex justify-end mb-4">
+                <Button variant="outline" size="sm" onClick={() => setIsEditProfileModalOpen(true)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Modifier le profil
+                </Button>
+              </div>
+            )}
+            <AboutTab
               bio={stagiaire.bio || ""}
               disponibility={disponibility}
               education={educationData}
@@ -218,7 +254,7 @@ export default function ProfilStagiaire() {
             />
           </TabsContent>
           <TabsContent value="cv">
-            <CVTab 
+            <CVTab
               userId={stagiaire.id}
               isPremium={stagiaire.is_premium}
             />
@@ -227,7 +263,7 @@ export default function ProfilStagiaire() {
             <Portfolio />
           </TabsContent>
           <TabsContent value="recommendations">
-            <Recommendations 
+            <Recommendations
               recommendations={stagiaire.recommendations || []}
               isOwner={isCurrentUser}
               stagiaireId={stagiaire.id}
@@ -240,6 +276,15 @@ export default function ProfilStagiaire() {
             </TabsContent>
           )}
         </Tabs>
+      )}
+
+      {/* Edit Profile Modal */}
+      {isCurrentUser && isEditProfileModalOpen && (
+        <EditStagiaireDialog
+          stagiaireId={stagiaire.id}
+          initialData={initialFormData}
+          onSuccess={handleProfileUpdate}
+        />
       )}
     </div>
   );
