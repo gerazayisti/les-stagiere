@@ -11,13 +11,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-//import { Document as PDFDocument, Page, pdfjs } from 'react-pdf';
 import { FileService } from "@/services/fileService";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-
-// Initialiser le worker PDF.js
-//pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
 export interface Document {
   id: string;
@@ -44,8 +40,6 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
   
   // États pour la prévisualisation et le versioning
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [numPages, setNumPages] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(1);
   const [documentVersions, setDocumentVersions] = useState<any[]>([]);
   const [selectedDocumentName, setSelectedDocumentName] = useState<string | null>(null);
   
@@ -82,7 +76,6 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
   // Fonction pour prévisualiser un document
   const handlePreviewDocument = (url: string) => {
     setPreviewUrl(url);
-    setCurrentPage(1);
   };
   
   // Fonction pour charger les versions d'un document
@@ -352,40 +345,14 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
             <DialogTitle>Prévisualisation du document</DialogTitle>
           </DialogHeader>
           <div className="h-full overflow-auto">
-            {/*previewUrl?.endsWith('.pdf') ? (
-              <div className="flex flex-col items-center">
-                <PDFDocument
-                  file={previewUrl}
-                  onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                >
-                  <Page 
-                    pageNumber={currentPage} 
-                    width={window.innerWidth > 768 ? 600 : 300}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                  />
-                </PDFDocument>
-                {numPages > 1 && (
-                  <div className="flex items-center gap-4 mt-4">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage <= 1}
-                    >
-                      Précédent
-                    </Button>
-                    <span>
-                      Page {currentPage} sur {numPages}
-                    </span>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
-                      disabled={currentPage >= numPages}
-                    >
-                      Suivant
-                    </Button>
-                  </div>
-                )}
+            {previewUrl?.endsWith('.pdf') ? (
+              <div className="flex flex-col items-center w-full h-full">
+                <iframe 
+                  src={previewUrl} 
+                  className="w-full h-[calc(100%-60px)]" 
+                  title="Prévisualisation PDF"
+                  style={{ border: 'none' }}
+                />
               </div>
             ) : (
               <div className="flex flex-col items-center">
@@ -396,7 +363,7 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
                   </a>
                 </Button>
               </div>
-            )*/}
+            )}
           </div>
         </DialogContent>
       </Dialog>
