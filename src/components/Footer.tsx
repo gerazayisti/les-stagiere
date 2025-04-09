@@ -61,9 +61,9 @@ const Footer = () => {
           <div>
             <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">Contact</h4>
             <ul className="space-y-2 text-muted-foreground">
-              <li>Email : contact@lesstagiaires.com</li>
-              <li>Téléphone : +695183768</li>
-              <li>Adresse : Yaoundé, Cameroun</li>
+              <li>Email : lesstagiairescameroun@gmail.com</li>
+              <li>Téléphone : 683 254 667 / 695 961 130 / 682 833 334</li>
+              <li>Adresse : Happi - Yaoundé, Cameroun</li>
             </ul>
           </div>
         </div>
@@ -72,7 +72,7 @@ const Footer = () => {
         <div className="mt-12 pt-8 border-t border-border">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-muted-foreground text-sm">
-              © {new Date().getFullYear()} Les Stagiaires. Tous droits réservés.
+              {new Date().getFullYear()} Les Stagiaires. Tous droits réservés.
             </p>
             <div className="flex gap-4 mt-4 md:mt-0">
               <Link to="/mentions-legales" className="text-sm text-muted-foreground hover:text-foreground transition-colors">

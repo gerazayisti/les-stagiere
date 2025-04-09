@@ -9,6 +9,8 @@ import ProfilEntreprise from "./pages/ProfilEntreprise";
 import ProfilEnrichi from "./pages/ProfilEnrichi";
 import MesCandidatures from "./pages/MesCandidatures";
 import NotFound from "./pages/NotFound";
+import MentionsLegales from "./pages/MentionsLegales";
+import Confidentialite from "./pages/Confidentialite";
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
           <Route path="/entreprises/:id" element={<ProfilEntreprise />} />
           <Route path="/profil-enrichi" element={<ProfilEnrichi />} />
           <Route path="/mes-candidatures" element={<MesCandidatures />} />
+          <Route path="/mentions-legales" element={<MentionsLegales />} />
+          <Route path="/confidentialite" element={<Confidentialite />} />
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
