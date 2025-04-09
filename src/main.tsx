@@ -28,6 +28,8 @@ import Settings from "./pages/Settings";
 import Messagerie from "./pages/Messagerie";
 import Admin from "./pages/Admin";
 import EmailConfirmation from "./pages/EmailConfirmation";
+import MentionsLegales from "./pages/MentionsLegales";
+import Confidentialite from "./pages/Confidentialite";
 
 // Create a router
 const router = createBrowserRouter([
@@ -111,6 +113,14 @@ const router = createBrowserRouter([
       {
         path: "email-confirmation",
         element: <EmailConfirmation />,
+      },
+      {
+        path: "mentions-legales",
+        element: <MentionsLegales />,
+      },
+      {
+        path: "confidentialite",
+        element: <Confidentialite />,
       },
     ],
   },
