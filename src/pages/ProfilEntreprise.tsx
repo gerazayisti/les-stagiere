@@ -16,6 +16,7 @@ import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EditEntrepriseDialog } from '@/components/profile/EditEntrepriseDialog';
 import { EntrepriseCandidatures } from '@/components/candidatures/EntrepriseCandidatures';
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
 // Fonction de mise en cache améliorée
 const cacheCompanyProfile = (id: string, data: any) => {
@@ -59,6 +60,12 @@ export default function ProfilEntreprise() {
   const [stages, setStages] = useState<any[]>([]);
   const [selectedStage, setSelectedStage] = useState<any | null>(null);
   const [isStageDetailsModalOpen, setIsStageDetailsModalOpen] = useState(false);
+  const { resetTimeout } = useSessionTimeout();
+
+  // Reset session timeout on component mount
+  useEffect(() => {
+    resetTimeout();
+  }, [resetTimeout]);
 
   // Fonction de chargement des données de l'entreprise avec optimisation
   const fetchEnterpriseData = useCallback(async () => {

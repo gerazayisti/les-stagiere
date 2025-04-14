@@ -16,15 +16,62 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { EditStagiaireDialog, StagiaireFormValues } from '@/components/profile/EditStagiaireDialog';
 import { Button } from '@/components/ui/button';
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
+
+// Fonction de mise en cache pour les profils stagiaires
+const cacheStagiaireProfile = (id: string, data: any) => {
+  try {
+    localStorage.setItem(`cachedStagiaireProfile_${id}`, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Erreur de mise en cache:', error);
+  }
+};
+
+// Fonction de récupération du cache
+const getCachedStagiaireProfile = (id: string) => {
+  try {
+    const cachedData = localStorage.getItem(`cachedStagiaireProfile_${id}`);
+    if (cachedData) {
+      const { data, timestamp } = JSON.parse(cachedData);
+      // Cache valide pendant 15 minutes
+      return (Date.now() - timestamp < 15 * 60 * 1000) ? data : null;
+    }
+  } catch (error) {
+    console.warn('Erreur de lecture du cache:', error);
+  }
+  return null;
+};
 
 export default function ProfilStagiaire() {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("about");
-  const { stagiaire, loading, error, refetch } = useStagiaire(id || '');
+  
+  // Récupération du cache avant d'appeler le hook
+  const cachedStagiaire = getCachedStagiaireProfile(id || '');
+  
+  // Utiliser le hook useStagiaire avec le cache comme initialState
+  const { stagiaire, loading, error, updateStagiaire } = useStagiaire(id || '', cachedStagiaire ? { ...cachedStagiaire } : null);
+  
   const { user } = useAuth();
   const [headerLoaded, setHeaderLoaded] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const { resetTimeout } = useSessionTimeout();
+
+  // Mise en cache des données
+  useEffect(() => {
+    if (stagiaire) {
+      cacheStagiaireProfile(id || '', stagiaire);
+    }
+  }, [stagiaire, id]);
+
+  // Reset session timeout on component mount
+  useEffect(() => {
+    resetTimeout();
+  }, [resetTimeout]);
 
   // Simuler un chargement plus rapide pour les données basiques
   useEffect(() => {
@@ -111,10 +158,16 @@ export default function ProfilStagiaire() {
   const isCurrentUser = user?.id === stagiaire.id;
 
   // Build social objects from available data
-  const socials = {
-    website: stagiaire.social_links?.website || "",
-    github: stagiaire.social_links?.github || "",
-    linkedin: stagiaire.social_links?.linkedin || ""
+  const socials = stagiaire?.social_links || {};
+  const initialFormData: StagiaireFormValues = {
+    name: stagiaire?.name || "",
+    title: stagiaire?.title || "",
+    bio: stagiaire?.bio || "",
+    education: Array.isArray(stagiaire?.education) ? stagiaire?.education : [],
+    phone: stagiaire?.phone || "",
+    website: socials.website || "",
+    github: socials.github || "",
+    linkedin: socials.linkedin || ""
   };
 
   // Ensure proper types for disponibility
@@ -123,25 +176,33 @@ export default function ProfilStagiaire() {
     ? stagiaire.disponibility
     : "upcoming";
 
-  // Fix for education type issue - ensure it's handled properly with the AboutTab component
-  // Convert string to array format if needed
-  const educationData = Array.isArray(stagiaire.education)
-    ? stagiaire.education
-    : [];
-
-  // Prepare initial form data for the edit profile modal
-  const initialFormData: StagiaireFormValues = {
-    name: stagiaire.name || "",
-    bio: stagiaire.bio || "",
-    education: stagiaire.education || "",
-    phone: stagiaire.phone || "",
-    website: socials.website || "",
-    github: socials.github || "",
-    linkedin: socials.linkedin || ""
-  };
+  // Formater les données pour les composants
+  let educationData = [];
+  if (stagiaire?.education) {
+    // Check if education is a string or an array
+    if (typeof stagiaire.education === 'string') {
+      try {
+        // Try to parse it if it's a JSON string
+        educationData = JSON.parse(stagiaire.education);
+      } catch (e) {
+        // If parsing fails, use it as a simple string
+        educationData = [{ 
+          school: stagiaire.education,
+          degree: '',
+          field: '',
+          start_date: '',
+          end_date: '',
+          description: ''
+        }];
+      }
+    } else {
+      // It's already an array
+      educationData = stagiaire.education;
+    }
+  }
 
   const handleProfileUpdate = () => {
-    refetch(); // Refresh stagiaire data after update
+    updateStagiaire({}); // Refresh stagiaire data after update with empty object to trigger refetch
     toast.success("Profil mis à jour avec succès");
   };
 

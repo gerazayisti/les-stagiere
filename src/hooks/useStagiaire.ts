@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,8 @@ export interface StagiaireData {
   languages: string[];
   bio: string | null;
   location: string | null;
+  phone: string | null;
+  disponibility: string | null;
   education: Array<{
     school: string;
     degree: string;
@@ -49,8 +51,6 @@ export interface StagiaireData {
   preferred_locations: string[];
   availability_date: string | null;
   internship_duration: string | null;
-  phone: string | null;
-  disponibility: string | null;
   recommendations: Recommendation[];
   is_premium: boolean;
   is_verified: boolean;
@@ -59,19 +59,64 @@ export interface StagiaireData {
 
 export interface UseStagiaireProps {
   stagiaireId: string;
+  cachedData?: StagiaireData | null;
 }
 
-export function useStagiaire(stagiaireId: string) {
+// Constantes pour le cache
+const STAGIAIRE_CACHE_PREFIX = 'cachedStagiaireProfile_';
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+// Fonction de mise en cache pour les profils stagiaires
+const cacheStagiaireProfile = (id: string, data: any) => {
+  try {
+    localStorage.setItem(`${STAGIAIRE_CACHE_PREFIX}${id}`, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Erreur de mise en cache du profil stagiaire:', error);
+  }
+};
+
+// Fonction de récupération du cache
+const getCachedStagiaireProfile = (id: string) => {
+  try {
+    const cachedData = localStorage.getItem(`${STAGIAIRE_CACHE_PREFIX}${id}`);
+    if (cachedData) {
+      const { data, timestamp } = JSON.parse(cachedData);
+      // Cache valide pendant 15 minutes
+      return (Date.now() - timestamp < CACHE_DURATION) ? data : null;
+    }
+  } catch (error) {
+    console.warn('Erreur de lecture du cache stagiaire:', error);
+  }
+  return null;
+};
+
+export function useStagiaire(stagiaireId: string, cachedData: StagiaireData | null = null) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [stagiaire, setStagiaire] = useState<StagiaireData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stagiaire, setStagiaire] = useState<StagiaireData | null>(cachedData);
+  const [loading, setLoading] = useState(!cachedData);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchStagiaire() {
+      // Si nous avons déjà des données en cache, ne pas charger à nouveau
+      if (stagiaire) {
+        return;
+      }
+      
       if (!stagiaireId) {
         setError("ID de stagiaire non fourni");
+        setLoading(false);
+        return;
+      }
+
+      // Récupérer les données du cache
+      const cachedData = getCachedStagiaireProfile(stagiaireId);
+      if (cachedData) {
+        setStagiaire(cachedData);
         setLoading(false);
         return;
       }
@@ -123,6 +168,9 @@ export function useStagiaire(stagiaireId: string) {
           recommendations: formattedRecommendations as Recommendation[],
         };
 
+        // Mettre en cache les données du stagiaire
+        cacheStagiaireProfile(stagiaireId, formattedStagiaire);
+
         setStagiaire(formattedStagiaire);
       } catch (error: any) {
         console.error('Erreur lors de la récupération du stagiaire:', error);
@@ -173,6 +221,9 @@ export function useStagiaire(stagiaireId: string) {
         return { ...prev, ...updatedData };
       });
 
+      // Mettre à jour le cache
+      cacheStagiaireProfile(stagiaireId, { ...stagiaire, ...updatedData });
+
       toast({
         title: "Succès",
         description: "Informations mises à jour avec succès",
@@ -222,6 +273,9 @@ export function useStagiaire(stagiaireId: string) {
           recommendations: [...stagiaire.recommendations, data as Recommendation]
         });
       }
+
+      // Mettre à jour le cache
+      cacheStagiaireProfile(stagiaireId, { ...stagiaire, recommendations: [...stagiaire.recommendations, data as Recommendation] });
 
       toast({
         title: "Succès",
@@ -283,6 +337,9 @@ export function useStagiaire(stagiaireId: string) {
         return { ...prev, avatar_url: publicUrl };
       });
 
+      // Mettre à jour le cache
+      cacheStagiaireProfile(stagiaireId, { ...stagiaire, avatar_url: publicUrl });
+
       return true;
     } catch (error: any) {
       console.error('Erreur lors du téléchargement de l\'avatar:', error);
@@ -337,6 +394,9 @@ export function useStagiaire(stagiaireId: string) {
         return { ...prev, cv_url: publicUrl };
       });
 
+      // Mettre à jour le cache
+      cacheStagiaireProfile(stagiaireId, { ...stagiaire, cv_url: publicUrl });
+
       return true;
     } catch (error: any) {
       console.error('Erreur lors du téléchargement du CV:', error);
@@ -384,6 +444,9 @@ export function useStagiaire(stagiaireId: string) {
         if (!prev) return null;
         return { ...prev, recommendations: formattedData };
       });
+
+      // Mettre à jour le cache
+      cacheStagiaireProfile(stagiaireId, { ...stagiaire, recommendations: formattedData });
 
       return formattedData;
     } catch (error: any) {
