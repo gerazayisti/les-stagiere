@@ -82,15 +82,15 @@ export const StageDetailsModal: React.FC<StageDetailsModalProps> = ({
 
   const renderViewMode = () => (
     <div className="fixed inset-0 z-50 overflow-auto bg-black/50 flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+      <div className="bg-white dark:bg-zinc-900 dark:text-zinc-200 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative border dark:border-zinc-700">
         <button 
           onClick={onClose} 
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
         >
-          <X className="w-6 h-6 text-gray-600" />
+          <X className="w-6 h-6 text-gray-600 dark:text-zinc-300" />
         </button>
-        <div className="p-6 border-b flex justify-between items-center">
-          <h2 className="text-2xl font-bold">{stage.title}</h2>
+        <div className="p-6 border-b dark:border-zinc-700 flex justify-between items-center">
+          <h2 className="text-2xl font-bold dark:text-white">{stage.title}</h2>
           <div className="flex items-center space-x-2">
             {renderStatusBadge(stage.status)}
             {stage.is_urgent && (
@@ -108,60 +108,52 @@ export const StageDetailsModal: React.FC<StageDetailsModalProps> = ({
               <span>{stage.type === 'temps_plein' ? 'Temps plein' : 
                       stage.type === 'temps_partiel' ? 'Temps partiel' : 
                       stage.type === 'alternance' ? 'Alternance' : 
-                      'Télétravail'}</span>
+                      stage.type === 'remote' ? 'Télétravail' : stage.type}</span>
             </div>
             <div className="flex items-center">
-              <MapPin className="w-5 h-5 mr-2" />
-              <span>{stage.location}</span>
+              <MapPin className="w-5 h-5 mr-2 text-muted-foreground dark:text-zinc-400" />
+              <span className="dark:text-zinc-300">{stage.location}</span>
             </div>
             <div className="flex items-center">
-              <Clock className="w-5 h-5 mr-2" />
-              <span>Début: {format(new Date(stage.start_date), 'dd MMMM yyyy', { locale: fr })}</span>
+              <Clock className="w-5 h-5 mr-2 text-muted-foreground dark:text-zinc-400" />
+              <span className="dark:text-zinc-300">{stage.duration}</span>
             </div>
-            {stage.deadline && (
-              <div className="flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-2 text-red-500" />
-                <span>Date limite: {format(new Date(stage.deadline), 'dd MMMM yyyy', { locale: fr })}</span>
-              </div>
-            )}
             <div className="flex items-center">
-              <DollarSign className="w-5 h-5 mr-2" />
-              <span>
-                {stage.compensation?.amount} {stage.compensation?.currency} / mois
-              </span>
+              <DollarSign className="w-5 h-5 mr-2 text-muted-foreground dark:text-zinc-400" />
+              <span className="dark:text-zinc-300">{stage.salary || 'Non communiqué'}</span>
             </div>
           </div>
 
           <div>
-            <h3 className="text-xl font-semibold mb-2">Description</h3>
-            <p className="text-gray-600">{stage.description}</p>
+            <h3 className="text-lg font-semibold mb-2 dark:text-zinc-200">Description</h3>
+            <p className="text-gray-700 dark:text-zinc-300 whitespace-pre-line">{stage.description}</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Compétences requises</h3>
+              <h3 className="text-lg font-semibold mb-2 dark:text-zinc-200">Compétences requises</h3>
               <div className="flex flex-wrap gap-2">
                 {stage.required_skills?.map((skill: string) => (
-                  <Badge key={skill} variant="secondary">{skill}</Badge>
+                  <Badge key={skill} variant="secondary" className="dark:bg-zinc-800 dark:text-zinc-200">{skill}</Badge>
                 ))}
               </div>
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-2">Compétences préférées</h3>
+              <h3 className="text-lg font-semibold mb-2 dark:text-zinc-200">Compétences préférées</h3>
               <div className="flex flex-wrap gap-2">
                 {stage.preferred_skills?.map((skill: string) => (
-                  <Badge key={skill} variant="outline">{skill}</Badge>
+                  <Badge key={skill} variant="outline" className="dark:border-zinc-600 dark:text-zinc-300">{skill}</Badge>
                 ))}
               </div>
             </div>
           </div>
 
           <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-zinc-400">
               Publié {formatDistance(new Date(stage.created_at), new Date(), { locale: fr })} ago
             </div>
             <div className="flex space-x-2">
-              <Button onClick={() => setIsEditing(true)}>
+              <Button onClick={() => setIsEditing(true)} className="dark:border-zinc-600 dark:text-zinc-200">
                 <Edit className="w-4 h-4 mr-2" /> Modifier
               </Button>
             </div>
@@ -173,42 +165,44 @@ export const StageDetailsModal: React.FC<StageDetailsModalProps> = ({
 
   const renderEditMode = () => (
     <div className="fixed inset-0 z-50 overflow-auto bg-black/50 flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+      <div className="bg-white dark:bg-zinc-900 dark:text-zinc-200 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative border dark:border-zinc-700">
         <button 
           onClick={onClose} 
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
         >
-          <X className="w-6 h-6 text-gray-600" />
+          <X className="w-6 h-6 text-gray-600 dark:text-zinc-300" />
         </button>
-        <div className="p-6 border-b">
-          <h2 className="text-2xl font-bold">Modifier l'offre de stage</h2>
+        <div className="p-6 border-b dark:border-zinc-700">
+          <h2 className="text-2xl font-bold dark:text-white">Modifier l'offre de stage</h2>
         </div>
 
         <div className="p-6 space-y-4">
           <div>
-            <Label>Titre</Label>
+            <Label className="dark:text-zinc-200">Titre</Label>
             <Input 
               value={editedStage.title} 
               onChange={(e) => setEditedStage({...editedStage, title: e.target.value})}
+              className="dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-600"
             />
           </div>
           <div>
-            <Label>Description</Label>
+            <Label className="dark:text-zinc-200">Description</Label>
             <Textarea 
               value={editedStage.description} 
               onChange={(e) => setEditedStage({...editedStage, description: e.target.value})}
+              className="dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-600"
             />
           </div>
           <div>
-            <Label>Type de stage</Label>
+            <Label className="dark:text-zinc-200">Type de stage</Label>
             <Select
               value={editedStage.type}
               onValueChange={(value) => setEditedStage({...editedStage, type: value})}
             >
-              <SelectTrigger>
+              <SelectTrigger className="dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-600">
                 <SelectValue placeholder="Sélectionnez le type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="dark:bg-zinc-800 dark:text-zinc-200">
                 <SelectItem value="temps_plein">Temps plein</SelectItem>
                 <SelectItem value="temps_partiel">Temps partiel</SelectItem>
                 <SelectItem value="alternance">Alternance</SelectItem>
@@ -217,15 +211,15 @@ export const StageDetailsModal: React.FC<StageDetailsModalProps> = ({
             </Select>
           </div>
           <div>
-            <Label>Statut</Label>
+            <Label className="dark:text-zinc-200">Statut</Label>
             <Select
               value={editedStage.status}
               onValueChange={(value) => setEditedStage({...editedStage, status: value})}
             >
-              <SelectTrigger>
+              <SelectTrigger className="dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-600">
                 <SelectValue placeholder="Sélectionnez le statut" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="dark:bg-zinc-800 dark:text-zinc-200">
                 <SelectItem value="draft">Brouillon</SelectItem>
                 <SelectItem value="active">Actif</SelectItem>
                 <SelectItem value="expired">Expiré</SelectItem>
@@ -234,10 +228,10 @@ export const StageDetailsModal: React.FC<StageDetailsModalProps> = ({
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
+            <Button variant="outline" onClick={() => setIsEditing(false)} className="dark:border-zinc-600 dark:text-zinc-200">
               Annuler
             </Button>
-            <Button onClick={handleSave} disabled={loading}>
+            <Button onClick={handleSave} disabled={loading} className="dark:border-zinc-600 dark:text-zinc-200">
               {loading ? 'Enregistrement...' : 'Enregistrer'}
             </Button>
           </div>
