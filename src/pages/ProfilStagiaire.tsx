@@ -17,6 +17,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { EditStagiaireDialog, StagiaireFormValues } from '@/components/profile/EditStagiaireDialog';
 import { Button } from '@/components/ui/button';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
+import { supabase } from '@/lib/supabase';
 
 // Fonction de mise en cache pour les profils stagiaires
 const cacheStagiaireProfile = (id: string, data: any) => {
@@ -60,6 +61,7 @@ export default function ProfilStagiaire() {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const { resetTimeout } = useSessionTimeout();
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
 
   // Mise en cache des données
   useEffect(() => {
@@ -85,6 +87,42 @@ export default function ProfilStagiaire() {
       return () => clearTimeout(timer);
     }
   }, [stagiaire]);
+
+  // Fonction de création du profil stagiaire
+  const createStagiaireProfile = async () => {
+    setIsCreatingProfile(true);
+    try {
+      const { error: createError } = await supabase
+        .from('stagiaires')
+        .upsert({
+          id: user?.id,
+          name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Stagiaire',
+          email: user?.email,
+          avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.user_metadata?.name || 'S')}&background=random`,
+          created_at: new Date().toISOString()
+        });
+      if (createError) throw createError;
+      // Après création, re-fetch le profil
+      updateStagiaire({});
+    } catch (error) {
+      toast.error('Impossible de créer le profil stagiaire');
+    } finally {
+      setIsCreatingProfile(false);
+    }
+  };
+
+  // Effet pour déclencher la création du profil si non trouvé et utilisateur courant
+  useEffect(() => {
+    if (
+      error &&
+      (error.message?.toLowerCase().includes('not found') || error.message?.toLowerCase().includes('non trouvé')) &&
+      user?.id === id &&
+      !isCreatingProfile
+    ) {
+      createStagiaireProfile();
+    }
+    // eslint-disable-next-line
+  }, [error, user, id]);
 
   // Rendu d'un squelette pendant le chargement des données de base
   if (loading && !headerLoaded) {
@@ -146,7 +184,18 @@ export default function ProfilStagiaire() {
     );
   }
 
-  if (error) {
+  if (isCreatingProfile) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p>Création de votre profil...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !isCreatingProfile) {
     toast.error("Erreur lors du chargement du profil");
     return <Navigate to="/" />;
   }

@@ -135,56 +135,128 @@ export function useStagiaire(stagiaireId: string, cachedData: StagiaireData | nu
           // Improved error handling with more specific logging
           if (stagiaireError.code === 'PGRST116') {
             console.error(`Stagiaire avec ID ${stagiaireId} non trouvé dans la base de données`);
+            throw new Error("Stagiaire non trouvé");
           }
           
           throw stagiaireError;
         }
 
+        // Si aucune donnée n'est retournée (null), c'est aussi une erreur "non trouvé"
         if (!stagiaireData) {
-          throw new Error('Stagiaire non trouvé');
+          console.error(`Stagiaire avec ID ${stagiaireId} non trouvé (données nulles)`);
+          throw new Error("Stagiaire non trouvé");
+        }
+
+        // Récupérer les compétences du stagiaire
+        const { data: skillsData, error: skillsError } = await supabase
+          .from('stagiaire_skills')
+          .select('skill')
+          .eq('stagiaire_id', stagiaireId);
+
+        if (skillsError) {
+          console.error('Erreur lors de la récupération des compétences:', skillsError);
+          // Continue without skills rather than failing completely
+        }
+
+        // Récupérer les langues du stagiaire
+        const { data: languagesData, error: languagesError } = await supabase
+          .from('stagiaire_languages')
+          .select('language')
+          .eq('stagiaire_id', stagiaireId);
+
+        if (languagesError) {
+          console.error('Erreur lors de la récupération des langues:', languagesError);
+          // Continue without languages rather than failing completely
+        }
+
+        // Récupérer l'éducation du stagiaire
+        const { data: educationData, error: educationError } = await supabase
+          .from('stagiaire_education')
+          .select('*')
+          .eq('stagiaire_id', stagiaireId)
+          .order('start_date', { ascending: false });
+
+        if (educationError) {
+          console.error('Erreur lors de la récupération de l\'éducation:', educationError);
+          // Continue without education rather than failing completely
+        }
+
+        // Récupérer l'expérience du stagiaire
+        const { data: experienceData, error: experienceError } = await supabase
+          .from('stagiaire_experience')
+          .select('*')
+          .eq('stagiaire_id', stagiaireId)
+          .order('start_date', { ascending: false });
+
+        if (experienceError) {
+          console.error('Erreur lors de la récupération de l\'expérience:', experienceError);
+          // Continue without experience rather than failing completely
+        }
+
+        // Récupérer les projets du stagiaire
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('stagiaire_projects')
+          .select('*')
+          .eq('stagiaire_id', stagiaireId);
+
+        if (projectsError) {
+          console.error('Erreur lors de la récupération des projets:', projectsError);
+          // Continue without projects rather than failing completely
         }
 
         // Récupérer les recommandations
         const { data: recommendationsData, error: recommendationsError } = await supabase
           .from('recommendations')
-          .select('*, entreprises(name, logo_url)')
+          .select('*')
           .eq('stagiaire_id', stagiaireId)
           .eq('is_public', true);
 
         if (recommendationsError) {
           console.error('Erreur lors de la récupération des recommandations:', recommendationsError);
+          // Continue without recommendations rather than failing completely
         }
 
-        // Formater les données des recommandations
-        const formattedRecommendations = (recommendationsData || []).map((rec: any) => ({
-          ...rec,
-          company_name: rec.entreprises?.name || 'Entreprise',
-          company_logo: rec.entreprises?.logo_url || null,
-        }));
-
-        // Assembler les données du stagiaire
-        const formattedStagiaire: StagiaireData = {
+        // Construire l'objet stagiaire complet
+        const completeStagiaire: StagiaireData = {
           ...stagiaireData,
-          recommendations: formattedRecommendations as Recommendation[],
+          skills: skillsData ? skillsData.map(s => s.skill) : [],
+          languages: languagesData ? languagesData.map(l => l.language) : [],
+          education: educationData || [],
+          experience: experienceData || [],
+          projects: projectsData || [],
+          recommendations: recommendationsData || []
         };
 
-        // Mettre en cache les données du stagiaire
-        cacheStagiaireProfile(stagiaireId, formattedStagiaire);
-
-        setStagiaire(formattedStagiaire);
+        // Mettre en cache les données
+        cacheStagiaireProfile(stagiaireId, completeStagiaire);
+        
+        // Mettre à jour l'état
+        setStagiaire(completeStagiaire);
+        setLoading(false);
       } catch (error: any) {
         console.error('Erreur lors de la récupération du stagiaire:', error);
-        setError(error.message || 'Une erreur est survenue');
+        setError(error.message || "Une erreur est survenue");
         
-        // If the stagiaire doesn't exist, redirect to home page instead of 404
-        // This prevents the 404 error when the page doesn't exist
+        // Gestion améliorée des erreurs "non trouvé"
         if (error.code === 'PGRST116' || error.message?.includes('non trouvé')) {
+          // Afficher un toast plus convivial
           toast({
             title: "Profil non trouvé",
             description: "Le profil demandé n'existe pas ou n'est pas accessible",
             variant: "destructive",
           });
-          navigate('/', { replace: true });
+          
+          // Rediriger vers la page d'accueil après un court délai
+          setTimeout(() => {
+            navigate('/', { replace: true });
+          }, 1500);
+        } else {
+          // Pour les autres erreurs, afficher un toast générique
+          toast({
+            title: "Erreur",
+            description: "Une erreur est survenue lors du chargement du profil",
+            variant: "destructive",
+          });
         }
       } finally {
         setLoading(false);

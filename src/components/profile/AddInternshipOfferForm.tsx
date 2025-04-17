@@ -113,34 +113,73 @@ export default function AddInternshipOfferForm({
 
       // Extraction du titre à partir de la première ligne de la description
       const titleFromDescription = description.split('\n')[0].trim();
-      const shortDescription = description.slice(0, 500);
+      // Limiter le titre à 255 caractères maximum
+      const limitedTitle = (titleFromDescription || 'Offre de stage sans titre').slice(0, 250);
+      
+      // Limiter la description courte à 255 caractères
+      const shortDescription = description.slice(0, 250);
+      
+      // Limiter la longueur de l'emplacement
+      const limitedLocation = location.slice(0, 250);
+      
+      // Limiter la politique de travail à distance
+      const remotePolicy = (type === 'remote' ? 'Télétravail' : 'Présentiel').slice(0, 250);
+      
+      // Limiter le niveau d'éducation
+      const limitedEducationLevel = (educationLevel || 'Non spécifié').slice(0, 250);
+
+      // Préparer les compétences pour s'assurer qu'elles sont au bon format
+      // et limiter chaque compétence à 250 caractères
+      const cleanRequiredSkills = requiredSkills
+        .filter(skill => skill.trim() !== '')
+        .map(skill => skill.trim().slice(0, 250));
+        
+      const cleanPreferredSkills = preferredSkills
+        .filter(skill => skill.trim() !== '')
+        .map(skill => skill.trim().slice(0, 250));
+
+      // Préparer l'objet compensation en tant que chaîne JSON
+      const compensationObject = {
+        amount: compensationAmount || 0,
+        currency: compensationCurrency || 'XAF',
+        period: 'mois'
+      };
+      
+      // S'assurer que la chaîne JSON ne dépasse pas 255 caractères
+      const compensationJson = JSON.stringify(compensationObject);
+      const limitedCompensationJson = compensationJson.length > 250 
+        ? JSON.stringify({ amount: compensationAmount || 0, currency: 'XAF' })
+        : compensationJson;
+      
+      // Convertir les dates au format ISO
+      const formattedStartDate = startDate ? startDate.toISOString() : null;
+      const formattedDeadline = deadline ? deadline.toISOString() : null;
 
       const stageData = {
         entreprise_id: user.id,
-        title: titleFromDescription || 'Offre de stage sans titre',
-        description,
+        title: limitedTitle,
+        description, // La description complète peut être longue, mais vérifiez que la colonne est de type TEXT
         short_description: shortDescription,
-        requirements: description,
-        responsibilities: description,
-        location,
-        remote_policy: type === 'remote' ? 'Télétravail' : 'Présentiel',
+        requirements: description, // Vérifiez que cette colonne est de type TEXT
+        responsibilities: description, // Vérifiez que cette colonne est de type TEXT
+        location: limitedLocation,
+        remote_policy: remotePolicy,
         type,
-        start_date: format(startDate, 'yyyy-MM-dd'),
-        compensation: {
-          amount: compensationAmount || 0,
-          currency: compensationCurrency || 'XAF',
-          period: 'mois'
-        },
-        required_skills: requiredSkills.filter(skill => skill.trim() !== ''),
-        preferred_skills: preferredSkills.filter(skill => skill.trim() !== ''),
-        education_level: educationLevel || 'Non spécifié',
+        start_date: formattedStartDate,
+        // Stocker la compensation comme une chaîne JSON
+        compensation: limitedCompensationJson,
+        required_skills: cleanRequiredSkills,
+        preferred_skills: cleanPreferredSkills,
+        education_level: limitedEducationLevel,
         status: 'active',
-        deadline: deadline ? format(deadline, 'yyyy-MM-dd') : null,
+        deadline: formattedDeadline,
         is_featured: isFeatured,
         is_urgent: isUrgent,
         views_count: 0,
         applications_count: 0
       };
+
+      console.log("Données à insérer:", stageData);
 
       const { data, error } = await supabase
         .from('stages')
@@ -149,7 +188,12 @@ export default function AddInternshipOfferForm({
 
       if (error) {
         console.error("Erreur lors de l'insertion de l'offre de stage:", error);
-        toast.error("Impossible de créer l'offre de stage");
+        // Afficher plus de détails sur l'erreur
+        if (error.details) console.error("Détails de l'erreur:", error.details);
+        if (error.hint) console.error("Indice:", error.hint);
+        if (error.message) console.error("Message:", error.message);
+        
+        toast.error(`Impossible de créer l'offre de stage: ${error.message || 'Erreur inconnue'}`);
         return;
       }
 
@@ -158,7 +202,13 @@ export default function AddInternshipOfferForm({
       onClose();
     } catch (error) {
       console.error("Erreur lors de la soumission du formulaire:", error);
-      toast.error("Une erreur est survenue");
+      // Afficher plus de détails sur l'erreur
+      if (error instanceof Error) {
+        console.error("Message d'erreur:", error.message);
+        toast.error(`Une erreur est survenue: ${error.message}`);
+      } else {
+        toast.error("Une erreur inconnue est survenue");
+      }
     } finally {
       setLoading(false);
     }

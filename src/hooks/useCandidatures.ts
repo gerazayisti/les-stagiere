@@ -62,43 +62,96 @@ export const useCandidatures = () => {
     if (!file) return null;
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${stagiaireId}_${type}_${Date.now()}.${fileExt}`;
-      const filePath = `${stagiaireId}/${fileName}`;
+      // Vérifier que le fichier n'est pas trop volumineux (10 Mo max)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`Le fichier est trop volumineux (max 10 Mo)`);
+        return null;
+      }
 
-      // Upload file to Supabase storage
+      // Nettoyer l'ID du stagiaire pour éviter les caractères spéciaux dans le chemin
+      const safeId = stagiaireId.replace(/[^a-zA-Z0-9]/g, '');
+      
+      // Extraire et nettoyer l'extension du fichier
+      const fileNameParts = file.name.split('.');
+      const fileExt = fileNameParts.pop() || 'docx';
+      
+      // Créer un nom de fichier sécurisé
+      const timestamp = Date.now();
+      const fileName = `${safeId}_${type}_${timestamp}.${fileExt}`;
+      
+      // Utiliser un chemin simple sans sous-dossiers pour éviter les problèmes de permissions
+      const filePath = fileName;
+
+      console.log(`Tentative d'upload du fichier ${type}:`, {
+        bucket: 'documents',
+        path: filePath,
+        size: file.size,
+        type: file.type
+      });
+
+      // Upload file to Supabase storage avec plus d'options
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('documents')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true, // Remplacer si existe déjà
+          contentType: file.type // Spécifier explicitement le type MIME
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error(`Erreur d'upload Supabase:`, uploadError);
+        throw uploadError;
+      }
+
+      console.log(`Fichier uploadé avec succès:`, uploadData);
 
       // Get public URL
       const { data: urlData } = supabase.storage
         .from('documents')
         .getPublicUrl(filePath);
 
+      if (!urlData || !urlData.publicUrl) {
+        throw new Error("Impossible d'obtenir l'URL publique du document");
+      }
+
+      console.log(`URL publique obtenue:`, urlData.publicUrl);
+
       // Save document metadata to database
+      const documentMetadata = {
+        stagiaire_id: stagiaireId,
+        type: type === 'cv' ? 'CV' : 'Lettre de motivation',
+        name: fileName,
+        file_url: urlData.publicUrl,
+        file_size: file.size,
+        file_type: file.type,
+        is_primary: true
+      };
+
+      console.log(`Enregistrement des métadonnées:`, documentMetadata);
+
       const { data: documentData, error: documentError } = await supabase
         .from('documents')
-        .insert({
-          stagiaire_id: stagiaireId,
-          type: type === 'cv' ? 'CV' : 'Lettre de motivation',
-          name: fileName,
-          file_url: urlData.publicUrl,
-          file_size: file.size,
-          file_type: file.type,
-          is_primary: true
-        })
+        .insert(documentMetadata)
         .select()
         .single();
 
-      if (documentError) throw documentError;
+      if (documentError) {
+        console.error(`Erreur d'insertion dans la base de données:`, documentError);
+        throw documentError;
+      }
 
+      console.log(`Document enregistré avec succès:`, documentData);
       return documentData.id;
     } catch (err: any) {
       console.error(`Erreur lors de l'upload du ${type}:`, err);
-      toast.error(`Impossible de télécharger le ${type}`);
+      
+      // Afficher des détails plus précis sur l'erreur
+      if (err.message) console.error(`Message d'erreur:`, err.message);
+      if (err.details) console.error(`Détails:`, err.details);
+      if (err.hint) console.error(`Indice:`, err.hint);
+      if (err.code) console.error(`Code d'erreur:`, err.code);
+      
+      toast.error(`Impossible de télécharger le ${type}: ${err.message || 'Erreur inconnue'}`);
       return null;
     }
   };
