@@ -30,31 +30,36 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS stagiaires (
     id UUID PRIMARY KEY REFERENCES users(id),
     name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
     title VARCHAR(255),
     avatar_url TEXT,
     location VARCHAR(255),
     bio TEXT,
     phone VARCHAR(50),
-    education TEXT,
+    education TEXT[],
     disponibility VARCHAR(50),
     linkedin_url TEXT,
     github_url TEXT,
     portfolio_url TEXT,
     skills TEXT[],
     languages TEXT[],
+    social_links JSONB,
+    is_verified BOOLEAN DEFAULT false,
     experience_years INTEGER DEFAULT 0,
     preferred_locations TEXT[],
     preferred_domains TEXT[],
     is_premium BOOLEAN DEFAULT false,
     visibility_settings JSONB,
     search_status VARCHAR(50),
-    last_active TIMESTAMP
+    last_active TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Entreprises profile
 CREATE TABLE IF NOT EXISTS entreprises (
     id UUID PRIMARY KEY REFERENCES users(id),
     name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
     logo_url TEXT,
     banner_url TEXT,
     description TEXT,
@@ -68,9 +73,10 @@ CREATE TABLE IF NOT EXISTS entreprises (
     company_culture TEXT,
     benefits TEXT[],
     is_premium BOOLEAN DEFAULT false,
-    verified BOOLEAN DEFAULT false,
+    is_verified BOOLEAN DEFAULT false,
     rating DECIMAL(3,2),
-    number_of_reviews INTEGER DEFAULT 0
+    number_of_reviews INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Skills taxonomy

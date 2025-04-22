@@ -97,10 +97,16 @@ export default function ProfilStagiaire() {
         .upsert({
           id: user?.id,
           name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Stagiaire',
-          email: user?.email,
+          email: user?.email ?? '',
           avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.user_metadata?.name || 'S')}&background=random`,
-          created_at: new Date().toISOString()
-        });
+          bio: `${user?.user_metadata?.name || 'Ce stagiaire'} est à la recherche d'un stage.`,
+          education: [],
+          disponibility: 'upcoming',
+          skills: [],
+          languages: [],
+          social_links: {},
+          is_verified: false
+        }, { onConflict: 'id' });
       if (createError) throw createError;
       // Après création, re-fetch le profil
       updateStagiaire({});
