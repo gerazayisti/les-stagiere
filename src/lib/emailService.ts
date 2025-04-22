@@ -1,15 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration Supabase pour Next.js
+// Configuration Supabase pour Vite
 const supabaseUrl = 
   typeof window !== 'undefined' 
-    ? (window as any).ENV?.NEXT_PUBLIC_SUPABASE_URL 
-    : process.env.NEXT_PUBLIC_SUPABASE_URL;
+    ? (window as any).ENV?.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL
+    : process.env.VITE_SUPABASE_URL;
 
 const supabaseAnonKey = 
   typeof window !== 'undefined' 
-    ? (window as any).ENV?.NEXT_PUBLIC_SUPABASE_ANON_KEY 
-    : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    ? (window as any).ENV?.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY
+    : process.env.VITE_SUPABASE_ANON_KEY;
 
 // Vérification de la configuration
 if (!supabaseUrl || !supabaseAnonKey) {
