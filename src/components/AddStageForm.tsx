@@ -19,9 +19,12 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Calendar, Info } from "lucide-react";
+import { Loader2, Calendar, Info, Sparkles, MessageSquareText } from "lucide-react";
 import { toast } from "sonner";
 import { addMonths, format, parseISO } from "date-fns";
+import AIStageGenerator from "@/components/AIStageGenerator";
+import FormattedText from "@/components/FormattedText";
+import { useSessionTimeout } from "@/contexts/SessionTimeoutContext";
 
 export interface StageFormData {
   title: string;
@@ -58,6 +61,10 @@ interface AddStageFormProps {
 
 export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddStageFormProps) {
   const [loading, setLoading] = useState(false);
+  const { resetTimer } = useSessionTimeout();
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [currentAIContentType, setCurrentAIContentType] = useState<'description' | 'responsibilities' | 'requirements'>('description');
+  const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState<StageFormData>({
     title: "",
     description: "",
@@ -109,6 +116,7 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
   }, [formData.start_date, formData.duration]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    resetTimer();
     const { name, value, type } = e.target;
     
     if (name.startsWith("compensation.")) {
@@ -131,6 +139,7 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
   };
 
   const handleSelectChange = (name: string, value: string) => {
+    resetTimer();
     setFormData({
       ...formData,
       [name]: value,
@@ -275,8 +284,35 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
     }
   };
 
+  // Ouvrir le générateur d'IA pour un type de contenu spécifique
+  const openAIGenerator = (contentType: 'description' | 'responsibilities' | 'requirements') => {
+    resetTimer();
+    setCurrentAIContentType(contentType);
+    setShowAIGenerator(true);
+  };
+
+  // Gérer le contenu généré par l'IA
+  const handleGeneratedContent = (content: string, type: 'description' | 'responsibilities' | 'requirements') => {
+    resetTimer();
+    setFormData({
+      ...formData,
+      [type]: content
+    });
+    toast.success(`${type === 'description' ? 'Description' : type === 'responsibilities' ? 'Responsabilités' : 'Prérequis'} généré(e) avec succès`);
+  };
+
+  // Afficher/masquer l'aperçu formaté
+  const togglePreview = (fieldName: string) => {
+    resetTimer();
+    setShowPreview(prev => !prev);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        resetTimer();
+        if (!open) onClose();
+      }}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Créer une offre de stage</DialogTitle>
@@ -312,22 +348,64 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
               </div>
               
               <div>
-                <Label htmlFor="description">Description complète *</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Décrivez en détail ce stage..."
-                  className="h-24"
-                  required
-                />
+                <div className="flex justify-between items-center mb-1">
+                  <Label htmlFor="description">Description complète *</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs flex items-center gap-1"
+                      onClick={() => togglePreview('description')}
+                    >
+                      <MessageSquareText className="h-3.5 w-3.5" />
+                      {showPreview ? 'Éditer' : 'Aperçu'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs flex items-center gap-1 text-primary"
+                      onClick={() => openAIGenerator('description')}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      IA
+                    </Button>
+                  </div>
+                </div>
+                {showPreview ? (
+                  <div className="border rounded-md p-3 h-24 overflow-y-auto bg-white">
+                    <FormattedText text={formData.description} highlightKeywords={true} />
+                  </div>
+                ) : (
+                  <Textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder="Décrivez en détail ce stage..."
+                    className="h-24"
+                    required
+                  />
+                )}
               </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="requirements">Prérequis</Label>
+                <div className="flex justify-between items-center mb-1">
+                  <Label htmlFor="requirements">Prérequis</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs flex items-center gap-1 text-primary"
+                    onClick={() => openAIGenerator('requirements')}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Générer avec l'IA
+                  </Button>
+                </div>
                 <Textarea
                   id="requirements"
                   name="requirements"
@@ -339,7 +417,19 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
               </div>
               
               <div>
-                <Label htmlFor="responsibilities">Responsabilités</Label>
+                <div className="flex justify-between items-center mb-1">
+                  <Label htmlFor="responsibilities">Responsabilités</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs flex items-center gap-1 text-primary"
+                    onClick={() => openAIGenerator('responsibilities')}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Générer avec l'IA
+                  </Button>
+                </div>
                 <Textarea
                   id="responsibilities"
                   name="responsibilities"
@@ -684,5 +774,15 @@ export function AddStageForm({ isOpen, onClose, entrepriseId, onSuccess }: AddSt
         </form>
       </DialogContent>
     </Dialog>
+
+      {/* Générateur de contenu IA */}
+      <AIStageGenerator
+        isOpen={showAIGenerator}
+        onClose={() => setShowAIGenerator(false)}
+        onGenerated={handleGeneratedContent}
+        contentType={currentAIContentType}
+        initialPrompt={formData.title}
+      />
+    </>
   );
 }
