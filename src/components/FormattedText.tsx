@@ -43,8 +43,11 @@ export const FormattedText: React.FC<FormattedTextProps> = ({
 
   // Traiter le texte pour détecter les différents formats
   const processText = () => {
-    // Diviser le texte en paragraphes
-    const paragraphs = text.split(/\n\s*\n/);
+    // Préserver les sauts de ligne simples en les convertissant en <br>
+    const textWithLineBreaks = text.replace(/(?<!\n)\n(?!\n)/g, '<br />');
+    
+    // Diviser le texte en paragraphes (séparés par des doubles sauts de ligne)
+    const paragraphs = textWithLineBreaks.split(/\n\s*\n/);
     
     return paragraphs.map((paragraph, index) => {
       // Vérifier si le paragraphe est une liste
@@ -94,7 +97,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({
   };
 
   return (
-    <div className={cn("text-gray-700 leading-relaxed", className)}>
+    <div className={cn("text-gray-700 leading-relaxed whitespace-pre-line", className)}>
       {processText()}
     </div>
   );

@@ -36,8 +36,9 @@ const plans = [
   },
   {
     name: "Premium",
-    price: "5000 FCFA/mois",
+    price: "1000 FCFA/an",
     description: "Pour les stagiaires ambitieux",
+    yearlyPrice: "1000 FCFA/an",
     icon: Crown,
     features: [
       "Tout du plan Gratuit",
@@ -49,6 +50,7 @@ const plans = [
       "Badges de compétences",
       "Statistiques de profil",
       "Support prioritaire",
+      "Rédaction CV par nos experts",
     ],
     buttonText: "Devenir Premium",
     popular: true,
@@ -56,8 +58,9 @@ const plans = [
   },
   {
     name: "Business",
-    price: "10000 FCFA/mois",
+    price: "5000 FCFA/an",
     description: "Pour les professionnels",
+    yearlyPrice: "5000 FCFA/an",
     icon: Zap,
     features: [
       "Tout du plan Premium",
@@ -68,6 +71,7 @@ const plans = [
       "Formations premium",
       "Réseau d'alumni",
       "Opportunités VIP",
+      "Conseil juridique du cabinet d'avocats",
     ],
     buttonText: "Contacter les ventes",
     popular: false,
@@ -134,6 +138,9 @@ export default function Abonnement() {
 
               <div className="mb-8">
                 <p className="text-3xl font-bold">{plan.price}</p>
+                {plan.yearlyPrice && (
+                  <p className="text-lg font-medium mt-1">ou {plan.yearlyPrice}</p>
+                )}
                 {plan.savings && (
                   <p className="text-sm text-primary mt-2">{plan.savings}</p>
                 )}

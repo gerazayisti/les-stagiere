@@ -50,7 +50,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { CVAnalysisResult, MotivationLetterAnalysisResult } from '@/lib/aiHelpers';
-import { useSessionTimeout } from '@/contexts/SessionTimeoutContext';
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
 export const EntrepriseCandidatures: React.FC = () => {
   const { user } = useAuth();
@@ -322,8 +322,8 @@ export const EntrepriseCandidatures: React.FC = () => {
       });
       
       // Récupérer les URLs des documents
-      const cvUrl = detailedCandidature.cv_url;
-      const letterUrl = detailedCandidature.lettre_motivation_url;
+      const cvUrl = detailedCandidature.cv?.[0]?.file_url;
+      const letterUrl = detailedCandidature.lettre?.[0]?.file_url;
       
       // Récupérer le contenu des documents (simulé pour l'instant)
       if (cvUrl) {
