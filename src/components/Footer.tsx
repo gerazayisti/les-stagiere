@@ -1,91 +1,68 @@
 import { Link } from "react-router-dom";
+import { Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-muted py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* About */}
-          <div>
-            <h3 className="text-lg font-bold text-foreground mb-4">Les Stagiaires - Your First Step</h3>
-            <p className="text-muted-foreground">
-              Votre plateforme de référence pour les stages et l'emploi. Connectez-vous avec les meilleurs talents et entreprises.
-            </p>
-          </div>
-
-          {/* Navigation */}
-          <div>
-            <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">Navigation</h4>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/stages" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Offres
-                </Link>
-              </li>
-              <li>
-                <Link to="/blocs" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Blocs
-                </Link>
-              </li>
-              <li>
-                <Link to="/abonnement" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Abonnement
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Resources */}
-          <div>
-            <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">Ressources</h4>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/guide" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Guide des études
-                </Link>
-              </li>
-              <li>
-                <Link to="/blog" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="text-muted-foreground hover:text-foreground transition-colors">
-                  FAQ
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">Contact</h4>
-            <ul className="space-y-2 text-muted-foreground">
-              <li>Email : lesstagiairescameroun@gmail.com</li>
-              <li>Téléphone : 683 254 667 / 695 961 130 / 682 833 334</li>
-              <li>Adresse : Happi - Yaoundé, Cameroun</li>
-            </ul>
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900 text-white relative overflow-hidden">
+      <div className="absolute inset-0 bg-[url('/footer-bg.webp')] bg-cover bg-center opacity-10"></div>
+      <div className="relative max-w-7xl mx-auto text-center space-y-8 z-10">
+        {/* Call-to-Action section content, removed for brevity as it's not the actual footer */}
+        <h2
+          className="text-4xl font-extrabold max-w-2xl mx-auto leading-tight"
+        >
+          Ne manquez jamais les actualités emploi, Prêt à commencer ?
+        </h2>
+        <div
+          className="flex justify-center mt-8"
+        >
+          <div className="flex w-full max-w-md bg-white rounded-full p-1 shadow-lg">
+            <input
+              type="email"
+              placeholder="Entrez votre e-mail"
+              className="flex-grow py-3 px-6 rounded-l-full outline-none text-gray-800"
+            />
+            <button className="bg-yellow-400 text-white px-6 py-3 rounded-full font-semibold hover:bg-yellow-500 transition-colors">S'abonner</button>
           </div>
         </div>
 
-        {/* Legal */}
-        <div className="mt-12 pt-8 border-t border-border">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-muted-foreground text-sm">
-              {new Date().getFullYear()} Les Stagiaires. Tous droits réservés.
-            </p>
-            <div className="flex gap-4 mt-4 md:mt-0">
-              <Link to="/mentions-legales" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Mentions légales
-              </Link>
-              <Link to="/confidentialite" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Politique de confidentialité
-              </Link>
+        {/* Footer Navigation & Socials */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 text-left mt-16 pt-8 border-t border-gray-700">
+          <div className="col-span-full md:col-span-1">
+            <h3 className="text-xl font-bold mb-4">Les Stagiaires</h3>
+            <p className="text-gray-400 text-sm">© 2004 All Rights Reserved by Les Stagiaires</p>
+          </div>
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Chercheurs d'emploi</h4>
+            <ul className="space-y-2 text-gray-400 text-sm">
+              <li><Link to="/browse-jobs" className="hover:text-white transition-colors">Parcourir les offres</Link></li>
+              <li><Link to="/browse-candidates" className="hover:text-white transition-colors">Parcourir les candidats</Link></li>
+              <li><Link to="/blog-news" className="hover:text-white transition-colors">Blog & Actualités</Link></li>
+              <li><Link to="/faq" className="hover:text-white transition-colors">Questions fréquentes</Link></li>
+              <li><Link to="/job-alerts" className="hover:text-white transition-colors">Alertes emploi</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Employeurs</h4>
+            <ul className="space-y-2 text-gray-400 text-sm">
+              <li><Link to="/all-employer" className="hover:text-white transition-colors">Tous les employeurs</Link></li>
+              <li><Link to="/browse-job" className="hover:text-white transition-colors">Parcourir les emplois</Link></li>
+              <li><Link to="/job-alert-employer" className="hover:text-white transition-colors">Alerte emploi</Link></li>
+              <li><Link to="/faq-employer" className="hover:text-white transition-colors">Questions fréquentes</Link></li>
+              <li><Link to="/job-packages" className="hover:text-white transition-colors">Forfaits Emploi</Link></li>
+            </ul>
+          </div>
+          <div className="md:col-span-1 lg:text-right">
+            <h4 className="text-lg font-semibold mb-4">Suivez-nous</h4>
+            <div className="flex justify-center md:justify-end gap-4 text-gray-400">
+              <a href="#" className="hover:text-white transition-colors"><Facebook className="w-6 h-6" /></a>
+              <a href="#" className="hover:text-white transition-colors"><Twitter className="w-6 h-6" /></a>
+              <a href="#" className="hover:text-white transition-colors"><Instagram className="w-6 h-6" /></a>
+              <a href="#" className="hover:text-white transition-colors"><Linkedin className="w-6 h-6" /></a>
             </div>
           </div>
         </div>
       </div>
-    </footer>
+    </section>
   );
 };
 

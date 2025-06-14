@@ -102,55 +102,62 @@ export default function Navigation() {
   }, [user, userRole, isAuthenticated, loading]);
 
   return (
-    <nav className="fixed w-full bg-background/95 backdrop-blur-sm z-50 border-b border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center">
-              <span className="text-xl font-display font-bold text-foreground">
-                Les Stagiaires
-              </span>
+    <nav className="fixed w-full flex justify-center items-center py-4 z-50 bg-transparent">
+      <div className="w-full max-w-7xl bg-white rounded-full shadow-lg px-6 py-2 flex justify-between items-center h-16">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2">
+          <div className="bg-yellow-400 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold text-xl">J</div>
+          <span className="text-2xl font-bold text-gray-800">Les <span className="text-yellow-500">Stagiaires</span></span>
             </Link>
-          </div>
 
-          <div className="hidden md:flex items-center space-x-8">
+        {/* Menu principal (Desktop) */}
+        <div className="hidden md:flex items-center gap-6 mx-8">
+          <Link to="/" className="hover:text-yellow-500 transition-colors font-medium">Accueil</Link>
             <Link
               to="/stages"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+            className="hover:text-yellow-500 transition-colors font-medium"
             >
               Offres de stages
             </Link>
             <Link
               to="/blog"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+            className="hover:text-yellow-500 transition-colors font-medium"
             >
               Blog
             </Link>
             <Link
               to="/abonnement"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+            className="hover:text-yellow-500 transition-colors font-medium"
             >
               Abonnement
             </Link>
             <Link
               to="/a-propos"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+            className="hover:text-yellow-500 transition-colors font-medium"
             >
               À propos
             </Link>
-            <Link
-              to="/contact"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
+          {/* Sous-menu Contact */}
+          <div className="relative group">
+            <button className="flex items-center gap-1 font-medium hover:text-yellow-500 transition-colors focus:outline-none">
               Contact
-            </Link>
-            
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-lg py-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-20">
+              <Link to="/contact" className="block px-4 py-2 hover:bg-gray-100">Contact principal</Link>
+              {/* Ajoutez d'autres liens de contact ici si nécessaire */}
+              <Link to="/contact-partenaire" className="block px-4 py-2 hover:bg-gray-100">Contact partenaire</Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions à droite (Desktop) */}
+        <div className="flex items-center gap-3">
             <Suspense fallback={<Skeleton className="h-8 w-8" />}>
               <ThemeToggle />
             </Suspense>
-
             {loading ? (
-              <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-10 w-24 rounded-full" />
             ) : isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -230,78 +237,78 @@ export default function Navigation() {
               </DropdownMenu>
             ) : (
               <div className="flex gap-4">
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate("/connexion")}
-                  className="hover:bg-muted/50"
-                >
-                  Connexion
-                </Button>
-                <Button
-                  onClick={() => navigate("/inscription")}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  Inscription
-                </Button>
+              <Link to="/connexion">
+                <button className="h-10 px-6 rounded-full border border-yellow-400 text-yellow-500 font-semibold hover:bg-yellow-50 transition-colors">Se connecter</button>
+              </Link>
+              <Link to="/abonnement">
+                <button className="h-10 px-6 rounded-full bg-yellow-400 text-white font-semibold hover:bg-yellow-500 transition-colors shadow">Abonnement</button>
+              </Link>
               </div>
             )}
-          </div>
-
-          <div className="md:hidden flex items-center gap-4">
-            <Suspense fallback={<Skeleton className="h-6 w-6" />}>
-              <ThemeToggle />
-            </Suspense>
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-foreground"
-            >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
+          {/* Bouton pour menu mobile */}
+          <button className="md:hidden ml-2 p-2 rounded-full hover:bg-gray-100" onClick={() => setIsOpen(!isOpen)}>
+            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
+      {/* Menu mobile déroulant */}
         {isOpen && (
-          <div className="md:hidden py-4">
-            <div className="flex flex-col space-y-4">
+        <div className="fixed top-20 left-0 w-full bg-white shadow-lg rounded-b-3xl z-40 flex flex-col items-center py-6 gap-4 md:hidden animate-fade-in">
+          <Suspense fallback={<Skeleton className="h-6 w-6" />}>
+            <ThemeToggle />
+          </Suspense>
+          <Link to="/" className="font-medium" onClick={() => setIsOpen(false)}>Accueil</Link>
               <Link
                 to="/stages"
-                className="text-muted-foreground hover:text-foreground"
+            className="font-medium"
                 onClick={() => setIsOpen(false)}
               >
                 Offres de stages
               </Link>
               <Link
                 to="/blog"
-                className="text-muted-foreground hover:text-foreground"
+            className="font-medium"
                 onClick={() => setIsOpen(false)}
               >
                 Blog
               </Link>
               <Link
                 to="/abonnement"
-                className="text-muted-foreground hover:text-foreground"
+            className="font-medium"
                 onClick={() => setIsOpen(false)}
               >
                 Abonnement
               </Link>
               <Link
                 to="/a-propos"
-                className="text-muted-foreground hover:text-foreground"
+            className="font-medium"
                 onClick={() => setIsOpen(false)}
               >
                 À propos
               </Link>
               <Link
                 to="/contact"
-                className="text-muted-foreground hover:text-foreground"
+            className="font-medium"
                 onClick={() => setIsOpen(false)}
               >
                 Contact
               </Link>
-              {isAuthenticated ? (
-                <>
+          <div className="w-full flex justify-center px-4"> {/* Wrapper for buttons and user info in mobile menu */}
+            {!isAuthenticated && (
+              <div className="flex flex-col space-y-2 w-full">
+                <Link to="/connexion" onClick={() => setIsOpen(false)}>
+                  <button className="h-10 px-6 rounded-full border border-yellow-400 text-yellow-500 font-semibold hover:bg-yellow-50 transition-colors w-full">Se connecter</button>
+                </Link>
+                <Link to="/abonnement" onClick={() => setIsOpen(false)}>
+                  <button className="h-10 px-6 rounded-full bg-yellow-400 text-white font-semibold hover:bg-yellow-500 transition-colors w-full">Abonnement</button>
+                </Link>
+              </div>
+            )}
+            {isAuthenticated && (
+              <div className="w-full">
                   <DropdownMenuSeparator />
-                  <div className="px-4 py-2">
+                <div className="px-4 py-2 w-full">
                     <div className="flex items-center space-x-3">
                       <Avatar>
                         <AvatarFallback className="bg-primary/10">
@@ -353,7 +360,7 @@ export default function Navigation() {
                         variant="ghost"
                         className="w-full justify-start"
                         onClick={() => {
-                          navigate("/parametres");
+                        navigate("/settings");
                           setIsOpen(false);
                         }}
                       >
@@ -379,32 +386,11 @@ export default function Navigation() {
                       </Button>
                     </div>
                   </div>
-                </>
-              ) : (
-                <div className="flex flex-col space-y-2 px-4">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      navigate("/connexion");
-                      setIsOpen(false);
-                    }}
-                  >
-                    Connexion
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      navigate("/inscription");
-                      setIsOpen(false);
-                    }}
-                  >
-                    Inscription
-                  </Button>
                 </div>
               )}
             </div>
           </div>
         )}
-      </div>
     </nav>
   );
 }
