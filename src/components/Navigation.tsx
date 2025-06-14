@@ -103,50 +103,41 @@ export default function Navigation() {
 
   return (
     <nav className="fixed w-full flex justify-center items-center py-4 z-50 bg-transparent">
-      <div className="w-full max-w-7xl bg-white rounded-full shadow-lg px-6 py-2 flex justify-between items-center h-16">
+      <div className="w-full max-w-7xl bg-white dark:bg-gray-800 rounded-full shadow-lg px-6 py-2 flex justify-between items-center h-20">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
-          <div className="bg-yellow-400 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold text-xl">J</div>
-          <span className="text-2xl font-bold text-gray-800">Les <span className="text-yellow-500">Stagiaires</span></span>
+          <img 
+            src="/les-stagiere.jpg" 
+            alt="Les Stagiere Logo" 
+            className="w-10 h-10 rounded-full object-cover"
+          />
+          <span className="text-2xl font-bold text-primary hidden md:block">Les <span className="text-secondary">Stagiaires</span></span>
             </Link>
 
         {/* Menu principal (Desktop) */}
         <div className="hidden md:flex items-center gap-6 mx-8">
-          <Link to="/" className="hover:text-yellow-500 transition-colors font-medium">Accueil</Link>
-            <Link
-              to="/stages"
-            className="hover:text-yellow-500 transition-colors font-medium"
-            >
+          <Link to="/" className="hover:text-secondary transition-colors font-medium text-gray-700 dark:text-gray-200">Accueil</Link>
+          <Link to="/stages" className="hover:text-secondary transition-colors font-medium text-gray-700 dark:text-gray-200">
               Offres de stages
             </Link>
-            <Link
-              to="/blog"
-            className="hover:text-yellow-500 transition-colors font-medium"
-            >
+          <Link to="/blog" className="hover:text-secondary transition-colors font-medium text-gray-700 dark:text-gray-200">
               Blog
             </Link>
-            <Link
-              to="/abonnement"
-            className="hover:text-yellow-500 transition-colors font-medium"
-            >
+          <Link to="/abonnement" className="hover:text-secondary transition-colors font-medium text-gray-700 dark:text-gray-200">
               Abonnement
             </Link>
-            <Link
-              to="/a-propos"
-            className="hover:text-yellow-500 transition-colors font-medium"
-            >
+          <Link to="/a-propos" className="hover:text-secondary transition-colors font-medium text-gray-700 dark:text-gray-200">
               À propos
             </Link>
           {/* Sous-menu Contact */}
           <div className="relative group">
-            <button className="flex items-center gap-1 font-medium hover:text-yellow-500 transition-colors focus:outline-none">
+            <button className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-200 hover:text-secondary transition-colors focus:outline-none">
               Contact
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
             </button>
-            <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-lg py-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-20">
-              <Link to="/contact" className="block px-4 py-2 hover:bg-gray-100">Contact principal</Link>
-              {/* Ajoutez d'autres liens de contact ici si nécessaire */}
-              <Link to="/contact-partenaire" className="block px-4 py-2 hover:bg-gray-100">Contact partenaire</Link>
+            <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-20">
+              <Link to="/contact" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200">Contact principal</Link>
+              <Link to="/contact-partenaire" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200">Contact partenaire</Link>
             </div>
           </div>
         </div>
@@ -169,17 +160,17 @@ export default function Navigation() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="w-56"
+                className="w-56 bg-white dark:bg-gray-800"
                   align="end"
                   sideOffset={5}
                 >
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {user?.user_metadata?.name || user?.email}
                       </p>
                       {user?.user_metadata?.name && (
-                        <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                           {user.email}
                         </p>
                       )}
@@ -188,7 +179,7 @@ export default function Navigation() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleProfileClick}
-                    className="cursor-pointer"
+                  className="cursor-pointer text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     Mon profil
                   </DropdownMenuItem>
@@ -198,7 +189,7 @@ export default function Navigation() {
                         navigate("/mes-candidatures");
                         setIsOpen(false);
                       }}
-                      className="cursor-pointer"
+                    className="cursor-pointer text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       Mes candidatures
                     </DropdownMenuItem>
@@ -208,12 +199,12 @@ export default function Navigation() {
                       navigate("/messagerie");
                       setIsOpen(false);
                     }}
-                    className="cursor-pointer"
+                  className="cursor-pointer text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     Messagerie
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/settings">
+                  <Link to="/settings" className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Paramètres</span>
                     </Link>
@@ -221,7 +212,7 @@ export default function Navigation() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleSignOut}
-                    className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 flex items-center"
+                  className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
                     disabled={isSigningOut}
                   >
                     {isSigningOut ? (
@@ -238,156 +229,84 @@ export default function Navigation() {
             ) : (
               <div className="flex gap-4">
               <Link to="/connexion">
-                <button className="h-10 px-6 rounded-full border border-yellow-400 text-yellow-500 font-semibold hover:bg-yellow-50 transition-colors">Se connecter</button>
-              </Link>
-              <Link to="/abonnement">
-                <button className="h-10 px-6 rounded-full bg-yellow-400 text-white font-semibold hover:bg-yellow-500 transition-colors shadow">Abonnement</button>
+                <button className="h-10 px-6 rounded-full border border-primary text-primary font-semibold hover:bg-primary/10 transition-colors dark:border-secondary dark:text-secondary dark:hover:bg-secondary/10">
+                  Se connecter
+                </button>
               </Link>
               </div>
             )}
-          {/* Bouton pour menu mobile */}
-          <button className="md:hidden ml-2 p-2 rounded-full hover:bg-gray-100" onClick={() => setIsOpen(!isOpen)}>
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {/* Menu mobile */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              {isOpen ? <X className="w-6 h-6 text-gray-700 dark:text-gray-200" /> : <Menu className="w-6 h-6 text-gray-700 dark:text-gray-200" />}
             </button>
+          </div>
           </div>
         </div>
 
-      {/* Menu mobile déroulant */}
+      {/* Menu mobile overlay */}
         {isOpen && (
-        <div className="fixed top-20 left-0 w-full bg-white shadow-lg rounded-b-3xl z-40 flex flex-col items-center py-6 gap-4 md:hidden animate-fade-in">
-          <Suspense fallback={<Skeleton className="h-6 w-6" />}>
-            <ThemeToggle />
-          </Suspense>
-          <Link to="/" className="font-medium" onClick={() => setIsOpen(false)}>Accueil</Link>
-              <Link
-                to="/stages"
-            className="font-medium"
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsOpen(false)}>
+          <div className="fixed inset-y-0 right-0 w-64 bg-white dark:bg-gray-800 shadow-lg p-6 transform transition-transform duration-300 ease-in-out">
+            <div className="flex flex-col h-full">
+              <div className="flex justify-between items-center mb-8">
+                <Link to="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
+                  <img 
+                    src="/les-stagiere.jpg" 
+                    alt="Les Stagiere Logo" 
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                  <span className="text-xl font-bold text-primary">Les <span className="text-secondary">Stagiaires</span></span>
+                </Link>
+                <button
                 onClick={() => setIsOpen(false)}
-              >
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-700 dark:text-gray-200" />
+                </button>
+              </div>
+
+              <div className="flex flex-col space-y-4">
+                <Link to="/" className="font-medium text-gray-700 dark:text-gray-200 hover:text-secondary transition-colors" onClick={() => setIsOpen(false)}>
+                  Accueil
+                </Link>
+                <Link to="/stages" className="font-medium text-gray-700 dark:text-gray-200 hover:text-secondary transition-colors" onClick={() => setIsOpen(false)}>
                 Offres de stages
               </Link>
-              <Link
-                to="/blog"
-            className="font-medium"
-                onClick={() => setIsOpen(false)}
-              >
+                <Link to="/blog" className="font-medium text-gray-700 dark:text-gray-200 hover:text-secondary transition-colors" onClick={() => setIsOpen(false)}>
                 Blog
               </Link>
-              <Link
-                to="/abonnement"
-            className="font-medium"
-                onClick={() => setIsOpen(false)}
-              >
+                <Link to="/abonnement" className="font-medium text-gray-700 dark:text-gray-200 hover:text-secondary transition-colors" onClick={() => setIsOpen(false)}>
                 Abonnement
               </Link>
-              <Link
-                to="/a-propos"
-            className="font-medium"
-                onClick={() => setIsOpen(false)}
-              >
+                <Link to="/a-propos" className="font-medium text-gray-700 dark:text-gray-200 hover:text-secondary transition-colors" onClick={() => setIsOpen(false)}>
                 À propos
               </Link>
-              <Link
-                to="/contact"
-            className="font-medium"
-                onClick={() => setIsOpen(false)}
-              >
+                <Link to="/contact" className="font-medium text-gray-700 dark:text-gray-200 hover:text-secondary transition-colors" onClick={() => setIsOpen(false)}>
                 Contact
               </Link>
-          <div className="w-full flex justify-center px-4"> {/* Wrapper for buttons and user info in mobile menu */}
-            {!isAuthenticated && (
-              <div className="flex flex-col space-y-2 w-full">
-                <Link to="/connexion" onClick={() => setIsOpen(false)}>
-                  <button className="h-10 px-6 rounded-full border border-yellow-400 text-yellow-500 font-semibold hover:bg-yellow-50 transition-colors w-full">Se connecter</button>
-                </Link>
-                <Link to="/abonnement" onClick={() => setIsOpen(false)}>
-                  <button className="h-10 px-6 rounded-full bg-yellow-400 text-white font-semibold hover:bg-yellow-500 transition-colors w-full">Abonnement</button>
-                </Link>
-              </div>
-            )}
-            {isAuthenticated && (
-              <div className="w-full">
-                  <DropdownMenuSeparator />
-                <div className="px-4 py-2 w-full">
-                    <div className="flex items-center space-x-3">
-                      <Avatar>
-                        <AvatarFallback className="bg-primary/10">
-                          {getInitials(getUserDisplayName())}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">
-                          {user?.user_metadata?.name || user?.email}
-                        </span>
-                        {user?.user_metadata?.name && (
-                          <span className="text-xs text-muted-foreground">
-                            {user.email}
-                          </span>
-                        )}
                       </div>
-                    </div>
-                    <div className="mt-4 space-y-2">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={handleProfileClick}
-                      >
-                        Mon profil
-                      </Button>
-                      {userRole === 'stagiaire' && (
-                        <Button
-                          variant="ghost"
-                          className="w-full justify-start"
-                          onClick={() => {
-                            navigate("/mes-candidatures");
-                            setIsOpen(false);
-                          }}
-                        >
-                          Mes candidatures
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => {
-                          navigate("/messagerie");
-                          setIsOpen(false);
-                        }}
-                      >
-                        Messagerie
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => {
-                        navigate("/settings");
-                          setIsOpen(false);
-                        }}
-                      >
-                        Paramètres
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 flex items-center"
-                        onClick={() => {
-                          handleSignOut();
-                          setIsOpen(false);
-                        }}
-                        disabled={isSigningOut}
-                      >
-                        {isSigningOut ? (
-                          <span className="animate-pulse">Déconnexion en cours...</span>
-                        ) : (
-                          <>
-                            <LogOut className="w-4 h-4 mr-2" />
-                            Se déconnecter
-                          </>
-                        )}
-                      </Button>
-                    </div>
+
+              <div className="mt-auto">
+                {!isAuthenticated && (
+                  <div className="flex flex-col space-y-2 w-full">
+                    <Link to="/connexion" onClick={() => setIsOpen(false)}>
+                      <button className="h-10 px-6 rounded-full border border-primary text-primary font-semibold hover:bg-primary/10 transition-colors w-full dark:border-secondary dark:text-secondary dark:hover:bg-secondary/10">
+                        Se connecter
+                      </button>
+                    </Link>
+                    <Link to="/abonnement" onClick={() => setIsOpen(false)}>
+                      <button className="h-10 px-6 rounded-full bg-primary text-white font-semibold hover:bg-primary/90 transition-colors w-full">
+                        Abonnement
+                      </button>
+                    </Link>
                   </div>
+                )}
                 </div>
-              )}
+            </div>
             </div>
           </div>
         )}
