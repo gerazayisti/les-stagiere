@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useCandidatures } from '@/hooks/useCandidatures';
 import { PostulerModal } from '@/components/candidatures/PostulerModal';
@@ -28,6 +29,7 @@ interface Stage {
     amount: number;
     currency: string;
   };
+  match_score?: number;
 }
 
 const OffresStages = () => {
@@ -37,12 +39,43 @@ const OffresStages = () => {
   const [locationFilter, setLocationFilter] = useState('');
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [isPostulerModalOpen, setIsPostulerModalOpen] = useState(false);
+  const [isIARecommended, setIsIARecommended] = useState(false);
   const { user } = useAuth();
   const { createCandidature } = useCandidatures();
 
   useEffect(() => {
-    fetchStages();
-  }, []);
+    if (isIARecommended && user) {
+      fetchRecommendedStages();
+    } else {
+      fetchStages();
+    }
+  }, [isIARecommended, user]);
+
+  const fetchRecommendedStages = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc('get_recommended_stages', {
+        p_stagiaire_id: user?.id,
+        match_threshold: 0.50
+      });
+
+      if (error) throw error;
+      
+      const formattedStages = (data || []).map((s: any) => ({
+        ...s,
+        entreprises: {
+          name: s.entreprise_name,
+          logo_url: s.entreprise_logo_url,
+        }
+      }));
+      setStages(formattedStages);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des recommandations IA:', error);
+      toast.error('Impossible de charger les recommandations.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchStages = async () => {
     try {
@@ -133,6 +166,17 @@ const OffresStages = () => {
                 <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
             </div>
+            {user && (user.user_metadata?.account_type === 'candidat' || user.user_metadata?.role === 'stagiaire') && (
+              <div className="mt-4 flex justify-end">
+                <Button 
+                  onClick={() => setIsIARecommended(!isIARecommended)}
+                  variant={isIARecommended ? "default" : "outline"}
+                  className={`transition-all ${isIARecommended ? 'bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-0' : ''}`}
+                >
+                  ✨ {isIARecommended ? 'Mode IA Activé' : 'Recommandé pour moi (IA)'}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -141,9 +185,14 @@ const OffresStages = () => {
           {/* Liste des stages */}
           <div className="md:col-span-1 space-y-4">
             {loading ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-                <p className="mt-2 text-gray-600">Chargement des stages...</p>
+              <div className="space-y-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                    <Skeleton className="h-6 w-3/4 mb-3" />
+                    <Skeleton className="h-4 w-1/2 mb-2" />
+                    <Skeleton className="h-4 w-1/3" />
+                  </div>
+                ))}
               </div>
             ) : filteredStages.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg shadow-sm">
@@ -163,6 +212,11 @@ const OffresStages = () => {
                   `}
                 >
                   <h3 className="text-lg font-semibold">{stage.title}</h3>
+                  {stage.match_score !== undefined && (
+                    <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white mt-2 mb-1 border-0">
+                      🔥 Match: {Math.round(stage.match_score * 100)}%
+                    </Badge>
+                  )}
                   <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                     <Building2 size={16} />
                     <span>{stage.entreprises?.name || 'Entreprise'}</span>

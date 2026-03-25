@@ -1,12 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
-
-// Modèle standard pour les analyses simples
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-// Modèle plus avancé pour l'analyse de documents
-const proModel = genAI.getGenerativeModel({ model: 'gemini-2.0-pro' });
+import { supabase } from '@/lib/supabase';
 
 export type StageType = 'temps_plein' | 'temps_partiel' | 'alternance' | 'remote';
 
@@ -34,12 +26,16 @@ export interface MotivationLetterAnalysisResult {
 }
 
 export const extractSkillsFromText = async (text: string): Promise<string[]> => {
-  console.log('Extracting skills from text:', text);
+  console.log('Extracting skills from text via Edge Function:', text);
   try {
-    const prompt = `Extrait les compétences techniques et non techniques mentionnées dans le texte suivant. Retourne uniquement une liste de compétences séparées par des virgules : ${text}`;
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const skills = response.text().split(',').map(skill => skill.trim());
+    const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+      body: { action: 'extractSkills', payload: { text } }
+    });
+    
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    
+    const skills = data.result.split(',').map((skill: string) => skill.trim());
     console.log('Extracted skills:', skills);
     return skills;
   } catch (error) {
@@ -49,12 +45,16 @@ export const extractSkillsFromText = async (text: string): Promise<string[]> => 
 };
 
 export const deduceEducationLevelFromText = async (text: string): Promise<string> => {
-  console.log('Deducing education level from text:', text);
+  console.log('Deducing education level from text via Edge Function:', text);
   try {
-    const prompt = `Déduis le niveau d'éducation requis à partir du texte suivant. Retourne uniquement le niveau d'éducation : ${text}`;
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const educationLevel = response.text();
+    const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+      body: { action: 'deduceEducationLevel', payload: { text } }
+    });
+    
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    
+    const educationLevel = data.result;
     console.log('Deduced education level:', educationLevel);
     return educationLevel;
   } catch (error) {
@@ -66,10 +66,14 @@ export const deduceEducationLevelFromText = async (text: string): Promise<string
 export const estimateCompensationAmount = async (type: StageType, location: string): Promise<number> => {
   console.log('Estimating compensation for:', type, location);
   try {
-    const prompt = `Estime une compensation raisonnable pour un stage de type ${type} à ${location}. Retourne uniquement un montant numérique : ${type} ${location}`;
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const compensationAmount = parseFloat(response.text());
+    const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+      body: { action: 'estimateCompensation', payload: { type, location } }
+    });
+    
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    
+    const compensationAmount = parseFloat(data.result);
     console.log('Estimated compensation:', compensationAmount);
     return compensationAmount;
   } catch (error) {
@@ -90,36 +94,16 @@ export const analyzeCV = async (
   jobDescription: string,
   requiredSkills: string[]
 ): Promise<CVAnalysisResult> => {
-  console.log('Analyzing CV against job description');
+  console.log('Analyzing CV against job description via Edge Function');
   try {
-    const prompt = `
-    Analyse ce CV par rapport à cette description de poste et ces compétences requises.
+    const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+      body: { action: 'analyzeCV', payload: { cvText, jobDescription, requiredSkills } }
+    });
     
-    # CV
-    ${cvText}
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
     
-    # Description du poste
-    ${jobDescription}
-    
-    # Compétences requises
-    ${requiredSkills.join(', ')}
-    
-    Réponds au format JSON structuré comme suit :
-    {
-      "matchScore": (score global de correspondance de 0 à 100),
-      "matchedSkills": [liste des compétences correspondantes],
-      "missingSkills": [liste des compétences requises manquantes],
-      "keyStrengths": [3-5 points forts du candidat],
-      "suggestions": "suggestions pour l'entretien",
-      "educationMatch": (true/false - le candidat a-t-il le niveau d'éducation requis),
-      "experienceRelevance": (pertinence de l'expérience de 0 à 100),
-      "overallAssessment": "évaluation globale en 2-3 phrases"
-    }
-    `;
-
-    const result = await proModel.generateContent(prompt);
-    const response = await result.response;
-    const analysisText = response.text();
+    const analysisText = data.result;
     
     // Extraire la partie JSON de la réponse
     const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
@@ -155,34 +139,16 @@ export const analyzeMotivationLetter = async (
   letterText: string,
   jobDescription: string
 ): Promise<MotivationLetterAnalysisResult> => {
-  console.log('Analyzing motivation letter');
+  console.log('Analyzing motivation letter via Edge Function');
   try {
-    const prompt = `
-    Analyse cette lettre de motivation par rapport à cette description de poste.
+    const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+      body: { action: 'analyzeMotivationLetter', payload: { letterText, jobDescription } }
+    });
     
-    # Lettre de motivation
-    ${letterText}
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
     
-    # Description du poste
-    ${jobDescription}
-    
-    Réponds au format JSON structuré comme suit :
-    {
-      "clarity": (clarté de la lettre de 0 à 100),
-      "relevance": (pertinence par rapport au poste de 0 à 100),
-      "enthusiasm": (niveau d'enthousiasme de 0 à 100),
-      "personalTouch": (personnalisation de 0 à 100),
-      "grammar": (qualité grammaticale de 0 à 100),
-      "overallScore": (score global de 0 à 100),
-      "strengths": [3-5 points forts de la lettre],
-      "weaknesses": [3-5 points faibles de la lettre],
-      "summary": "résumé de l'analyse en 2-3 phrases"
-    }
-    `;
-
-    const result = await proModel.generateContent(prompt);
-    const response = await result.response;
-    const analysisText = response.text();
+    const analysisText = data.result;
     
     // Extraire la partie JSON de la réponse
     const jsonMatch = analysisText.match(/\{[\s\S]*\}/);

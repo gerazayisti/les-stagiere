@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EditEntrepriseDialog } from '@/components/profile/EditEntrepriseDialog';
 import { EntrepriseCandidatures } from '@/components/candidatures/EntrepriseCandidatures';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
+import { EntrepriseAnalytics } from '@/components/profile/EntrepriseAnalytics';
 
 // Fonction de mise en cache améliorée
 const cacheCompanyProfile = (id: string, data: any) => {
@@ -199,7 +200,6 @@ export default function ProfilEntreprise() {
     setIsStageDetailsModalOpen(false);
   };
 
-  // Rendu d'un squelette pendant le chargement des données de base
   if (!headerLoaded) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -259,12 +259,15 @@ export default function ProfilEntreprise() {
       />
       
       <Tabs defaultValue="about" value={activeTab} onValueChange={setActiveTab} className="mt-8">
-        <TabsList className="grid grid-cols-4 mb-8">
-          <TabsTrigger value="about">À propos</TabsTrigger>
-          <TabsTrigger value="offers">Offres de stage</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommandations</TabsTrigger>
+        <TabsList className="flex flex-wrap w-full mb-8 bg-muted/50 p-1 rounded-lg">
+          <TabsTrigger value="about" className="flex-1">À propos</TabsTrigger>
+          <TabsTrigger value="offers" className="flex-1">Offres</TabsTrigger>
+          <TabsTrigger value="recommendations" className="flex-1">Recommandations</TabsTrigger>
           {isCurrentUser && (
-            <TabsTrigger value="candidatures">Candidatures</TabsTrigger>
+            <>
+              <TabsTrigger value="candidatures" className="flex-1">Candidatures</TabsTrigger>
+              <TabsTrigger value="analytics" className="flex-1">Analytics</TabsTrigger>
+            </>
           )}
         </TabsList>
         <TabsContent value="about">
@@ -338,9 +341,14 @@ export default function ProfilEntreprise() {
           />
         </TabsContent>
         {isCurrentUser && (
-          <TabsContent value="candidatures">
-            <EntrepriseCandidatures />
-          </TabsContent>
+          <>
+            <TabsContent value="candidatures">
+              <EntrepriseCandidatures />
+            </TabsContent>
+            <TabsContent value="analytics">
+              <EntrepriseAnalytics entrepriseId={entreprise.id} />
+            </TabsContent>
+          </>
         )}
       </Tabs>
       

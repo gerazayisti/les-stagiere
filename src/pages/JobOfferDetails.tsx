@@ -8,6 +8,7 @@ import { PostulerModal } from '@/components/candidatures/PostulerModal';
 import { MapPin, Briefcase, Calendar, Clock, DollarSign, Building2, ExternalLink, Users2, LineChart, Award, Bookmark, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Stage {
   id: string;
@@ -238,8 +239,55 @@ const JobOfferDetails = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-12">
+        <div className="bg-white dark:bg-gray-800 shadow-sm pt-28 pb-8 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-6 w-full">
+              <Skeleton className="w-20 h-20 rounded-full flex-shrink-0" />
+              <div className="w-full max-w-lg space-y-3">
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-6 w-1/2" />
+                <div className="flex gap-4 mt-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </div>
+            </div>
+            <Skeleton className="h-12 w-48 rounded-lg" />
+          </div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 space-y-6">
+            <div className="flex gap-4 border-b pb-4">
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-8 w-32" />
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          </div>
+          
+          <div className="lg:col-span-1 space-y-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+              <Skeleton className="h-6 w-1/2 mb-6" />
+              <div className="space-y-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="flex gap-3 items-center">
+                    <Skeleton className="h-5 w-5 rounded-full" />
+                    <Skeleton className="h-5 w-3/4" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

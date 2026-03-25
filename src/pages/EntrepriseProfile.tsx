@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Building2, MapPin, Briefcase, Calendar, Clock, DollarSign, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Entreprise {
   id: string;
@@ -102,8 +103,31 @@ const EntrepriseProfile = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-background py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-8">
+            <Skeleton className="w-32 h-32 rounded-lg flex-shrink-0" />
+            <div className="flex-grow w-full space-y-4">
+              <Skeleton className="h-10 w-1/2" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-1/3" />
+            </div>
+          </div>
+          <div className="mt-8">
+            <Skeleton className="h-8 w-64 mb-6" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 space-y-3">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

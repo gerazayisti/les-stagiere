@@ -49,8 +49,9 @@ import { FormattedText } from '@/components/FormattedText';
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { CVAnalysisResult, MotivationLetterAnalysisResult } from '@/lib/aiHelpers';
 import { useSessionTimeout } from '@/contexts/SessionTimeoutContext';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import { StageContractDocument } from '@/components/profile/StageContractPDF';
 
 export const EntrepriseCandidatures: React.FC = () => {
   const { user } = useAuth();
@@ -452,6 +453,33 @@ export const EntrepriseCandidatures: React.FC = () => {
                                   Rejeter
                                 </Button>
                               </>
+                            )}
+                            {candidature.status === 'accepted' && (
+                              <PDFDownloadLink
+                                document={
+                                  <StageContractDocument 
+                                    entrepriseName={user?.user_metadata?.name || 'L\'Entreprise'}
+                                    stagiaireName={candidature.stagiaires?.name || 'Le Stagiaire'}
+                                    stageTitle={stage.title || 'Mission de stage'}
+                                    duration={stage.duration || 'Durée indéterminée'}
+                                    startDate={stage.start_date ? format(new Date(stage.start_date), 'dd/MM/yyyy') : 'Date à définir'}
+                                    location={stage.location || 'Sur site'}
+                                  />
+                                }
+                                fileName={`Contrat_${candidature.stagiaires?.name?.replace(/\s+/g, '') || 'Stage'}.pdf`}
+                              >
+                                {({ loading }) => (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                                    disabled={loading}
+                                  >
+                                    <Download className="mr-2 h-4 w-4" />
+                                    {loading ? '...' : 'Contrat PDF'}
+                                  </Button>
+                                )}
+                              </PDFDownloadLink>
                             )}
                           </div>
                         </TableCell>
