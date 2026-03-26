@@ -9,12 +9,17 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  build: {
+    chunkSizeWarningLimit: 5000, // Suppression de l'avertissement de taille
+  },
   plugins: [
     react(),
-    mode === 'development',
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'og-image.png'],
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5000000, // Augmenté à 5MB pour tolérer les gros bundles react-pdf/gemini
+      },
       manifest: {
         name: 'Les Stagiaires',
         short_name: 'Stagiaires',
