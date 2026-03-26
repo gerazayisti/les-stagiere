@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import Footer from "@/components/Footer";
 import { Article } from "@/components/Article";
 import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Animations
 const slideUp = {
@@ -66,6 +67,15 @@ const Index = () => {
   const [premiumCandidates, setPremiumCandidates] = useState<Stagiaire[]>([]);
   const [totalStagiairesCount, setTotalStagiairesCount] = useState<number>(0);
   const [allStagiairesForAvatarsDisplay, setAllStagiairesForAvatarsDisplay] = useState<Stagiaire[]>([]);
+  const [viewMode, setViewMode] = useState<'candidat' | 'entreprise'>('candidat');
+  const [isSwitching, setIsSwitching] = useState(false);
+
+  const handleToggleView = (mode: 'candidat' | 'entreprise') => {
+    if (viewMode === mode) return;
+    setIsSwitching(true);
+    setViewMode(mode);
+    setTimeout(() => setIsSwitching(false), 500); // Animation duration
+  };
 
   useEffect(() => {
     fetchJobListings();
@@ -226,23 +236,31 @@ const Index = () => {
         <div className="absolute inset-0 bg-[url('/les-stagiere.jpg')] bg-cover bg-center opacity-30"></div>
         <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center items-center text-center">
           
-          <motion.h1 
+          <motion.div 
             initial="hidden"
             animate="visible"
             variants={slideUp}
             transition={{ duration: 0.5 }}
-            className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white max-w-4xl leading-tight"
+            className="flex items-center justify-center min-h-[140px]"
           >
-            Débloquez votre potentiel <br /> Trouvez le stage idéal
-          </motion.h1>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white max-w-4xl leading-tight text-center">
+              {viewMode === 'candidat' ? (
+                <>Débloquez votre potentiel <br /> Trouvez le stage idéal</>
+              ) : (
+                <>Découvrez les meilleurs talents <br /> Trouvez le stagiaire idéal</>
+              )}
+            </h1>
+          </motion.div>
           <motion.p 
             initial="hidden"
             animate="visible"
             variants={slideUp}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-6 text-xl text-white max-w-3xl"
+            className="mt-6 text-xl text-white max-w-3xl min-h-[60px]"
           >
-            Connectez-vous avec les meilleures entreprises et démarrez votre carrière dès aujourd'hui.
+            {viewMode === 'candidat' 
+              ? "Connectez-vous avec les meilleures entreprises et démarrez votre carrière."
+              : "Recherchez parmi des milliers de profils qualifiés et boostez votre équipe."}
           </motion.p>
           <motion.div 
             initial="hidden"
@@ -252,11 +270,25 @@ const Index = () => {
             className="mt-10 flex flex-col items-center w-full max-w-3xl"
           >
             {/* les Stagiere Toggle */}
-            <div className="flex bg-white dark:bg-gray-800 p-1 rounded-full mb-6 shadow-lg">
-              <button className="px-6 py-2 rounded-full font-semibold text-white bg-primary hover:bg-primary/90 transition-colors">
+            <div className="flex bg-white dark:bg-gray-800 p-1 rounded-full mb-6 shadow-lg relative">
+              <button 
+                onClick={() => handleToggleView('candidat')}
+                className={`px-6 py-2 rounded-full font-semibold transition-all duration-300 relative ${
+                  viewMode === 'candidat' 
+                    ? 'text-white bg-primary shadow-md scale-105 z-10' 
+                    : 'text-gray-700 dark:text-gray-200 hover:text-primary z-0'
+                }`}
+              >
                 Je suis un Candidat
               </button>
-              <button className="px-6 py-2 rounded-full font-semibold text-gray-700 dark:text-gray-200 hover:text-secondary transition-colors">
+              <button 
+                onClick={() => handleToggleView('entreprise')}
+                className={`px-6 py-2 rounded-full font-semibold transition-all duration-300 relative ${
+                  viewMode === 'entreprise' 
+                    ? 'text-white bg-secondary shadow-md scale-105 z-10' 
+                    : 'text-gray-700 dark:text-gray-200 hover:text-secondary z-0'
+                }`}
+              >
                 Je suis une Entreprise
               </button>
             </div>
@@ -335,9 +367,30 @@ const Index = () => {
             </Link>
           </div>
 
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          {isSwitching || loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-6 h-[260px] flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center mb-4">
+                      <Skeleton className="w-12 h-12 rounded-lg" />
+                      <div className="ml-4 space-y-2 w-full">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-5/6" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-6 w-14 rounded-full" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : jobListings.length === 0 ? (
             <div className="text-center py-12">
@@ -522,7 +575,28 @@ const Index = () => {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {premiumCandidates.map((candidate) => (
+            {isSwitching || loading ? (
+              [1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 h-[380px] flex flex-col justify-between">
+                  <div className="flex items-center mb-4">
+                    <Skeleton className="w-16 h-16 rounded-full shrink-0" />
+                    <div className="ml-4 space-y-2 w-full">
+                      <Skeleton className="h-5 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+                  </div>
+                  <div className="space-y-3 mt-4">
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-6">
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-10 w-full rounded-lg mt-auto" />
+                </div>
+              ))
+            ) : premiumCandidates.map((candidate) => (
               <div key={candidate.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="p-6">
                   <div className="flex items-center mb-4">
