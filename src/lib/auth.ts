@@ -185,51 +185,9 @@ export const auth = {
         }
 
         if (authData?.user) {
-          try {
-            await supabase.from('users').upsert({
-              id: authData.user.id,
-              email: email,
-              role: role,
-              name: name,
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'id' });
-            
-            if (role === 'stagiaire') {
-              await supabase.from('stagiaires').upsert({
-                id: authData.user.id,
-                name,
-                avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
-                skills: [],
-                languages: [],
-                preferred_locations: [],
-                preferred_domains: [],
-                created_at: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD for date type
-                last_active: new Date().toISOString()
-              }, { onConflict: 'id' });
-            } else if (role === 'entreprise') {
-              await supabase.from('entreprises').upsert({
-                id: authData.user.id,
-                name,
-                logo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.charAt(0))}&size=128&background=random&format=.png`,
-                benefits: [],
-                created_at: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD for date type
-                rating: 0,
-                number_of_reviews: 0
-              }, { onConflict: 'id' });
-            }
-            
-            localStorage.setItem(`userProfile_${authData.user.id}`, JSON.stringify({
-              id: authData.user.id,
-              email: authData.user.email,
-              role,
-              name
-            }));
-          } catch (profileError: any) {
-            console.error("Erreur lors de la création du profil:", profileError);
-            console.error("Détails:", profileError.details, profileError.hint);
-          }
+          // L'insertion dans users, stagiaires et entreprises est désormais 
+          // gérée nativement et de manière sécurisée par le Trigger Supabase "handle_new_user" 
+          // situé en base de données. Plus besoin de le faire côté client !
           
           toast.success("Inscription réussie", {
             description: "Vérifiez votre email pour confirmer votre compte"
