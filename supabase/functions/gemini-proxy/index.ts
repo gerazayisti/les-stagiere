@@ -22,8 +22,10 @@ serve(async (req) => {
 
     const genAI = new GoogleGenerativeAI(apiKey)
     
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-    const proModel = genAI.getGenerativeModel({ model: 'gemini-2.0-pro' })
+    // Utiliser gemini-1.5 pour une meilleure compatibilité et disponibilité
+    console.log(`Action: ${action} - Using Gemini 1.5 Models`)
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const proModel = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
     
     let resultText = ''
 

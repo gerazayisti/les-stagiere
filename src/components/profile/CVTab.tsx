@@ -20,8 +20,11 @@ export interface Document {
   name: string;
   file_url: string;
   type: string;
-  created_at: string;
-  version: number;
+  upload_date: string;
+  metadata?: {
+    version?: number;
+    [key: string]: any;
+  };
 }
 
 export interface CVTabProps {
@@ -50,7 +53,7 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
         .from('documents')
         .select('*')
         .eq('stagiaire_id', userId)
-        .order('created_at', { ascending: false });
+        .order('upload_date', { ascending: false });
         
       if (error) {
         throw error;
@@ -154,8 +157,8 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
             name: file.name, // Keep original filename for display
             file_url: publicUrl,
             type: 'cv',
-            version: 1,
-            created_at: new Date().toISOString()
+            metadata: { version: 1 },
+            upload_date: new Date().toISOString()
           });
         
         if (docError) throw docError;
@@ -230,8 +233,8 @@ export function CVTab({ userId, isPremium = false }: CVTabProps) {
                 <div>
                   <h4 className="font-medium">{doc.name}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Ajouté le {new Date(doc.created_at).toLocaleDateString()}
-                    {doc.version && <Badge variant="outline" className="ml-2">v{doc.version}</Badge>}
+                    Ajouté le {new Date(doc.upload_date || new Date()).toLocaleDateString()}
+                    {doc.metadata?.version && <Badge variant="outline" className="ml-2">v{doc.metadata.version}</Badge>}
                   </p>
                 </div>
               </div>

@@ -166,7 +166,7 @@ export function RegistrationForm({
             Inscription en cours...
           </>
         ) : (
-          "S'inscrire"
+          "Continuer"
         )}
       </Button>
     </form>

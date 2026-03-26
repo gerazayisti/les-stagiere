@@ -5,7 +5,10 @@ import Index from "@/pages/Index";
 import StagiaireProfile from "@/pages/StagiaireProfile";
 import JobOfferDetails from "@/pages/JobOfferDetails";
 import EntrepriseProfile from "@/pages/EntrepriseProfile";
+import OffresStages from "@/pages/OffresStages";
+import Candidates from "@/pages/Candidates";
 import Navigation from "@/components/Navigation";
+
 import Footer from "@/components/Footer";
 import { AuthContextProvider } from "@/contexts/AuthContext";
 
@@ -19,7 +22,10 @@ function App() {
             <Route path="/" element={<Index />} />
             <Route path="/stagiaires/:id" element={<StagiaireProfile />} />
             <Route path="/stages/:id" element={<JobOfferDetails />} />
+            <Route path="/stages" element={<OffresStages />} />
+            <Route path="/candidates" element={<Candidates />} />
             <Route path="/entreprises/:id" element={<EntrepriseProfile />} />
+
             {/* Add other routes here as needed */}
           </Routes>
           <Footer />

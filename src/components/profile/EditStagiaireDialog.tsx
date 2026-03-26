@@ -4,10 +4,32 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { supabase } from "@/lib/supabase";
 import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { 
+  Loader2, 
+  User2, 
+  GraduationCap, 
+  Settings, 
+  Link as LinkIcon, 
+  ChevronRight, 
+  ChevronLeft, 
+  Save,
+  MapPin,
+  Phone,
+  Globe,
+  Github,
+  Linkedin,
+  Languages,
+  Wrench,
+  Briefcase
+} from "lucide-react";
 import {
   Form,
   FormControl,
@@ -29,7 +51,14 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { TagSelector } from "@/components/ui/tag-selector";
+import { 
+  SKILLS_OPTIONS, 
+  LANGUAGES_OPTIONS, 
+  DOMAINS_OPTIONS, 
+  LOCATIONS_OPTIONS 
+} from "../registration/registrationOptions";
 
 const formSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
@@ -57,6 +86,15 @@ interface EditStagiaireDialogProps {
   onClose?: () => void;
 }
 
+function SectionLabel({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+  return (
+    <span className="flex items-center gap-1.5 text-sm font-semibold">
+      <Icon className="h-4 w-4 text-primary" />
+      {text}
+    </span>
+  );
+}
+
 export function EditStagiaireDialog({ 
   stagiaireId, 
   initialData,
@@ -66,23 +104,21 @@ export function EditStagiaireDialog({
 }: EditStagiaireDialogProps) {
   const [open, setOpen] = useState(externalOpen || false);
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState(1);
+  const totalSteps = 4;
+
   const [skills, setSkills] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [preferredLocations, setPreferredLocations] = useState<string[]>([]);
   const [preferredDomains, setPreferredDomains] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState("");
-  const [languageInput, setLanguageInput] = useState("");
-  const [locationInput, setLocationInput] = useState("");
-  const [domainInput, setDomainInput] = useState("");
 
-  // Update open state when external state changes
   useEffect(() => {
     if (externalOpen !== undefined) {
       setOpen(externalOpen);
+      if (externalOpen) setStep(1);
     }
   }, [externalOpen]);
 
-  // Handle dialog close
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen && onClose) {
@@ -95,10 +131,9 @@ export function EditStagiaireDialog({
     defaultValues: initialData,
   });
 
-  // Fetch stagiaire data including arrays
   useEffect(() => {
     async function fetchStagiaireData() {
-      if (!stagiaireId) return;
+      if (!stagiaireId || !open) return;
       
       try {
         const { data, error } = await supabase
@@ -121,19 +156,17 @@ export function EditStagiaireDialog({
     }
     
     fetchStagiaireData();
-  }, [stagiaireId]);
+  }, [stagiaireId, open]);
 
   const onSubmit = async (values: StagiaireFormValues) => {
     setIsLoading(true);
     try {
-      // Prepare social media object
       const social_links = {
         website: values.website || "",
         github: values.github || "",
         linkedin: values.linkedin || "",
       };
 
-      // Prepare update data
       const updateData = {
         ...values,
         skills,
@@ -141,11 +174,14 @@ export function EditStagiaireDialog({
         preferred_locations: preferredLocations,
         preferred_domains: preferredDomains,
         social_links,
+        updated_at: new Date().toISOString(),
       };
 
-      // Remove individual social fields from the update data
+      // @ts-ignore - Clean up redundant fields
       delete updateData.website;
+      // @ts-ignore
       delete updateData.github;
+      // @ts-ignore
       delete updateData.linkedin;
 
       const { error } = await supabase
@@ -158,421 +194,318 @@ export function EditStagiaireDialog({
       toast.success("Profil mis à jour avec succès");
       handleOpenChange(false);
       if (onSuccess) onSuccess();
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour du profil:", error);
-      toast.error("Erreur lors de la mise à jour du profil");
+    } catch (error: any) {
+      console.error("Erreur mise à jour profil:", error);
+      toast.error(`Erreur : ${error.message || "Impossible de mettre à jour le profil"}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle skills
-  const addSkill = () => {
-    if (skillInput.trim() && !skills.includes(skillInput.trim())) {
-      setSkills([...skills, skillInput.trim()]);
-      setSkillInput("");
-    }
+  const nextStep = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setStep(prev => Math.min(prev + 1, totalSteps));
   };
-
-  const removeSkill = (skill: string) => {
-    setSkills(skills.filter(s => s !== skill));
-  };
-
-  // Handle languages
-  const addLanguage = () => {
-    if (languageInput.trim() && !languages.includes(languageInput.trim())) {
-      setLanguages([...languages, languageInput.trim()]);
-      setLanguageInput("");
-    }
-  };
-
-  const removeLanguage = (language: string) => {
-    setLanguages(languages.filter(l => l !== language));
-  };
-
-  // Handle preferred locations
-  const addLocation = () => {
-    if (locationInput.trim() && !preferredLocations.includes(locationInput.trim())) {
-      setPreferredLocations([...preferredLocations, locationInput.trim()]);
-      setLocationInput("");
-    }
-  };
-
-  const removeLocation = (location: string) => {
-    setPreferredLocations(preferredLocations.filter(l => l !== location));
-  };
-
-  // Handle preferred domains
-  const addDomain = () => {
-    if (domainInput.trim() && !preferredDomains.includes(domainInput.trim())) {
-      setPreferredDomains([...preferredDomains, domainInput.trim()]);
-      setDomainInput("");
-    }
-  };
-
-  const removeDomain = (domain: string) => {
-    setPreferredDomains(preferredDomains.filter(d => d !== domain));
+  
+  const prevStep = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setStep(prev => Math.max(prev - 1, 1));
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md md:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Modifier le profil</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="max-h-[80vh]">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Titre professionnel</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Ex: Développeur Web Junior" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="bio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bio</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        placeholder="Parlez de vous et de vos compétences..."
-                        className="resize-none"
-                        rows={4}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Localisation</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Ex: Paris, France" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="education"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Formation</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        placeholder="Décrivez votre parcours académique..."
-                        className="resize-none"
-                        rows={3}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Téléphone</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="tel" placeholder="+33 6 12 34 56 78" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="disponibility"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Disponibilité</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez votre disponibilité" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="immediate">Immédiate</SelectItem>
-                        <SelectItem value="upcoming">Prochainement</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="experience_years"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Années d'expérience</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="number" min="0" max="50" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="search_status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Statut de recherche</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez votre statut" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="active">Recherche active</SelectItem>
-                        <SelectItem value="passive">Recherche passive</SelectItem>
-                        <SelectItem value="not_searching">Pas en recherche</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Compétences */}
-              <div className="space-y-2">
-                <FormLabel>Compétences</FormLabel>
-                <div className="flex gap-2">
-                  <Input
-                    value={skillInput}
-                    onChange={(e) => setSkillInput(e.target.value)}
-                    placeholder="Ajouter une compétence"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addSkill();
-                      }
-                    }}
-                  />
-                  <Button type="button" onClick={addSkill}>Ajouter</Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {skills.map((skill) => (
-                    <Badge key={skill} variant="secondary" className="flex items-center gap-1">
-                      {skill}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => removeSkill(skill)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Langues */}
-              <div className="space-y-2">
-                <FormLabel>Langues</FormLabel>
-                <div className="flex gap-2">
-                  <Input
-                    value={languageInput}
-                    onChange={(e) => setLanguageInput(e.target.value)}
-                    placeholder="Ajouter une langue"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addLanguage();
-                      }
-                    }}
-                  />
-                  <Button type="button" onClick={addLanguage}>Ajouter</Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {languages.map((language) => (
-                    <Badge key={language} variant="secondary" className="flex items-center gap-1">
-                      {language}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => removeLanguage(language)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Lieux préférés */}
-              <div className="space-y-2">
-                <FormLabel>Lieux préférés</FormLabel>
-                <div className="flex gap-2">
-                  <Input
-                    value={locationInput}
-                    onChange={(e) => setLocationInput(e.target.value)}
-                    placeholder="Ajouter un lieu"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addLocation();
-                      }
-                    }}
-                  />
-                  <Button type="button" onClick={addLocation}>Ajouter</Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {preferredLocations.map((location) => (
-                    <Badge key={location} variant="secondary" className="flex items-center gap-1">
-                      {location}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => removeLocation(location)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Domaines préférés */}
-              <div className="space-y-2">
-                <FormLabel>Domaines préférés</FormLabel>
-                <div className="flex gap-2">
-                  <Input
-                    value={domainInput}
-                    onChange={(e) => setDomainInput(e.target.value)}
-                    placeholder="Ajouter un domaine"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addDomain();
-                      }
-                    }}
-                  />
-                  <Button type="button" onClick={addDomain}>Ajouter</Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {preferredDomains.map((domain) => (
-                    <Badge key={domain} variant="secondary" className="flex items-center gap-1">
-                      {domain}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => removeDomain(domain)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              <FormField
-                control={form.control}
-                name="website"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Site web</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="https://monsite.com" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="github"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>GitHub</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="https://github.com/username" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="linkedin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>LinkedIn</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="https://linkedin.com/in/username" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="portfolio_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Portfolio</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="https://monportfolio.com" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter className="pt-4">
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enregistrement...
-                    </>
-                  ) : (
-                    "Enregistrer"
+      <DialogContent className="sm:max-w-[600px] gap-0 p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-2">
+          <div className="flex justify-between items-center mb-2">
+            <Badge variant="outline" className="text-xs uppercase tracking-wider font-semibold border-primary/30 text-primary">
+              Profil Stagiaire • Étape {step}/{totalSteps}
+            </Badge>
+            <div className="flex gap-1.5">
+              {[1, 2, 3, 4].map((i) => (
+                <div 
+                  key={i} 
+                  className={cn(
+                    "h-1.5 rounded-full transition-all duration-300",
+                    i === step ? "w-8 bg-primary" : i < step ? "w-4 bg-primary/40" : "w-4 bg-muted"
                   )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </ScrollArea>
+                />
+              ))}
+            </div>
+          </div>
+          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+            {step === 1 && <><User2 className="h-6 w-6 text-primary" /> Identité & Bio</>}
+            {step === 2 && <><GraduationCap className="h-6 w-6 text-primary" /> Formation & Expérience</>}
+            {step === 3 && <><Settings className="h-6 w-6 text-primary" /> Compétences & Préférences</>}
+            {step === 4 && <><LinkIcon className="h-6 w-6 text-primary" /> Liens & Contact</>}
+          </DialogTitle>
+          <DialogDescription>
+            {step === 1 && "Mettez à jour vos informations de base et votre présentation."}
+            {step === 2 && "Partagez votre parcours académique et votre disponibilité."}
+            {step === 3 && "Optimisez votre visibilité en précisant vos technos et lieux favoris."}
+            {step === 4 && "Où les recruteurs peuvent-ils vous trouver en dehors de LesStagiaires ?"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col">
+            <ScrollArea className="max-h-[60vh] px-6 py-4">
+              <div className="space-y-6 pb-4">
+                {/* STEP 1: IDENTITY */}
+                {step === 1 && (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nom complet</FormLabel>
+                          <FormControl>
+                            <Input {...field} className="h-11 shadow-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Titre professionnel</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Ex: Développeur Fullstack React" className="h-11 shadow-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="bio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Votre bio</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Décrivez vos aspirations et ce que vous apportez..."
+                              className="min-h-[120px] shadow-sm resize-none"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {/* STEP 2: EDUCATION */}
+                {step === 2 && (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <FormField
+                      control={form.control}
+                      name="education"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Parcours académique</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Détaillez vos diplômes et certifications..."
+                              className="min-h-[100px] shadow-sm resize-none"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="experience_years"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Expérience (années)</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" min="0" className="h-11 shadow-sm" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="disponibility"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Disponibilité</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="h-11 shadow-sm">
+                                  <SelectValue placeholder="Sélectionnez..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="immediate">Immédiate</SelectItem>
+                                <SelectItem value="upcoming">Prochainement</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 3: SKILLS & PREFS */}
+                {step === 3 && (
+                  <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <TagSelector
+                      label={<SectionLabel icon={Wrench} text="Compétences" />}
+                      placeholder="React, Java, UI Design..."
+                      options={SKILLS_OPTIONS}
+                      selected={skills}
+                      onChange={setSkills}
+                      colorScheme="primary"
+                    />
+
+                    <TagSelector
+                      label={<SectionLabel icon={Languages} text="Langues" />}
+                      placeholder="Français, Anglais..."
+                      options={LANGUAGES_OPTIONS}
+                      selected={languages}
+                      onChange={setLanguages}
+                      colorScheme="primary"
+                    />
+
+                    <TagSelector
+                      label={<SectionLabel icon={MapPin} text="Lieux de prédilection" />}
+                      placeholder="Douala, Yaoundé, Remote..."
+                      options={LOCATIONS_OPTIONS}
+                      selected={preferredLocations}
+                      onChange={setPreferredLocations}
+                      colorScheme="primary"
+                    />
+
+                    <TagSelector
+                      label={<SectionLabel icon={Briefcase} text="Secteurs d'intérêt" />}
+                      placeholder="Finlande, Santé, IA..."
+                      options={DOMAINS_OPTIONS}
+                      selected={preferredDomains}
+                      onChange={setPreferredDomains}
+                      colorScheme="primary"
+                    />
+                  </div>
+                )}
+
+                {/* STEP 4: CONTACT & LINKS */}
+                {step === 4 && (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="location"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Habite à</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Ville, Pays" className="h-11 shadow-sm" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2"><Phone className="h-4 w-4" /> Téléphone</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="tel" className="h-11 shadow-sm" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="space-y-4 mt-2">
+                       <FormField
+                        control={form.control}
+                        name="linkedin"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2 text-[#0A66C2]"><Linkedin className="h-4 w-4" /> LinkedIn</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="https://linkedin.com/in/..." className="h-11 shadow-sm" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="github"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2 text-gray-900 dark:text-gray-100"><Github className="h-4 w-4" /> GitHub</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="https://github.com/..." className="h-11 shadow-sm" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="website"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2"><Globe className="h-4 w-4" /> Portfolio / Site Perso</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="https://mon-site.com" className="h-11 shadow-sm" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            <DialogFooter className="p-6 border-t bg-muted/10 flex flex-row sm:justify-between items-center">
+              <div>
+                {step > 1 ? (
+                  <Button type="button" variant="ghost" onClick={prevStep}>
+                    <ChevronLeft className="mr-2 h-4 w-4" /> Précédent
+                  </Button>
+                ) : (
+                  <Button type="button" variant="ghost" onClick={onClose}>
+                    Annuler
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                {step < totalSteps ? (
+                  <Button type="button" onClick={nextStep} className="px-8 transition-all hover:gap-1.5 active:scale-95">
+                    Suivant <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button type="submit" className="px-8 bg-primary hover:bg-primary/90 shadow-md transition-all active:scale-95" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Enregistrer
+                  </Button>
+                )}
+              </div>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

@@ -303,8 +303,6 @@ export const useCandidatures = () => {
             date_postulation,
             cv_id,
             lettre_motivation_id,
-            cv:documents!candidatures_cv_id_fkey (id, file_url),
-            lettre:documents!candidatures_lettre_motivation_id_fkey (id, file_url),
             note,
             internal_rating,
             stagiaires (
@@ -319,7 +317,10 @@ export const useCandidatures = () => {
         `)
         .eq('entreprise_id', entrepriseId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur Supabase lors de la récupération des candidatures:', error);
+        throw error;
+      }
       
       // Vérifier que les URLs des documents sont bien présentes
       const stagesWithCandidatures = data || [];

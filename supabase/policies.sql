@@ -106,6 +106,18 @@ CREATE POLICY "Insertion de messages publics" ON public.contact_messages
 -- ----------------------------------------------------------------------------
 CREATE POLICY "Enable insert for documents" ON public.documents FOR INSERT WITH CHECK (auth.uid() = stagiaire_id);
 -- Les documents "public" sont accessibles, sinon privé.
-CREATE POLICY "Enable select for own documents" ON public.documents FOR SELECT USING (auth.uid() = stagiaire_id OR is_public = true);
+CREATE POLICY "Enable select for own documents" ON public.documents 
+  FOR SELECT USING (
+    auth.uid() = stagiaire_id 
+    OR 
+    is_public = true
+    OR
+    EXISTS (
+      SELECT 1 FROM public.candidatures c
+      JOIN public.stages s ON c.stage_id = s.id
+      WHERE (c.cv_id = public.documents.id OR c.lettre_motivation_id = public.documents.id)
+      AND s.entreprise_id = auth.uid()
+    )
+  );
 CREATE POLICY "Enable update for own documents" ON public.documents FOR UPDATE USING (auth.uid() = stagiaire_id);
 CREATE POLICY "Enable delete for own documents" ON public.documents FOR DELETE USING (auth.uid() = stagiaire_id);

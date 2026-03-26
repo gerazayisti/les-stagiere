@@ -31,6 +31,8 @@ import EmailConfirmation from "./pages/EmailConfirmation";
 import MentionsLegales from "./pages/MentionsLegales";
 import Confidentialite from "./pages/Confidentialite";
 import MesCandidatures from "./pages/MesCandidatures";
+import Candidates from "./pages/Candidates";
+
 
 // Create a router
 const router = createBrowserRouter([
@@ -127,6 +129,11 @@ const router = createBrowserRouter([
         path: "mes-candidatures",
         element: <MesCandidatures />,
       },
+      {
+        path: "candidates",
+        element: <Candidates />,
+      },
+
     ],
   },
 ]);

@@ -13,6 +13,26 @@ export interface SignUpData {
   password: string;
   role: UserRole;
   name: string;
+  // Shared
+  location?: string;
+  // Stagiaire
+  title?: string;
+  bio?: string;
+  linkedin_url?: string;
+  search_status?: string;
+  disponibility?: string;
+  skills?: string[];
+  preferred_locations?: string[];
+  languages?: string[];
+  preferred_domains?: string[];
+  // Entreprise
+  industry?: string;
+  description?: string;
+  company_culture?: string;
+  size?: string;
+  founded_year?: string;
+  website?: string;
+  benefits?: string[];
 }
 
 export interface SignInData {

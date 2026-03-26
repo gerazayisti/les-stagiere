@@ -69,20 +69,22 @@ export default function ProfilEntreprise() {
   }, [resetTimeout]);
 
   // Fonction de chargement des données de l'entreprise avec optimisation
-  const fetchEnterpriseData = useCallback(async () => {
+  const fetchEnterpriseData = useCallback(async (forceRefresh = false) => {
     if (!id) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      // Vérifier d'abord le cache
-      const cachedProfile = getCachedCompanyProfile(id);
-      if (cachedProfile) {
-        setEntreprise(cachedProfile);
-        setHeaderLoaded(true);
-        setLoading(false);
-        return;
+      // Vérifier d'abord le cache (sauf si forcé)
+      if (!forceRefresh) {
+        const cachedProfile = getCachedCompanyProfile(id);
+        if (cachedProfile) {
+          setEntreprise(cachedProfile);
+          setHeaderLoaded(true);
+          setLoading(false);
+          return;
+        }
       }
 
       // Requête Supabase avec sélection optimisée
@@ -146,7 +148,7 @@ export default function ProfilEntreprise() {
       }
 
       // Rechargement des données après création
-      await fetchEnterpriseData();
+      await fetchEnterpriseData(true);
     } catch (error) {
       console.error('Erreur de création de profil:', error);
       toast.error('Impossible de créer le profil');
@@ -239,7 +241,9 @@ export default function ProfilEntreprise() {
   };
   
   const handleProfileUpdate = () => {
-    fetchEnterpriseData();
+    // Supprimer du cache avant de recharger
+    localStorage.removeItem(`cachedCompanyProfile_${id}`);
+    fetchEnterpriseData(true);
   };
   
   return (

@@ -3,13 +3,19 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Users2, Building2, TrendingUp, Briefcase, Search, UserPlus, MapPin, ChevronLeft, ChevronRight, Clock, Calendar, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
+
+
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import Footer from "@/components/Footer";
 import { Article } from "@/components/Article";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StagiaireDetailModal } from "@/components/profile/StagiaireDetailModal";
+
 
 // Animations
 const slideUp = {
@@ -69,11 +75,19 @@ const Index = () => {
   const [allStagiairesForAvatarsDisplay, setAllStagiairesForAvatarsDisplay] = useState<Stagiaire[]>([]);
   const [viewMode, setViewMode] = useState<'candidat' | 'entreprise'>('candidat');
   const [isSwitching, setIsSwitching] = useState(false);
+  const [selectedStagiaireId, setSelectedStagiaireId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleToggleView = (mode: 'candidat' | 'entreprise') => {
     if (viewMode === mode) return;
     setIsSwitching(true);
     setViewMode(mode);
+    
+    // Si on passe en mode entreprise, on s'assure d'avoir les données des candidats
+    if (mode === 'entreprise') {
+      fetchStagiairesForAvatarsDisplay();
+    }
+    
     setTimeout(() => setIsSwitching(false), 500); // Animation duration
   };
 
@@ -100,8 +114,9 @@ const Index = () => {
         query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
       }
       if (locationFilter) {
-        query = query.ilike('location', `%{locationFilter}%`);
+        query = query.ilike('location', `%${locationFilter}%`);
       }
+
       if (jobTypeFilter) {
         query = query.eq('type', jobTypeFilter);
       }
@@ -203,7 +218,216 @@ const Index = () => {
     { title: "Gestion de Projet", icon: "briefcase", count: 0 },
   ];
 
-  // Données pour les articles de blog
+  const renderJobListings = () => (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+          {viewMode === 'candidat' ? 'Offres récentes' : 'Dernières opportunités'}
+        </h2>
+        <Link to="/stages" className="text-secondary hover:text-secondary/80 font-semibold flex items-center">
+          Voir tout <ArrowRight className="ml-2" size={16} />
+        </Link>
+      </div>
+
+      {isSwitching || loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-6 h-[260px] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center mb-4">
+                  <Skeleton className="w-12 h-12 rounded-lg" />
+                  <div className="ml-4 space-y-2 w-full">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-6 w-14 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : jobListings.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600 dark:text-gray-400">Aucune offre trouvée</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {jobListings.map((job) => (
+            <Link
+              key={job.id}
+              to={`/stages/${job.id}`}
+              className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow block"
+            >
+              <div className="p-6">
+                <div className="flex items-center mb-4">
+                  {job.entreprises?.logo_url ? (
+                    <img
+                      src={job.entreprises.logo_url}
+                      alt={job.entreprises.name}
+                      className="w-12 h-12 rounded-lg object-cover cursor-pointer"
+                      onClick={(e) => { e.preventDefault(); handleProfileClick(job.entreprise_id, 'entreprise'); }}
+                    />
+                  ) : (
+                    <div 
+                      className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center cursor-pointer"
+                      onClick={(e) => { e.preventDefault(); handleProfileClick(job.entreprise_id, 'entreprise'); }}
+                    >
+                      <Building2 className="text-primary" size={24} />
+                    </div>
+                  )}
+                  <div className="ml-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{job.title}</h3>
+                    <p 
+                      className="text-gray-600 dark:text-gray-400 cursor-pointer hover:text-secondary"
+                      onClick={(e) => { e.preventDefault(); handleProfileClick(job.entreprise_id, 'entreprise'); }}
+                    >
+                      {job.entreprises?.name}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center text-gray-600 dark:text-gray-400">
+                    <MapPin size={16} className="mr-2" />
+                    {job.location}
+                  </div>
+                  <div className="flex items-center text-gray-600 dark:text-gray-400">
+                    <Clock size={16} className="mr-2" />
+                    {job.duration}
+                  </div>
+                  <div className="flex items-center text-gray-600 dark:text-gray-400">
+                    <Calendar size={16} className="mr-2" />
+                    {new Date(job.start_date).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {job.required_skills?.slice(0, 3).map((skill, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 text-sm bg-primary/10 text-primary rounded-full"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPremiumCandidates = () => (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+          {viewMode === 'entreprise' ? 'Stagiaires recommandés' : 'Candidats à la une'}
+        </h2>
+        <Link to="/candidates" className="text-secondary hover:text-secondary/80 font-semibold flex items-center">
+          Voir tout <ArrowRight className="ml-2" size={16} />
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {isSwitching || loading ? (
+          [1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 h-[380px] flex flex-col justify-between">
+              <div className="flex items-center mb-4">
+                <Skeleton className="w-16 h-16 rounded-full shrink-0" />
+                <div className="ml-4 space-y-2 w-full">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              </div>
+              <div className="space-y-3 mt-4">
+                <Skeleton className="h-4 w-full" />
+              </div>
+              <div className="flex flex-wrap gap-2 mt-6">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-10 w-full rounded-lg mt-auto" />
+            </div>
+          ))
+        ) : premiumCandidates.map((candidate) => (
+          <div key={candidate.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all group border border-transparent hover:border-primary/20">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                {candidate.avatar_url ? (
+                  <Link 
+                    to={`/stagiaires/${candidate.id}`}
+                    className="w-16 h-16 rounded-full object-cover shadow-md block cursor-pointer overflow-hidden border-2 border-muted group-hover:border-primary/50 transition-colors"
+                  >
+                    <img
+                      src={candidate.avatar_url}
+                      alt={candidate.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </Link>
+                ) : (
+                  <Link 
+                    to={`/stagiaires/${candidate.id}`}
+                    className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-md cursor-pointer group-hover:bg-primary/20 transition-colors"
+                  >
+                    <UserPlus size={32} />
+                  </Link>
+                )}
+                <div className="ml-4">
+                  <h3 
+                    className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-secondary"
+                  >
+                    <Link 
+                      to={`/stagiaires/${candidate.id}`}
+                      className="block"
+                    >
+                      {candidate.name}
+                    </Link>
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-1">{candidate.title}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                  <MapPin size={14} className="mr-1.5" />
+                  {candidate.location}
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-1.5 h-[64px] overflow-hidden">
+                {candidate.skills?.slice(0, 4).map((skill, index) => (
+                  <Badge
+                    key={index}
+                    variant="secondary"
+                    className="px-2 py-0 text-[10px] bg-primary/5 text-primary border-primary/10"
+                  >
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+              <Button
+                onClick={() => {
+                  setSelectedStagiaireId(candidate.id);
+                  setIsModalOpen(true);
+                }}
+                className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary/90 text-white transition-all shadow-sm hover:shadow-md active:scale-95 text-sm font-medium"
+              >
+                Voir le profil
+              </Button>
+
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const blogPosts = [
     {
       id: 1,
@@ -321,11 +545,17 @@ const Index = () => {
                 </select>
               </div>
               <button 
-                className="w-full md:w-auto bg-secondary text-white px-6 py-3 rounded-full font-semibold hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2"
-                onClick={fetchJobListings}
+                className="w-full md:w-auto bg-secondary text-white px-6 py-3 rounded-full font-semibold hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2 shadow-md active:scale-95"
+                onClick={() => {
+                  if (viewMode === 'entreprise') {
+                    navigate('/candidates');
+                  } else {
+                    fetchJobListings();
+                  }
+                }}
               >
                 <Search className="w-5 h-5" /> 
-                <span>Rechercher</span>
+                <span>{viewMode === 'entreprise' ? 'Trouver des Stagiaires' : 'Rechercher'}</span>
               </button>
             </div>
 
@@ -357,318 +587,44 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Job Listings Section */}
-      <section className="py-16 bg-white dark:bg-gray-800 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Offres récentes</h2>
-            <Link to="/stages" className="text-secondary hover:text-secondary/80 font-semibold flex items-center">
-              Voir tout <ArrowRight className="ml-2" size={16} />
-            </Link>
-          </div>
+      <StagiaireDetailModal 
+        stagiaireId={selectedStagiaireId}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onContact={(id) => {
+          navigate(`/messagerie?user=${id}`);
+          setIsModalOpen(false);
+        }}
+      />
 
-          {isSwitching || loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-6 h-[260px] flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center mb-4">
-                      <Skeleton className="w-12 h-12 rounded-lg" />
-                      <div className="ml-4 space-y-2 w-full">
-                        <Skeleton className="h-5 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-5/6" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <Skeleton className="h-6 w-16 rounded-full" />
-                    <Skeleton className="h-6 w-20 rounded-full" />
-                    <Skeleton className="h-6 w-14 rounded-full" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : jobListings.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600 dark:text-gray-400">Aucune offre trouvée</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {jobListings.map((job) => (
-                <Link
-                  key={job.id}
-                  to={`/stages/${job.id}`}
-                  className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow block"
-                >
-                  <div className="p-6">
-                    <div className="flex items-center mb-4">
-                      {job.entreprises?.logo_url ? (
-                        <img
-                          src={job.entreprises.logo_url}
-                          alt={job.entreprises.name}
-                          className="w-12 h-12 rounded-lg object-cover cursor-pointer"
-                          onClick={(e) => { e.preventDefault(); handleProfileClick(job.entreprise_id, 'entreprise'); }}
-                        />
-                      ) : (
-                        <div 
-                          className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center cursor-pointer"
-                          onClick={(e) => { e.preventDefault(); handleProfileClick(job.entreprise_id, 'entreprise'); }}
-                        >
-                          <Building2 className="text-primary" size={24} />
-                        </div>
-                      )}
-                      <div className="ml-4">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{job.title}</h3>
-                        <p 
-                          className="text-gray-600 dark:text-gray-400 cursor-pointer hover:text-secondary"
-                          onClick={(e) => { e.preventDefault(); handleProfileClick(job.entreprise_id, 'entreprise'); }}
-                        >
-                          {job.entreprises?.name}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-gray-600 dark:text-gray-400">
-                        <MapPin size={16} className="mr-2" />
-                        {job.location}
-                      </div>
-                      <div className="flex items-center text-gray-600 dark:text-gray-400">
-                        <Clock size={16} className="mr-2" />
-                        {job.duration}
-                      </div>
-                      <div className="flex items-center text-gray-600 dark:text-gray-400">
-                        <Calendar size={16} className="mr-2" />
-                        {new Date(job.start_date).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {job.required_skills?.slice(0, 3).map((skill, index) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 text-sm bg-primary/10 text-primary rounded-full"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
 
-      {/* Explore Nearby Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <motion.h2
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={slideUp}
-            transition={{ duration: 0.5 }}
-            className="text-3xl font-semibold text-foreground mb-2"
-          >
-            Explorez à proximité avec Les Stagiaires
-          </motion.h2>
-          <motion.p
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={slideUp}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-muted-foreground mb-12"
-          >
-            À la recherche de votre prochaine opportunité de carrière ? Ne cherchez plus.
-          </motion.p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {nearbyLocationsFromDB.map((locationItem) => {
-              // Déterminer l'image de fond en fonction du lieu
-              let backgroundImage = '/default-city.webp';
-              const locationLower = locationItem.location.toLowerCase();
-              
-              if (locationLower.includes('maroua')) {
-                backgroundImage = '/ville/maroua.jpeg';
-              } else if (locationLower.includes('buea')) {
-                backgroundImage = '/ville/Buea.jpg';
-              } else if (locationLower.includes('douala')) {
-                backgroundImage = '/ville/Douala.jpg';
-              } else if (locationLower.includes('yaounde') || locationLower.includes('yaoundé')) {
-                backgroundImage = '/ville/yaounde.jpg';
-              }
-
-              return (
-          <motion.div
-                  key={locationItem.location}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={slideUp}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  className="relative w-full h-64 rounded-lg overflow-hidden shadow-md group"
-                >
-                  <img
-                    src={backgroundImage}
-                    alt={locationItem.location}
-                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-4 text-white">
-                    <h3 className="text-xl font-semibold mb-1">{locationItem.location}</h3>
-                    <p className="text-sm text-gray-200">{locationItem.count} Offres</p>
-            </div>
-          </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-      
-      {/* Stats Section */}
-      <section className="py-16 bg-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div>
-              <h3 className="text-4xl font-bold text-white mb-2">{totalStagiairesCount}+</h3>
-              <p className="text-white/80">Stagiaires inscrits</p>
-            </div>
-            <div>
-              <h3 className="text-4xl font-bold text-white mb-2">{jobListings.length}+</h3>
-              <p className="text-white/80">Offres disponibles</p>
-            </div>
-            <div>
-              <h3 className="text-4xl font-bold text-white mb-2">{nearbyLocationsFromDB.length}+</h3>
-              <p className="text-white/80">Villes couvertes</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Catégories Populaires Section */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Catégories populaires</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {popularCategories.map((category, index) => (
-                  <CategoryCard
-                key={index}
-                    title={category.title}
-                icon={category.icon}
-                    count={category.count}
-                  />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Premium Candidates Section */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Candidats à la une</h2>
-            <Link to="/candidates" className="text-secondary hover:text-secondary/80 font-semibold flex items-center">
-              Voir tout <ArrowRight className="ml-2" size={16} />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {isSwitching || loading ? (
-              [1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 h-[380px] flex flex-col justify-between">
-                  <div className="flex items-center mb-4">
-                    <Skeleton className="w-16 h-16 rounded-full shrink-0" />
-                    <div className="ml-4 space-y-2 w-full">
-                      <Skeleton className="h-5 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                    </div>
-                  </div>
-                  <div className="space-y-3 mt-4">
-                    <Skeleton className="h-4 w-full" />
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-6">
-                    <Skeleton className="h-6 w-16 rounded-full" />
-                    <Skeleton className="h-6 w-20 rounded-full" />
-                    <Skeleton className="h-6 w-16 rounded-full" />
-                  </div>
-                  <Skeleton className="h-10 w-full rounded-lg mt-auto" />
-                </div>
-              ))
-            ) : premiumCandidates.map((candidate) => (
-              <div key={candidate.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="p-6">
-                  <div className="flex items-center mb-4">
-                    {candidate.avatar_url ? (
-                      <a 
-                        href={`/stagiaires/${candidate.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-16 h-16 rounded-full object-cover shadow-md block cursor-pointer"
-                      >
-                        <img
-                          src={candidate.avatar_url}
-                          alt={candidate.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </a>
-                    ) : (
-                      <a 
-                        href={`/stagiaires/${candidate.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-md cursor-pointer"
-                      >
-                        <UserPlus size={32} />
-                      </a>
-                    )}
-                    <div className="ml-4">
-                      <h3 
-                        className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-secondary"
-                      >
-                        <a 
-                          href={`/stagiaires/${candidate.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block"
-                        >
-                          {candidate.name}
-                        </a>
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-400">{candidate.title}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center text-gray-600 dark:text-gray-400">
-                      <MapPin size={16} className="mr-2" />
-                      {candidate.location}
-                    </div>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {candidate.skills?.slice(0, 3).map((skill, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 text-sm bg-primary/10 text-primary rounded-full"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                  <a
-                    href={`/stagiaires/${candidate.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-6 block w-full text-center py-2 px-4 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors"
-                  >
-                    Voir le profil
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Dynamic Content Section */}
+      <div className="flex flex-col">
+        {/* Render Sections in different order based on viewMode */}
+        {viewMode === 'candidat' ? (
+          <>
+            {/* Job Listings First for Candidates */}
+            <section className="py-16 bg-white dark:bg-gray-800 mt-12 order-1">
+              {renderJobListings()}
+            </section>
+            
+            <section className="py-16 bg-gray-50 dark:bg-gray-900 order-2">
+              {renderPremiumCandidates()}
+            </section>
+          </>
+        ) : (
+          <>
+            {/* Candidates First for Entreprises */}
+            <section className="py-16 bg-white dark:bg-gray-800 mt-12 order-1">
+              {renderPremiumCandidates()}
+            </section>
+            
+            <section className="py-16 bg-gray-50 dark:bg-gray-900 order-2">
+              {renderJobListings()}
+            </section>
+          </>
+        )}
+      </div>
 
       {/* Blog Section */}
       <section className="py-16 bg-white dark:bg-gray-800">

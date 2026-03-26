@@ -106,7 +106,13 @@ export const auth = {
   },
 
   async signUp(data: SignUpData): Promise<AuthResponse> {
-    const { email, password, role, name } = data;
+    const { 
+      email, password, role, name, location,
+      title, bio, linkedin_url, search_status, disponibility,
+      skills, preferred_locations, languages, preferred_domains,
+      industry, description, company_culture, size, founded_year, website,
+      benefits 
+    } = data;
     
     try {
       if (!email || !password || !role || !name) {
@@ -154,7 +160,27 @@ export const auth = {
           options: {
             data: {
               name,
-              role
+              role,
+              // Shared
+              location: location || null,
+              // Stagiaire fields
+              title: title || null,
+              bio: bio || null,
+              linkedin_url: linkedin_url || null,
+              search_status: search_status || null,
+              disponibility: disponibility || null,
+              skills: skills || [],
+              preferred_locations: preferred_locations || [],
+              languages: languages || [],
+              preferred_domains: preferred_domains || [],
+              // Entreprise fields
+              industry: industry || null,
+              description: description || null,
+              company_culture: company_culture || null,
+              size: size || null,
+              founded_year: founded_year || null,
+              website: website || null,
+              benefits: benefits || [],
             },
             emailRedirectTo: redirectUrl
           }

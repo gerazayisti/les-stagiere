@@ -18,25 +18,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Database } from '@/lib/supabase';
 import { supabase } from '@/lib/supabase';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, Sparkles, MessageSquareText, Eye, Edit, Wand2 } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { ListSkills } from '../ListSkills';
+import { Calendar } from "@/components/ui/calendar";
+import { 
+  CalendarIcon, 
+  Sparkles, 
+  Eye, 
+  Edit, 
+  Wand2, 
+  ChevronRight, 
+  ChevronLeft, 
+  Save,
+  MapPin,
+  Coins,
+  GraduationCap,
+  Wrench,
+  Info,
+  Briefcase
+} from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import { extractSkillsFromText, deduceEducationLevelFromText, estimateCompensationAmount } from '@/lib/aiHelpers';
 import FormattedText from "@/components/FormattedText";
 import { useSessionTimeout } from "@/contexts/SessionTimeoutContext";
 import AIStageGenerator from "@/components/AIStageGenerator";
+import { TagSelector } from "@/components/ui/tag-selector";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { SKILLS_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '../registration/registrationOptions';
 
 type StageType = 'temps_plein' | 'temps_partiel' | 'alternance' | 'remote';
 type StageStatus = 'draft' | 'active' | 'expired';
-
 type Stage = Database['public']['Tables']['stages']['Row'];
 
 interface AddInternshipOfferFormProps {
@@ -46,642 +70,359 @@ interface AddInternshipOfferFormProps {
   initialData?: Stage;
 }
 
+function SectionLabel({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+  return (
+    <span className="flex items-center gap-1.5 text-sm font-semibold">
+      <Icon className="h-4 w-4 text-primary" />
+      {text}
+    </span>
+  );
+}
+
 export default function AddInternshipOfferForm({
   isOpen,
   onClose,
   onSave,
   initialData,
 }: AddInternshipOfferFormProps) {
-  const [description, setDescription] = useState(initialData?.description || "");
+  const [step, setStep] = useState(1);
+  const totalSteps = 4;
   const [loading, setLoading] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
-  const [previewTab, setPreviewTab] = useState<"data" | "post">("data");
   const { resetTimer } = useSessionTimeout();
-  
-  // États pour les générateurs IA
-  const [showAIGenerator, setShowAIGenerator] = useState(false);
-  const [currentAIContentType, setCurrentAIContentType] = useState<'description' | 'responsibilities' | 'requirements'>('description');
 
-  const [startDate] = useState<Date>(new Date());
-  const [requiredSkills, setRequiredSkills] = useState<[string, ...string[]]>([""]);
-  const [preferredSkills, setPreferredSkills] = useState<[string, ...string[]]>([""]);
-  const [educationLevel, setEducationLevel] = useState("");
-  const [compensationAmount, setCompensationAmount] = useState(0);
+  // Form State
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [location, setLocation] = useState(initialData?.location || "");
+  const [type, setType] = useState<StageType>(initialData?.type as StageType || "temps_plein");
+  const [educationLevel, setEducationLevel] = useState(initialData?.education_level || "");
+  const [compensationAmount, setCompensationAmount] = useState(0); // Compensation parsing from JSONB
   const [compensationCurrency, setCompensationCurrency] = useState("XAF");
-  const [type, setType] = useState<StageType>("temps_plein");
-  const [location, setLocation] = useState("");
-  const [status, setStatus] = useState<StageStatus>("active");
-  const [isFeatured, setIsFeatured] = useState(false);
-  const [isUrgent, setIsUrgent] = useState(false);
-  const [deadline, setDeadline] = useState<Date | null>(null);
+  
+  const [requiredSkills, setRequiredSkills] = useState<string[]>(initialData?.required_skills || []);
+  const [preferredSkills, setPreferredSkills] = useState<string[]>(initialData?.preferred_skills || []);
+  
+  const [startDate, setStartDate] = useState<Date | undefined>(initialData?.start_date ? new Date(initialData.start_date) : new Date());
+  const [deadline, setDeadline] = useState<Date | undefined>(initialData?.deadline ? new Date(initialData.deadline) : undefined);
+  const [isFeatured, setIsFeatured] = useState(initialData?.is_featured || false);
+  const [isUrgent, setIsUrgent] = useState(initialData?.is_urgent || false);
 
-  // Réinitialiser le timer d'inactivité lors du montage du composant
+  // States for IA
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [previewAI, setPreviewAI] = useState(false);
+
   useEffect(() => {
-    resetTimer();
-    // Réinitialiser le timer d'inactivité lors des interactions utilisateur
-    const handleUserActivity = () => resetTimer();
-    window.addEventListener('click', handleUserActivity);
-    window.addEventListener('keydown', handleUserActivity);
-    window.addEventListener('scroll', handleUserActivity);
-    
-    return () => {
-      window.removeEventListener('click', handleUserActivity);
-      window.removeEventListener('keydown', handleUserActivity);
-      window.removeEventListener('scroll', handleUserActivity);
-    };
-  }, [resetTimer]);
-
-  // Fonction pour ouvrir le générateur IA avec le type de contenu spécifié
-  const openAIGenerator = (contentType: 'description' | 'responsibilities' | 'requirements') => {
-    resetTimer();
-    setCurrentAIContentType(contentType);
-    setShowAIGenerator(true);
-  };
-
-  // Fonction pour gérer le contenu généré par l'IA
-  const handleGeneratedContent = (content: string, type: 'description' | 'responsibilities' | 'requirements') => {
-    resetTimer();
-    if (type === 'description') {
-      setDescription(content);
+    if (isOpen) {
+      setStep(1);
+      resetTimer();
     }
-    // Fermer le générateur IA
-    setShowAIGenerator(false);
-  };
+  }, [isOpen]);
 
-  const handlePreview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    resetTimer();
+  const handleGenerateSuggestions = async () => {
+    if (!description.trim()) {
+      toast.error("Veuillez d'abord saisir une description !");
+      return;
+    }
+
     setLoading(true);
+    toast.loading("L'IA analyse votre offre...", { id: "ai-analyze" });
+    
     try {
-      // Générer des suggestions pour les compétences et autres champs, mais pas les dates
       const skills = await extractSkillsFromText(description);
-      const educationLevel = await deduceEducationLevelFromText(description);
-      const compensationAmount = await estimateCompensationAmount(type, location);
+      const eduLevel = await deduceEducationLevelFromText(description);
+      const estimatedComp = await estimateCompensationAmount(type, location);
 
-      setRequiredSkills(skills as [string, ...string[]]);
-      setPreferredSkills(skills as [string, ...string[]]);
-      setEducationLevel(educationLevel);
-      setCompensationAmount(compensationAmount);
-      
-      // Ne pas passer en mode prévisualisation automatiquement
-      // Afficher un message de succès à la place
-      toast.success("Suggestions générées avec succès");
+      setRequiredSkills(skills);
+      setEducationLevel(eduLevel);
+      if (!compensationAmount) setCompensationAmount(estimatedComp);
+      if (!title) {
+         const firstLine = description.split('\n')[0].trim();
+         setTitle(firstLine.slice(0, 100));
+      }
+
+      toast.success("Suggestions générées !", { id: "ai-analyze" });
+      setStep(2); // Auto-advance to details
     } catch (error) {
-      console.error("Erreur lors de la génération des suggestions:", error);
-      toast.error("Impossible de générer les suggestions");
+      console.error("AI Error:", error);
+      toast.error("Erreur d'analyse IA", { id: "ai-analyze" });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    resetTimer();
+  const handleGeneratedContent = (content: string) => {
+    setDescription(content);
+    setShowAIGenerator(false);
+    toast.success("Description améliorée !");
+  };
+
+  const handleSubmit = async () => {
     setLoading(true);
-
-    // Validation des champs obligatoires
-    if (!description.trim()) {
-      toast.error("La description du stage est obligatoire");
-      setLoading(false);
-      return;
-    }
-
-    if (!location.trim()) {
-      toast.error("Le lieu du stage est obligatoire");
-      setLoading(false);
-      return;
-    }
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("Vous devez être connecté pour créer une offre de stage");
-        setLoading(false);
-        return;
-      }
+      if (!user) throw new Error("Non connecté");
 
-      // Extraction du titre à partir de la première ligne de la description
-      const titleFromDescription = description.split('\n')[0].trim();
-      // Limiter le titre à 255 caractères maximum
-      const limitedTitle = (titleFromDescription || 'Offre de stage sans titre').slice(0, 250);
-      
-      // Limiter la description courte à 255 caractères
-      const shortDescription = description.slice(0, 250);
-      
-      // Limiter la longueur de l'emplacement
-      const limitedLocation = location.slice(0, 250);
-      
-      // Limiter la politique de travail à distance
-      const remotePolicy = (type === 'remote' ? 'Télétravail' : 'Présentiel').slice(0, 250);
-      
-      // Limiter le niveau d'éducation
-      const limitedEducationLevel = (educationLevel || 'Non spécifié').slice(0, 250);
-
-      // Préparer les compétences pour s'assurer qu'elles sont au bon format
-      // et limiter chaque compétence à 250 caractères
-      const cleanRequiredSkills = requiredSkills
-        .filter(skill => skill.trim() !== '')
-        .map(skill => skill.trim().slice(0, 250));
-        
-      const cleanPreferredSkills = preferredSkills
-        .filter(skill => skill.trim() !== '')
-        .map(skill => skill.trim().slice(0, 250));
-
-      // Préparer l'objet compensation en tant que chaîne JSON
-      const compensationObject = {
-        amount: compensationAmount || 0,
-        currency: compensationCurrency || 'XAF',
+      const compensation = JSON.stringify({
+        amount: compensationAmount,
+        currency: compensationCurrency,
         period: 'mois'
-      };
-      
-      // S'assurer que la chaîne JSON ne dépasse pas 255 caractères
-      const compensationJson = JSON.stringify(compensationObject);
-      const limitedCompensationJson = compensationJson.length > 250 
-        ? JSON.stringify({ amount: compensationAmount || 0, currency: 'XAF' })
-        : compensationJson;
-      
-      // Convertir les dates au format ISO
-      const formattedStartDate = startDate ? startDate.toISOString() : null;
-      const formattedDeadline = deadline ? deadline.toISOString() : null;
+      });
 
       const stageData = {
         entreprise_id: user.id,
-        title: limitedTitle,
-        description, // La description complète peut être longue, mais vérifiez que la colonne est de type TEXT
-        short_description: shortDescription,
-        requirements: description, // Vérifiez que cette colonne est de type TEXT
-        responsibilities: description, // Vérifiez que cette colonne est de type TEXT
-        location: limitedLocation,
-        remote_policy: remotePolicy,
+        title: title || description.split('\n')[0].trim().slice(0, 100),
+        description,
+        short_description: description.slice(0, 250),
+        location: location || "Remote",
+        remote_policy: type === 'remote' ? 'Télétravail' : 'Présentiel',
         type,
-        start_date: formattedStartDate,
-        // Stocker la compensation comme une chaîne JSON
-        compensation: limitedCompensationJson,
-        required_skills: cleanRequiredSkills,
-        preferred_skills: cleanPreferredSkills,
-        education_level: limitedEducationLevel,
+        start_date: startDate?.toISOString(),
+        deadline: deadline?.toISOString(),
+        compensation,
+        required_skills: requiredSkills,
+        preferred_skills: preferredSkills,
+        education_level: educationLevel,
         status: 'active',
-        deadline: formattedDeadline,
         is_featured: isFeatured,
         is_urgent: isUrgent,
-        views_count: 0,
-        applications_count: 0
       };
 
-      console.log("Données à insérer:", stageData);
+      const { data, error } = await supabase.from('stages').insert(stageData).select();
+      if (error) throw error;
 
-      const { data, error } = await supabase
-        .from('stages')
-        .insert(stageData)
-        .select();
-
-      if (error) {
-        console.error("Erreur lors de l'insertion de l'offre de stage:", error);
-        // Afficher plus de détails sur l'erreur
-        if (error.details) console.error("Détails de l'erreur:", error.details);
-        if (error.hint) console.error("Indice:", error.hint);
-        if (error.message) console.error("Message:", error.message);
-        
-        toast.error(`Impossible de créer l'offre de stage: ${error.message || 'Erreur inconnue'}`);
-        return;
-      }
-
-      toast.success("Offre de stage créée avec succès");
+      toast.success("Offre publiée avec succès !");
       onSave(data[0]);
       onClose();
-    } catch (error) {
-      console.error("Erreur lors de la soumission du formulaire:", error);
-      // Afficher plus de détails sur l'erreur
-      if (error instanceof Error) {
-        console.error("Message d'erreur:", error.message);
-        toast.error(`Une erreur est survenue: ${error.message}`);
-      } else {
-        toast.error("Une erreur inconnue est survenue");
-      }
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
+  const nextStep = () => setStep(s => Math.min(s + 1, totalSteps));
+  const prevStep = () => setStep(s => Math.max(s - 1, 1));
+
   if (!isOpen) return null;
 
-  if (showPreview) {
-    return (
-      <div className="fixed inset-0 z-50 overflow-auto bg-black/50">
-        <div className="relative w-full max-w-2xl mx-auto mt-10">
-          <Card className="rounded-lg shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl">Prévisualisation de l'offre de stage</CardTitle>
-              <CardDescription>
-                Vérifiez et ajustez les champs remplis automatiquement par l'IA.
-              </CardDescription>
-              <div className="mt-4">
-                <Tabs value={previewTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger 
-                      value="data" 
-                      onClick={() => {
-                        resetTimer();
-                        setPreviewTab("data");
-                      }}
-                    >
-                      Données extraites
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="post" 
-                      onClick={() => {
-                        resetTimer();
-                        setPreviewTab("post");
-                      }}
-                    >
-                      Aperçu du post
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <TabsContent value="data" className="mt-0">
-              <div>
-                <Label>Compétences requises</Label>
-                <Input
-                  type="text"
-                  value={requiredSkills.join(', ')}
-                  onChange={(e) => setRequiredSkills(e.target.value.split(', ') as [string, ...string[]])}
-                />
-              </div>
-              <div>
-                <Label>Compétences préférées</Label>
-                <Input
-                  type="text"
-                  value={preferredSkills.join(', ')}
-                  onChange={(e) => setPreferredSkills(e.target.value.split(', ') as [string, ...string[]])}
-                />
-              </div>
-              <div>
-                <Label>Niveau d'éducation</Label>
-                <Input
-                  type="text"
-                  value={educationLevel}
-                  onChange={(e) => setEducationLevel(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Montant de la compensation</Label>
-                <Input
-                  type="number"
-                  value={compensationAmount}
-                  onChange={(e) => setCompensationAmount(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label>Lieu</Label>
-                <Input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Type de stage</Label>
-                <Select 
-                  value={type} 
-                  onValueChange={(value: StageType) => setType(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez le type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="temps_plein">Temps plein</SelectItem>
-                    <SelectItem value="temps_partiel">Temps partiel</SelectItem>
-                    <SelectItem value="alternance">Alternance</SelectItem>
-                    <SelectItem value="remote">Télétravail</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Date de début</Label>
-                <Calendar
-                  value={startDate}
-                  onChange={(date) => startDate}
-                />
-              </div>
-              <div>
-                <Label>Date limite</Label>
-                <Calendar
-                  value={deadline}
-                  onChange={(date) => setDeadline(date)}
-                />
-              </div>
-              </TabsContent>
-              
-              <TabsContent value="post" className="mt-0">
-                <div className="rounded-lg border overflow-hidden bg-white">
-                  {/* En-tête du post */}
-                  <div className="p-6 border-b">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      {description.split('\n')[0].trim() || "Offre de stage"}
-                    </h2>
-                    <div className="flex flex-wrap gap-3 mb-4">
-                      <span className="inline-flex items-center gap-1 text-sm text-gray-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                          <circle cx="12" cy="10" r="3"/>
-                        </svg>
-                        {location}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-sm text-gray-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                          <line x1="16" x2="16" y1="2" y2="6"/>
-                          <line x1="8" x2="8" y1="2" y2="6"/>
-                          <line x1="3" x2="21" y1="10" y2="10"/>
-                        </svg>
-                        {startDate ? format(startDate, 'dd MMM yyyy') : 'Date à définir'}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-sm text-gray-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10"/>
-                          <polyline points="12 6 12 12 16 14"/>
-                        </svg>
-                        {type === 'temps_plein' ? 'Temps plein' : 
-                         type === 'temps_partiel' ? 'Temps partiel' : 
-                         type === 'alternance' ? 'Alternance' : 'Télétravail'}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-sm font-medium text-primary-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/>
-                          <line x1="2" y1="20" x2="2" y2="20"/>
-                        </svg>
-                        {compensationAmount} {compensationCurrency}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {requiredSkills.filter(s => s.trim()).map((skill, index) => (
-                        <span key={index} className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* Corps du post */}
-                  <div className="p-6">
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold mb-3">Description</h3>
-                      <div className="prose prose-sm max-w-none">
-                        <FormattedText text={description} highlightKeywords={true} />
-                      </div>
-                    </div>
-                    
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold mb-3">Profil recherché</h3>
-                      <ul className="list-disc pl-5 space-y-1">
-                        <li>Niveau d'études : {educationLevel}</li>
-                        {requiredSkills.filter(s => s.trim()).map((skill, index) => (
-                          <li key={index}>{skill}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold mb-3">Informations complémentaires</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Type de contrat</p>
-                          <p>{type === 'temps_plein' ? 'Stage à temps plein' : 
-                              type === 'temps_partiel' ? 'Stage à temps partiel' : 
-                              type === 'alternance' ? 'Alternance' : 'Télétravail'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Lieu</p>
-                          <p>{location}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Date de début</p>
-                          <p>{startDate ? format(startDate, 'dd MMMM yyyy') : 'Date à définir'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Rémunération</p>
-                          <p>{compensationAmount} {compensationCurrency}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-8">
-                      <button className="w-full py-2.5 px-4 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition-colors">
-                        Postuler à cette offre
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    resetTimer();
-                    onClose();
-                  }}
-                >
-                  Annuler
-                </Button>
-                <Button 
-                  type="button" 
-                  onClick={handleSubmit} 
-                  disabled={loading}
-                >
-                  {loading ? "En cours..." : "Enregistrer"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 z-50 overflow-auto bg-black/50">
-      <div className="relative w-full max-w-2xl mx-auto mt-10">
-        {/* Générateur IA */}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[700px] gap-0 p-0 overflow-hidden outline-none">
+        
         <AIStageGenerator 
           isOpen={showAIGenerator}
           onClose={() => setShowAIGenerator(false)}
-          onGenerated={handleGeneratedContent}
-          contentType={currentAIContentType}
+          onGenerated={(content) => handleGeneratedContent(content)}
+          contentType="description"
           initialPrompt={description}
         />
-        
-        <Card className="rounded-lg shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <Wand2 className="h-5 w-5 text-primary" />
-              Ajouter une offre de stage
-            </CardTitle>
-            <CardDescription>
-              Décrivez votre stage en détail. L'IA remplira automatiquement les autres champs.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form onSubmit={handlePreview} className="grid grid-cols-1 gap-4">
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <Label htmlFor="description">Description complète du stage</Label>
+
+        <DialogHeader className="p-6 pb-2">
+          <div className="flex justify-between items-center mb-2">
+            <Badge variant="outline" className="text-xs font-semibold bg-primary/5 text-primary border-primary/20">
+              NOUVELLE OFFRE • ÉTAPE {step}/{totalSteps}
+            </Badge>
+            <div className="flex gap-1.5">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className={cn("h-1.5 rounded-full transition-all duration-300", i === step ? "w-8 bg-primary" : i < step ? "w-4 bg-primary/40" : "w-4 bg-muted")} />
+              ))}
+            </div>
+          </div>
+          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+            {step === 1 && <><Info className="h-6 w-6 text-primary" /> Description du poste</>}
+            {step === 2 && <><Briefcase className="h-6 w-6 text-primary" /> Détails du stage</>}
+            {step === 3 && <><Wrench className="h-6 w-6 text-primary" /> Profil recherché</>}
+            {step === 4 && <><Coins className="h-6 w-6 text-primary" /> Logistique & Budget</>}
+          </DialogTitle>
+          <DialogDescription>
+             {step === 1 && "Décrivez le stage, l'IA s'occupera d'extraire les détails techniques."}
+             {step === 2 && "Précisez le titre et le format de travail de ce stage."}
+             {step === 3 && "Sélectionnez les compétences clés que vous recherchez."}
+             {step === 4 && "Dates, lieu et rémunération proposée."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <ScrollArea className="max-h-[65vh]">
+          <div className="p-6 space-y-6">
+            {/* STEP 1: DESCRIPTION */}
+            {step === 1 && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium">Contenu de l'offre</Label>
                   <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-xs flex items-center gap-1"
-                      onClick={() => {
-                        resetTimer();
-                        openAIGenerator('description');
-                      }}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Améliorer avec IA
+                    <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs text-primary bg-primary/5 border-primary/20 hover:bg-primary/10" onClick={() => setShowAIGenerator(true)}>
+                      <Sparkles className="h-3.5 w-3.5" /> IA : Améliorer
                     </Button>
-                    {description.length > 100 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs flex items-center gap-1"
-                        onClick={() => {
-                          resetTimer();
-                          setActiveTab(activeTab === "edit" ? "preview" : "edit");
-                        }}
-                      >
-                        {activeTab === "edit" ? (
-                          <>
-                            <Eye className="h-3.5 w-3.5" />
-                            Aperçu formaté
-                          </>
-                        ) : (
-                          <>
-                            <Edit className="h-3.5 w-3.5" />
-                            Éditer
-                          </>
-                        )}
-                      </Button>
-                    )}
+                    <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setPreviewAI(!previewAI)}>
+                      {previewAI ? <><Edit className="h-3.5 w-3.5" /> Édition</> : <><Eye className="h-3.5 w-3.5" /> Aperçu</>}
+                    </Button>
                   </div>
                 </div>
-                
-                {activeTab === "edit" ? (
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => {
-                      resetTimer();
-                      setDescription(e.target.value);
-                    }}
-                    className="min-h-[200px]"
-                    placeholder="Décrivez le poste, les responsabilités, les compétences requises, etc. Plus votre description est détaillée, meilleures seront les suggestions de l'IA."
-                    required
-                  />
-                ) : (
-                  <div className="border rounded-md p-4 min-h-[200px] bg-white overflow-y-auto">
-                    <FormattedText text={description} highlightKeywords={true} />
+                {previewAI ? (
+                  <div className="min-h-[250px] p-4 border rounded-xl bg-muted/20 prose prose-sm max-w-none">
+                    <FormattedText text={description || "*Aucun contenu pour le moment...*"} highlightKeywords={true} />
                   </div>
+                ) : (
+                  <Textarea 
+                    value={description} 
+                    onChange={e => setDescription(e.target.value)} 
+                    placeholder="Saisissez la description complète. Plus c'est détaillé, plus l'IA sera précise !"
+                    className="min-h-[250px] shadow-sm resize-none rounded-xl"
+                  />
                 )}
-                
-                <p className="text-xs text-gray-500 mt-1">
-                  Conseil : Incluez des détails sur les technologies, les responsabilités et le profil recherché.
-                </p>
+                <div className="flex justify-center pt-2">
+                   <Button onClick={handleGenerateSuggestions} variant="secondary" className="gap-2 shadow-sm border" disabled={!description || loading}>
+                      <Wand2 className={cn("h-4 w-4", loading && "animate-spin")} />
+                      {loading ? "Analyse en cours..." : "Lancer l'analyse IA des données"}
+                   </Button>
+                </div>
               </div>
-              
-              <div>
-                <Label htmlFor="location">Lieu du stage</Label>
-                <Input
-                  id="location"
-                  value={location}
-                  onChange={(e) => {
-                    resetTimer();
-                    setLocation(e.target.value);
-                  }}
-                  placeholder="Ex: Paris, Lyon, Remote..."
-                  required
+            )}
+
+            {/* STEP 2: STAGE DETAILS */}
+            {step === 2 && (
+              <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="space-y-2">
+                  <Label>Titre de l'offre</Label>
+                  <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Stage Développeur Fullstack" className="h-11 rounded-xl shadow-sm" />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Type de contrat</Label>
+                    <Select value={type} onValueChange={(v: StageType) => setType(v)}>
+                      <SelectTrigger className="h-11 rounded-xl shadow-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="temps_plein">Temps plein</SelectItem>
+                        <SelectItem value="temps_partiel">Temps partiel</SelectItem>
+                        <SelectItem value="alternance">Alternance</SelectItem>
+                        <SelectItem value="remote">Remote complet</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Niveau d'études requis</Label>
+                    <Input value={educationLevel} onChange={e => setEducationLevel(e.target.value)} placeholder="Ex: Bac +3 / Licence" className="h-11 rounded-xl shadow-sm" />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 p-4 border rounded-xl bg-orange-50/50 border-orange-100">
+                   <div className="bg-orange-100 p-2 rounded-full h-fit mt-0.5"><Sparkles className="h-4 w-4 text-orange-600" /></div>
+                   <div className="text-sm">
+                      <p className="font-semibold text-orange-900">Conseil IA</p>
+                      <p className="text-orange-800/80">Nous avons extrait ces informations de votre description. N'hésitez pas à les ajuster si nécessaire.</p>
+                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: SKILLS */}
+            {step === 3 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <TagSelector
+                  label={<SectionLabel icon={Wrench} text="Compétences indispensables" />}
+                  placeholder="Python, SQL, Anglais..."
+                  options={SKILLS_OPTIONS}
+                  selected={requiredSkills}
+                  onChange={setRequiredSkills}
+                  colorScheme="primary"
+                />
+                <TagSelector
+                  label={<SectionLabel icon={Sparkles} text="Compétences appréciées (Bonus)" />}
+                  placeholder="Docker, Figma, Soft Skills..."
+                  options={SKILLS_OPTIONS}
+                  selected={preferredSkills}
+                  onChange={setPreferredSkills}
+                  colorScheme="primary"
                 />
               </div>
-              
-              <div>
-                <Label>Type de stage</Label>
-                <Select 
-                  value={type} 
-                  onValueChange={(value: StageType) => {
-                    resetTimer();
-                    setType(value);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez le type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="temps_plein">Temps plein</SelectItem>
-                    <SelectItem value="temps_partiel">Temps partiel</SelectItem>
-                    <SelectItem value="alternance">Alternance</SelectItem>
-                    <SelectItem value="remote">Télétravail</SelectItem>
-                  </SelectContent>
-                </Select>
+            )}
+
+            {/* STEP 4: LOGISTICS */}
+            {step === 4 && (
+              <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Lieu</Label>
+                    <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Ville, Pays" className="h-11 rounded-xl" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2"><Coins className="h-4 w-4" /> Rémunération (mois)</Label>
+                    <div className="relative">
+                      <Input type="number" value={compensationAmount} onChange={e => setCompensationAmount(Number(e.target.value))} className="h-11 pr-16 rounded-xl" />
+                      <span className="absolute right-3 top-2.5 text-muted-foreground font-medium">{compensationCurrency}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2 flex flex-col">
+                    <Label>Date de début</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("h-11 text-left font-normal rounded-xl", !startDate && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {startDate ? format(startDate, "PPP") : <span>Choisir...</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} /></PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2 flex flex-col">
+                    <Label>Date limite d'envoi</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("h-11 text-left font-normal rounded-xl", !deadline && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {deadline ? format(deadline, "PPP") : <span>Choisir...</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={deadline} onSelect={setDeadline} /></PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="flex items-center space-x-2 border p-3 rounded-xl bg-muted/30">
+                     <Checkbox id="urgent" checked={isUrgent} onCheckedChange={(v) => setIsUrgent(v === true)} />
+                     <Label htmlFor="urgent" className="text-sm font-medium cursor-pointer">Marquer comme Urgent</Label>
+                   </div>
+                   <div className="flex items-center space-x-2 border p-3 rounded-xl bg-muted/30">
+                     <Checkbox id="featured" checked={isFeatured} onCheckedChange={(v) => setIsFeatured(v === true)} />
+                     <Label htmlFor="featured" className="text-sm font-medium cursor-pointer">Offre à la une</Label>
+                   </div>
+                </div>
               </div>
-            </form>
-          </CardContent>
-          <CardFooter className="flex justify-between gap-2">
-            <div>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  resetTimer();
-                  onClose();
-                }}
-              >
+            )}
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="p-6 border-t bg-muted/5 flex flex-row sm:justify-between items-center gap-2">
+          <div>
+            {step > 1 ? (
+              <Button type="button" variant="ghost" onClick={prevStep}>
+                <ChevronLeft className="mr-2 h-4 w-4" /> Précédent
+              </Button>
+            ) : (
+              <Button type="button" variant="ghost" onClick={onClose}>
                 Annuler
               </Button>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={handlePreview} 
-                variant="outline"
-                disabled={loading || !description.trim() || !location.trim()}
-                className="flex items-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Génération en cours...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Générer les suggestions
-                  </>
-                )}
+            )}
+          </div>
+          <div className="flex gap-2">
+            {step < totalSteps ? (
+              <Button onClick={nextStep} className="px-8 shadow-sm transition-all active:scale-95">
+                Suivant <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
-              <Button 
-                onClick={handleSubmit} 
-                disabled={loading || !description.trim() || !location.trim()}
-                className="flex items-center gap-2"
-              >
-                {loading ? (
-                  <>En cours...</>
-                ) : (
-                  <>Publier l'offre</>
-                )}
+            ) : (
+              <Button onClick={handleSubmit} className="px-8 bg-primary shadow-lg transition-all active:scale-95" disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Publier l'offre
               </Button>
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
-    </div>
+            )}
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

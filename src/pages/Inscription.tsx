@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/useAuth";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RegistrationForm } from "@/components/registration/RegistrationForm";
+import { RegistrationStep2Form } from "@/components/registration/RegistrationStep2Form";
+import { RegistrationStep3Form } from "@/components/registration/RegistrationStep3Form";
 import { VerificationEmailSent } from "@/components/registration/VerificationEmailSent";
 
 export default function Inscription() {
@@ -20,11 +22,33 @@ export default function Inscription() {
   const [networkError, setNetworkError] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
+    // Step 1 - auth fields
     email: "",
     password: "",
     name: "",
     role: "stagiaire" as UserRole,
+    // Step 2 - Shared
+    location: "",
+    // Step 2 - Stagiaire (matches stagiaires table)
+    title: "",
+    bio: "",
+    search_status: "",
+    disponibility: "",
+    linkedin_url: "",
+    skills: [] as string[],
+    languages: [] as string[],
+    preferred_locations: [] as string[],
+    preferred_domains: [] as string[],
+    // Step 2 - Entreprise (matches entreprises table)
+    industry: "",
+    description: "",
+    company_culture: "",
+    size: "",
+    founded_year: "",
+    website: "",
+    benefits: [] as string[],
   });
 
   const getRedirectPath = () => {
@@ -113,6 +137,53 @@ export default function Inscription() {
     }
   };
 
+  const handleNextStep = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    setNetworkError(false);
+
+    if (!formData.email.includes('@') || !formData.email.includes('.')) {
+      setFormError("Veuillez entrer une adresse email valide");
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setFormError("Le mot de passe doit contenir au moins 8 caractères");
+      return;
+    }
+
+    if (formData.name.trim().length < 2) {
+      setFormError(formData.role === 'entreprise' 
+        ? "Le nom de l'entreprise est trop court" 
+        : "Votre nom est trop court");
+      return;
+    }
+
+    setStep(2);
+  };
+
+  const handleArrayChange = (name: string, value: string) => {
+    const arr = value.split(',').map(item => item.trim()).filter(Boolean);
+    setFormData(prev => ({
+      ...prev,
+      [name]: arr
+    }));
+  };
+
+  const handleFieldChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleTagsChange = (field: string, values: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: values
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -120,28 +191,8 @@ export default function Inscription() {
     setNetworkError(false);
 
     try {
-      if (!formData.email.includes('@') || !formData.email.includes('.')) {
-        setFormError("Veuillez entrer une adresse email valide");
-        setLoading(false);
-        return;
-      }
-
-      if (formData.password.length < 8) {
-        setFormError("Le mot de passe doit contenir au moins 8 caractères");
-        setLoading(false);
-        return;
-      }
-
-      if (formData.name.trim().length < 2) {
-        setFormError(formData.role === 'entreprise' 
-          ? "Le nom de l'entreprise est trop court" 
-          : "Votre nom est trop court");
-        setLoading(false);
-        return;
-      }
-      
       const result = await auth.signUp(formData);
-      
+
       if (result.success) {
         setEmailSent(true);
         toast.success("Inscription réussie !", {
@@ -219,24 +270,54 @@ export default function Inscription() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Inscription</CardTitle>
-          <CardDescription className="text-center">
-            Créez votre compte pour accéder à la plateforme
-          </CardDescription>
+          {/* Progress dots */}
+          <div className="flex justify-center gap-2 mt-2">
+            {[1, 2, 3].map((s) => (
+              <div
+                key={s}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  s === step ? "w-6 bg-primary" : s < step ? "w-4 bg-primary/50" : "w-4 bg-muted"
+                }`}
+              />
+            ))}
+          </div>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[400px] pr-4">
-            <RegistrationForm
-              loading={loading}
-              formError={formError}
-              formData={formData}
-              emailAvailable={emailAvailable}
-              checkingEmail={checkingEmail}
-              passwordStrength={passwordStrength}
-              onSubmit={handleSubmit}
-              onInputChange={handleInputChange}
-              onRoleChange={(value) => setFormData({ ...formData, role: value })}
-              networkError={networkError}
-            />
+          <ScrollArea className="h-[460px] pr-4">
+            {step === 1 && (
+              <RegistrationForm
+                loading={loading}
+                formError={formError}
+                formData={formData}
+                emailAvailable={emailAvailable}
+                checkingEmail={checkingEmail}
+                passwordStrength={passwordStrength}
+                onSubmit={handleNextStep}
+                onInputChange={handleInputChange}
+                onRoleChange={(value) => setFormData({ ...formData, role: value })}
+                networkError={networkError}
+              />
+            )}
+            {step === 2 && (
+              <RegistrationStep2Form
+                loading={loading}
+                role={formData.role}
+                formData={formData}
+                onBack={() => setStep(1)}
+                onNext={() => setStep(3)}
+                onFieldChange={handleFieldChange}
+              />
+            )}
+            {step === 3 && (
+              <RegistrationStep3Form
+                loading={loading}
+                role={formData.role}
+                formData={formData}
+                onBack={() => setStep(2)}
+                onSubmit={handleSubmit}
+                onTagsChange={handleTagsChange}
+              />
+            )}
           </ScrollArea>
         </CardContent>
       </Card>
