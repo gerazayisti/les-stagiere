@@ -10,6 +10,14 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   build: {
+    rollupOptions:{
+      output: { manualChunks(id){
+        if
+        (id.includes('node_modules')){
+          return 'vendor'
+        }
+      }}
+    },
     chunkSizeWarningLimit: 5000, // Suppression de l'avertissement de taille
   },
   plugins: [
@@ -18,7 +26,7 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'og-image.png'],
       workbox: {
-        maximumFileSizeToCacheInBytes: 5000000, // Augmenté à 5MB pour tolérer les gros bundles react-pdf/gemini
+        maximumFileSizeToCacheInBytes: 5*1024*1024, // Augmenté à 5MB pour tolérer les gros bundles react-pdf/gemini
       },
       manifest: {
         name: 'Les Stagiaires',
