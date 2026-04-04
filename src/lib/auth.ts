@@ -189,6 +189,21 @@ export const auth = {
         if (signUpError) {
           console.error("Erreur Supabase lors de l'inscription:", signUpError);
           
+          if (signUpError.message === "Failed to fetch" || 
+              signUpError.name === "TypeError" || 
+              signUpError.message?.includes("network") ||
+              signUpError.message?.includes("ERR_NAME_NOT_RESOLVED")) {
+            return {
+              success: false,
+              error: {
+                message: "Problème de connexion au serveur d'authentification. Veuillez vérifier votre connexion internet ou désactiver vos bloqueurs de publicités.",
+                status: 0,
+                isRetryable: true,
+                isNetworkError: true
+              }
+            };
+          }
+          
           if (signUpError.message?.includes("already registered")) {
             return {
               success: false,
